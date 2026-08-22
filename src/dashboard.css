@@ -395,3 +395,161 @@
       color: #1E1E1E;
       text-align: center;
     }
+
+    /* ===== Profile Card ===== */
+.profile-card {
+    background: #ffffff;
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
+}
+
+/* Card Header */
+.card-header {
+    background: linear-gradient(to right, #200b7f, #1e4cf3);
+    padding: 16px 32px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    height: 70px;
+}
+
+.header-icon {
+    font-size: 35px;
+    color: #ffffff;
+}
+
+.card-title {
+    font-size: 22px;
+    font-weight: 600;
+    color: #ffffff;
+    letter-spacing: -0.2px;
+}
+
+/* Card Body */
+.card-body {
+    padding: 40px 64px 50px;
+}
+
+/* ===== Top Section: Photo + Fields ===== */
+.info-section-top {
+    display: flex;
+    gap: 50px;
+    margin-bottom: 50px;
+}
+
+.profile-photo {
+    width: 260px;
+    min-width: 260px;
+    height: 336px;
+    border-radius: 15px;
+    border: 1px solid #000000;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #f0f0f0;
+}
+
+.profile-photo img {
+    width: 236px;
+    height: 236px;
+    object-fit: cover;
+}
+
+/* ===== Info Fields ===== */
+.info-fields {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.field-row {
+    display: flex;
+    gap: 45px;
+}
+
+.field-group {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.field-large {
+    flex: 1.33;
+}
+
+.field-small {
+    flex: 1;
+}
+
+.field-half {
+    flex: 1;
+}
+
+.field-label {
+    font-size: 16px;
+    font-weight: 500;
+    color: #323639;
+}
+
+.field-input {
+    height: 50px;
+    background-color: #f7f7f7;
+    border: 1px solid #878787;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    padding: 0 15px;
+}
+
+.field-value {
+    font-size: 16px;
+    font-weight: 400;
+    color: #1541d2;
+}
+
+/* ===== Bottom Section: Contact ===== */
+.info-section-bottom {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.info-section-bottom .field-row {
+    gap: 45px;
+}
+
+/* ===== Edit Button ===== */
+.edit-button-wrapper {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 24px;
+}
+
+.btn-edit {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 16px 32px;
+    background: linear-gradient(to bottom, #1541d2, #0b2268);
+    color: #ffffff;
+    border: none;
+    border-radius: 40px;
+    font-family: 'Prompt', sans-serif;
+    font-size: 16px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: opacity 0.2s ease, transform 0.15s ease;
+    box-shadow: 0 4px 16px rgba(21, 65, 210, 0.35);
+}
+
+.btn-edit:hover {
+    opacity: 0.9;
+    transform: translateY(-1px);
+}
+
+.btn-edit .material-icons {
+    font-size: 24px;
+}
