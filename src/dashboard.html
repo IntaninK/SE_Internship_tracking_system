@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard - นิสิต</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <link rel="stylesheet" href="dashboard.css">
+
+</head>
+<body>
+
+  <!-- Header Bar -->
+  <div id="header-placeholder"></div>
+
+  <!-- Main Content -->
+  <main class="main-content">
+
+    <!-- Student Info Section -->
+    <section class="student-info-section">
+      <div class="section-header">
+        <span class="material-icons">how_to_reg</span>
+        <h2>ข้อมูลและสถานะของนิสิต</h2>
+      </div>
+      <div class="student-info-body">
+        <div class="profile-left">
+          <div class="avatar">
+            <span class="material-icons">person</span>
+          </div>
+          <div class="profile-details">
+            <p class="name">676767 นาย เอกภัพ เจริญพัน</p>
+            <p class="info">069 677 6967</p>
+            <p class="info">677@Up.ac.th</p>
+            <p class="info">อาจารย์ที่ปรึกษา: -</p>
+          </div>
+        </div>
+        <div class="profile-right">
+          <h3>สถานะการเข้าฝึกงานของนิสิต :</h3>
+          <p class="status-tags">
+            <span class="tag-pending">รอยื่นเอกสาร</span>
+            <span class="tag-separator"> / </span>
+            <span class="tag-approval">รอการอนุมัติ</span>
+            <span class="tag-separator"> / </span>
+            <span class="tag-ready">พร้อมฝึกงาน</span>
+          </p>
+          <p class="position-info">ตำแหน่งเข้าสมัครงาน : Java</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Internship Data Section -->
+    <section class="internship-section">
+      <h2 class="internship-title">ข้อมูลการเข้าฝึกงานนิสิต</h2>
+      <a href="#" class="add-data-btn">
+        <span class="material-icons">add_circle</span>
+        เพิ่มข้อมูล
+      </a>
+
+      <div class="internship-content">
+        <!-- CV Column -->
+        <div class="cv-column">
+          <p class="cv-label">ไฟล์ CV :</p>
+          <div class="cv-area">
+            <div class="cv-placeholder">
+              <p class="cv-placeholder-text">ยังไม่มี CV</p>
+            </div>
+            <div class="cv-sidebar">
+              <div class="gpa-box">
+                <p>GPA : -.--</p>
+              </div>
+              <div class="status-cv-box">
+                <p class="label">สถานะ CV :</p>
+                <p class="value">-</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Training Column -->
+        <div class="training-column">
+          <div class="training-left">
+            <p class="training-label">การเข้าอบรม Soft/Hard skill :</p>
+            <table class="training-table">
+              <thead>
+                <tr>
+                  <th style="width: 54px;">ลำดับ</th>
+                  <th style="width: 148px;">หัวข้ออบรม</th>
+                  <th style="width: 76px;">Soft skill</th>
+                  <th style="width: 84px;">Hard skill</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr class="empty-row">
+                  <td>&nbsp;</td>
+                  <td>&nbsp;</td>
+                  <td>&nbsp;</td>
+                  <td>&nbsp;</td>
+                </tr>
+              </tbody>
+              <tfoot>
+                <tr>
+                  <td>รวมทั้งหมด</td>
+                  <td>&nbsp;</td>
+                  <td>0</td>
+                  <td>0</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+
+          <!-- Checklist Column -->
+          <div class="checklist-column">
+            <div class="checklist-box">
+              <p>Checklist : -</p>
+              <p>สถานะ Checklist : -</p>
+            </div>
+            <p class="company-label">ข้อมูลบริษัท</p>
+            <div class="company-placeholder">
+              <p>ยังไม่มี ข้อมูลบริษัท</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+  <script src="header.js"></script>
+
+</body>
+</html>
