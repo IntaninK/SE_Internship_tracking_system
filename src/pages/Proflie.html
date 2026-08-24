@@ -26,22 +26,22 @@
             <!-- Card Body -->
             <div class="card-body">
                 <!-- Top Section: Photo + Info Fields -->
-                <div class="info-section-top">
-                    <div class="profile-photo">
-                        <img src="https://via.placeholder.com/236x236?text=Profile" alt="Profile Photo">
+                <div class="flex flex-wrap gap-[32px_50px] mb-10 max-[900px]:flex-col max-[900px]:items-center">
+                    <div class="w-[260px] min-w-[180px] max-w-[260px] h-[336px] rounded-[15px] border border-black overflow-hidden flex items-center justify-center bg-[#f0f0f0] shrink mx-auto max-[560px]:w-full max-[560px]:max-w-[240px] max-[560px]:h-[300px] max-[360px]:max-w-[200px] max-[360px]:h-[250px]" style="flex-basis: 260px;">
+                        <img src="https://via.placeholder.com/236x236?text=Profile" alt="Profile Photo" class="w-full h-full object-cover">
                     </div>
 
-                    <div class="info-fields">
+                    <div class="flex-1 min-w-[280px] flex flex-col gap-5 max-[900px]:w-full max-[900px]:min-w-0" style="flex: 1 1 320px;">
                         <!-- Row 1 -->
-                        <div class="field-row">
-                            <div class="field-group field-large">
-                                <label class="field-label">ชื่อ-สกุล (ไทย)</label>
+                        <div class="flex flex-wrap gap-[16px_24px] max-[560px]:flex-col max-[560px]:gap-4">
+                            <div class="flex flex-col gap-[10px] min-w-[140px] max-[560px]:min-w-0 max-[560px]:w-full" style="flex: 1.33 1 200px;">
+                                <label class="text-[15px] font-medium text-[#323639] leading-[1.35]">ชื่อ-สกุล (ไทย)</label>
                                 <div class="input-field">
                                     <span class="field-value">นาย ทอง หลังอิ่ม</span>
                                 </div>
                             </div>
-                            <div class="field-group field-small">
-                                <label class="field-label">รหัสนิสิต</label>
+                            <div class="flex flex-col gap-[10px] min-w-[140px] max-[560px]:min-w-0 max-[560px]:w-full" style="flex: 1 1 140px;">
+                                <label class="text-[15px] font-medium text-[#323639] leading-[1.35]">รหัสนิสิต</label>
                                 <div class="input-field">
                                     <span class="field-value">670xxxxx</span>
                                 </div>
@@ -49,15 +49,15 @@
                         </div>
 
                         <!-- Row 2 -->
-                        <div class="field-row">
-                            <div class="field-group field-large">
-                                <label class="field-label">Name & Surname (English)</label>
+                        <div class="flex flex-wrap gap-[16px_24px] max-[560px]:flex-col max-[560px]:gap-4">
+                            <div class="flex flex-col gap-[10px] min-w-[140px] max-[560px]:min-w-0 max-[560px]:w-full" style="flex: 1.33 1 200px;">
+                                <label class="text-[15px] font-medium text-[#323639] leading-[1.35]">Name & Surname (English)</label>
                                 <div class="input-field">
                                     <span class="field-value">Thong Lang-im</span>
                                 </div>
                             </div>
-                            <div class="field-group field-small">
-                                <label class="field-label">ชั้นปีที่</label>
+                            <div class="flex flex-col gap-[10px] min-w-[140px] max-[560px]:min-w-0 max-[560px]:w-full" style="flex: 1 1 140px;">
+                                <label class="text-[15px] font-medium text-[#323639] leading-[1.35]">ชั้นปีที่</label>
                                 <div class="input-field">
                                     <span class="field-value">3</span>
                                 </div>
@@ -65,15 +65,15 @@
                         </div>
 
                         <!-- Row 3 -->
-                        <div class="field-row">
-                            <div class="field-group field-large">
-                                <label class="field-label">เกรดเฉลี่ย</label>
+                        <div class="flex flex-wrap gap-[16px_24px] max-[560px]:flex-col max-[560px]:gap-4">
+                            <div class="flex flex-col gap-[10px] min-w-[140px] max-[560px]:min-w-0 max-[560px]:w-full" style="flex: 1.33 1 200px;">
+                                <label class="text-[15px] font-medium text-[#323639] leading-[1.35]">เกรดเฉลี่ย</label>
                                 <div class="input-field">
                                     <span class="field-value">3.67</span>
                                 </div>
                             </div>
-                            <div class="field-group field-small">
-                                <label class="field-label">สาขาวิชา</label>
+                            <div class="flex flex-col gap-[10px] min-w-[140px] max-[560px]:min-w-0 max-[560px]:w-full" style="flex: 1 1 140px;">
+                                <label class="text-[15px] font-medium text-[#323639] leading-[1.35]">สาขาวิชา</label>
                                 <div class="input-field">
                                     <span class="field-value">วิศวกรรมซอฟต์แวร์</span>
                                 </div>
@@ -83,17 +83,17 @@
                 </div>
 
                 <!-- Bottom Section: Contact Info -->
-                <div class="info-section-bottom">
+                <div class="flex flex-col gap-[10px]">
                     <!-- Row 1 -->
-                    <div class="field-row">
-                        <div class="field-group field-half">
-                            <label class="field-label">E-mail</label>
+                    <div class="flex flex-wrap gap-[16px_24px] max-[560px]:flex-col max-[560px]:gap-4">
+                        <div class="flex flex-col gap-[10px] min-w-[140px] max-[560px]:min-w-0 max-[560px]:w-full" style="flex: 1 1 160px;">
+                            <label class="text-[15px] font-medium text-[#323639] leading-[1.35]">E-mail</label>
                             <div class="input-field">
                                 <span class="field-value">...</span>
                             </div>
                         </div>
-                        <div class="field-group field-half">
-                            <label class="field-label">เบอร์โทร</label>
+                        <div class="flex flex-col gap-[10px] min-w-[140px] max-[560px]:min-w-0 max-[560px]:w-full" style="flex: 1 1 160px;">
+                            <label class="text-[15px] font-medium text-[#323639] leading-[1.35]">เบอร์โทร</label>
                             <div class="input-field">
                                 <span class="field-value">...</span>
                             </div>
@@ -101,15 +101,15 @@
                     </div>
 
                     <!-- Row 2 -->
-                    <div class="field-row">
-                        <div class="field-group field-half">
-                            <label class="field-label">Line ID</label>
+                    <div class="flex flex-wrap gap-[16px_24px] max-[560px]:flex-col max-[560px]:gap-4">
+                        <div class="flex flex-col gap-[10px] min-w-[140px] max-[560px]:min-w-0 max-[560px]:w-full" style="flex: 1 1 160px;">
+                            <label class="text-[15px] font-medium text-[#323639] leading-[1.35]">Line ID</label>
                             <div class="input-field">
                                 <span class="field-value">...</span>
                             </div>
                         </div>
-                        <div class="field-group field-half">
-                            <label class="field-label">Line ID</label>
+                        <div class="flex flex-col gap-[10px] min-w-[140px] max-[560px]:min-w-0 max-[560px]:w-full" style="flex: 1 1 160px;">
+                            <label class="text-[15px] font-medium text-[#323639] leading-[1.35]">Line ID</label>
                             <div class="input-field">
                                 <span class="field-value">...</span>
                             </div>
@@ -120,8 +120,8 @@
         </div>
 
         <!-- Edit Button -->
-        <div class="edit-button-wrapper">
-            <button class="btn btn-primary btn-lg">
+        <div class="flex justify-end mt-6 max-[560px]:justify-center">
+            <button class="btn btn-primary btn-lg max-[560px]:w-full max-[560px]:justify-center">
                 <span class="material-icons">add_circle</span>
                 <span>ดู/แก้ไขข้อมูล</span>
             </button>

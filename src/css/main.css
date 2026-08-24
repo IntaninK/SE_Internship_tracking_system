@@ -14,6 +14,9 @@
    ========================================================= */
 @layer legacy {
 
+/* =========================================================
+   1. Reset & Base
+   ========================================================= */
 * {
   margin: 0;
   padding: 0;
@@ -28,15 +31,23 @@ body {
 }
 
 /* =========================================================
-   Reusable UI Components
+   2. Reusable UI Components
    -----------------------------------------------------------
-   หมวดนี้รวม class ที่เคยถูกสร้างซ้ำหลายชื่อ (จาก Figma-to-code
-   ที่ export component คล้ายกันเป็นคนละ class ทุกครั้ง) ให้เหลือ
-   base class เดียว + modifier เพื่อลดโค้ดซ้ำและแก้ทีเดียวได้ทั้งเว็บ
+   หมวดนี้รวม class ที่ใช้ร่วมกันหลายหน้า เช่น card, button,
+   input, upload zone ฯลฯ แก้ที่เดียวมีผลทั้งเว็บ
    ========================================================= */
 
-/* ---- Card / Section Header (สีเดียวกับที่ใช้เดิม #200B7F -> #1E4CF2) ----
-   แทนที่: .section-header, .section-header .material-icons, .section-header h2 */
+/* ---- Card ---- */
+.card {
+  background: #fff;
+  border: 1px solid #000;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 2px 12px rgba(0,0,0,.06);
+  margin-top: 50px;
+}
+
+/* ---- Card Header (gradient สีน้ำเงิน) ---- */
 .card-header {
   background: linear-gradient(90deg, #200B7F 0%, #1E4CF2 100%);
   border: 1px solid #000;
@@ -60,8 +71,12 @@ body {
   letter-spacing: -0.2px;
 }
 
+/* ---- Card Body ---- */
+.card-body {
+  padding: clamp(20px, 4vw, 40px) clamp(16px, 6vw, 64px) clamp(24px, 5vw, 50px);
+}
+
 /* ---- Buttons ----
-   แทนที่: .btn-primary, .btn-edit, .add-data-btn (สี/หน้าตา), .btn-add, .btn-tonal, .btn-edit-cell
    ใช้ร่วมกัน: <button class="btn btn-primary btn-lg">...</button> */
 .btn {
   display: inline-flex;
@@ -102,7 +117,6 @@ body {
 .btn-xs { padding: 4px 12px; font-size: 12px; border-radius: 6px; }
 
 /* ---- Input Field ----
-   แทนที่: .form-input, select.form-input, .status-select, .field-input (div แสดงผลอย่างเดียว)
    ใช้กับทั้ง <input>, <select>, และ <div> ที่โชว์ค่าแบบ read-only ได้ */
 .input-field {
   min-height: 44px;
@@ -133,8 +147,7 @@ select.input-field {
 }
 
 /* ---- Upload Zone (dashed drop-zone) ----
-   แทนที่: .photo-upload, .file-upload
-   ใช้ร่วมกับ modifier ขนาด: .upload-zone--photo หรือ .upload-zone--file */
+   ใช้ร่วมกับ modifier: .upload-zone--photo หรือ .upload-zone--file */
 .upload-zone {
   border: 2px dashed #CCC;
   border-radius: 12px;
@@ -155,8 +168,7 @@ select.input-field {
 .upload-zone--photo { width: 220px; height: 280px; flex-shrink: 0; padding: 0 12px; }
 .upload-zone--file { padding: 40px 20px; }
 
-/* ---- Placeholder Box (กล่องขอบทึบ "ยังไม่มีข้อมูล") ----
-   แทนที่: .cv-placeholder, .company-placeholder */
+/* ---- Placeholder Box (กล่องขอบทึบ "ยังไม่มีข้อมูล") ---- */
 .placeholder-box {
   background: #F4F4F4;
   border: 1px solid #000;
@@ -167,7 +179,20 @@ select.input-field {
   position: relative;
 }
 
-/* ===== Header Bar ===== */
+/* ---- Field Value (ค่าที่แสดงใน input-field แบบ read-only) ---- */
+.field-value {
+  font-size: 15px;
+  font-weight: 400;
+  color: #1541d2;
+  overflow-wrap: normal;
+  word-break: keep-all;
+  white-space: normal;
+  line-height: 1.4;
+}
+
+/* =========================================================
+   3. Header Bar (ใช้ทุกหน้าผ่าน component)
+   ========================================================= */
 .header-bar {
   display: flex;
   align-items: center;
@@ -257,504 +282,18 @@ select.input-field {
   }
 }
 
-/* ===== Main Content ===== */
+/* =========================================================
+   4. Main Content Layout
+   ========================================================= */
 .main-content {
   max-width: 1282px;
   margin: 15px auto 40px;
   padding: 0 20px;
 }
 
-/* ===== Student Info Section ===== */
-.student-info-section {
-  margin-bottom: 15px;
-}
-
-/* .section-header ถูกรวมเข้ากับ .card-header แล้ว (ดูหมวด "Reusable UI Components" ด้านล่าง) */
-
-.student-info-body {
-  background: #fff;
-  border: 1px solid #000;
-  padding: 22px 15px;
-  display: flex;
-  gap: 120px;
-}
-
-.profile-left {
-  display: flex;
-  align-items: flex-start;
-  gap: 40px;
-}
-
-.avatar {
-  width: 200px;
-  height: 200px;
-  border-radius: 50%;
-  background: #CDCDCD;
-  border: 1px solid #000;
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-}
-
-.avatar .material-icons {
-  font-size: 100px;
-  color: #999;
-}
-
-.profile-details {
-  padding-top: 30px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.profile-details .name {
-  font-size: 24px;
-  color: #757575;
-  font-weight: 500;
-}
-
-.profile-details .info {
-  font-size: 20px;
-  color: #757575;
-}
-
-.profile-right {
-  padding-top: 22px;
-}
-
-.profile-right h3 {
-  font-size: 24px;
-  font-weight: 600;
-  color: #1E1E1E;
-  margin-bottom: 24px;
-}
-
-.status-tags {
-  font-size: 20px;
-  margin-bottom: 12px;
-}
-
-.status-tags .tag-pending {
-  color: #E7E54D;
-}
-
-.status-tags .tag-separator {
-  color: #757575;
-}
-
-.status-tags .tag-approval {
-  color: #53DDFF;
-}
-
-.status-tags .tag-ready {
-  color: #51FF51;
-}
-
-.position-info {
-  font-size: 20px;
-  color: #757575;
-}
-
-/* ===== Internship Data Section ===== */
-.internship-section {
-  background: #F9FFFF;
-  border: 1px solid #000;
-  border-radius: 34px;
-  padding: 28px 20px;
-  position: relative;
-}
-
-.internship-title {
-  font-size: 48px;
-  font-weight: 700;
-  color: #1E1E1E;
-  margin-bottom: 25px;
-  -webkit-text-stroke: 1px #BEEAFF;
-}
-
-/* .add-data-btn ตอนนี้เหลือแค่ "ตำแหน่ง" เท่านั้น
-   ส่วนหน้าตา (สี/ขนาด/ตัวอักษร) ใช้ .btn .btn-primary .btn-lg ร่วมกับปุ่มอื่นทั้งเว็บ */
-.add-data-btn {
-  position: absolute;
-  top: 28px;
-  right: 40px;
-}
-
-.internship-content {
-  display: flex;
-  gap: 0;
-}
-
-/* Left Column - CV */
-.cv-column {
-  width: 537px;
-  flex-shrink: 0;
-}
-
-.cv-label {
-  font-size: 32px;
-  font-weight: 600;
-  color: #1E1E1E;
-  margin-bottom: 15px;
-  padding-left: 10px;
-}
-
-.cv-area {
-  display: flex;
-  gap: 10px;
-}
-
-/* .cv-placeholder ถูกรวมเข้ากับ .placeholder-box แล้ว (ดูหมวด "Reusable UI Components") */
-.placeholder-box--cv { width: 282px; height: 365px; }
-
-.cv-placeholder-text {
-  font-size: 32px;
-  color: #1E1E1E;
-  text-align: center;
-  position: absolute;
-  bottom: 50px;
-  width: 100%;
-}
-
-.cv-sidebar {
-  display: flex;
-  flex-direction: column;
-  gap: 11px;
-}
-
-.gpa-box,
-.status-cv-box {
-  background: #fff;
-  border: 1px solid #000;
-  border-radius: 10px;
-  padding: 8px 10px;
-  min-width: 203px;
-}
-
-.gpa-box p,
-.status-cv-box p {
-  font-size: 20px;
-  color: #1E1E1E;
-}
-
-.status-cv-box .label {
-  margin-bottom: 8px;
-}
-
-/* Right Column - Training & Checklist */
-.training-column {
-  flex: 1;
-  display: flex;
-  gap: 23px;
-}
-
-.training-left {
-  flex: 1;
-}
-
-.training-label {
-  font-size: 24px;
-  font-weight: 600;
-  color: #1E1E1E;
-  margin-bottom: 18px;
-  padding-left: 10px;
-}
-
-/* Table */
-.training-table {
-  width: 362px;
-  border-collapse: collapse;
-  border: 1px solid #A7A7A7;
-  border-radius: 4px;
-  overflow: hidden;
-  font-size: 14px;
-}
-
-.training-table thead th {
-  background: #000;
-  color: #fff;
-  padding: 8px 10px;
-  text-align: left;
-  font-weight: 500;
-  border: 1px solid #777;
-}
-
-.training-table tbody td {
-  background: #fff;
-  padding: 8px 10px;
-  border: 1px solid #777;
-  vertical-align: top;
-}
-
-.training-table tbody tr.empty-row td {
-  height: 220px;
-}
-
-.training-table tfoot td {
-  background: #404040;
-  color: #fff;
-  padding: 12px 10px;
-  border: 1px solid #777;
-  font-weight: 500;
-}
-
-/* Checklist */
-.checklist-column {
-  width: 288px;
-}
-
-.checklist-box {
-  border: 1px solid #160AFF;
-  border-radius: 10px;
-  padding: 5px 20px 15px;
-  margin-bottom: 24px;
-}
-
-.checklist-box p {
-  font-size: 24px;
-  color: #1E1E1E;
-  text-align: center;
-}
-
-.checklist-box p:first-child {
-  margin-bottom: 24px;
-}
-
-.company-label {
-  font-size: 24px;
-  color: #1E1E1E;
-  font-weight: 500;
-  margin-bottom: 24px;
-}
-
-/* .company-placeholder ถูกรวมเข้ากับ .placeholder-box แล้ว (ดูหมวด "Reusable UI Components") */
-.placeholder-box--company { width: 285px; min-height: 185px; padding: 10px; background: #F1F1F1; }
-.placeholder-box--company p { font-size: 32px; color: #1E1E1E; text-align: center; }
-
-    /* ===== Profile Card ===== */
-/* Card Header */
-.card-header {
-  background: linear-gradient(to right, #200b7f, #1e4cf3);
-  border: 1px solid #000;
-  padding: 16px 32px;
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  min-height: 70px;
-}
- 
-.header-icon {
-  font-size: 35px;
-  color: #ffffff;
-  flex-shrink: 0;
-}
- 
-.card-title {
-  font-size: clamp(16px, 2.2vw, 22px);
-  font-weight: 600;
-  color: #ffffff;
-  letter-spacing: -0.2px;
-}
- 
-/* Card Body */
-.card-body {
-  padding: clamp(20px, 4vw, 40px) clamp(16px, 6vw, 64px) clamp(24px, 5vw, 50px);
-}
- 
-
-/* ===== Top Section: Photo + Fields ===== */
-.info-section-top {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 32px 50px;
-  margin-bottom: 40px;
-}
- 
-.profile-photo {
-    width: 260px;
-    min-width: 180px;
-    max-width: 260px;
-    height: 336px;
-    border-radius: 15px;
-    border: 1px solid #000000;
-    overflow: hidden;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background-color: #f0f0f0;
-    flex-shrink: 1;
-    flex-basis: 260px;
-    margin: 0 auto;
-}
- 
-.profile-photo img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-}
- 
-/* ===== Info Fields ===== */
-.info-fields {
-    flex: 1 1 320px;
-    min-width: 280px;
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-}
- 
-.field-row {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 16px 24px;
-}
- 
-.field-group {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    min-width: 140px;
-}
- 
-.field-large {
-    flex: 1.33 1 200px;
-}
- 
-.field-small {
-    flex: 1 1 140px;
-}
- 
-.field-half {
-    flex: 1 1 160px;
-}
- 
-.field-label {
-    font-size: 15px;
-    font-weight: 500;
-    color: #323639;
-    line-height: 1.35;
-}
- 
-/* .field-input ถูกรวมเข้ากับ .input-field แล้ว (ดูหมวด "Reusable UI Components") */
-
-.field-value {
-    font-size: 15px;
-    font-weight: 400;
-    color: #1541d2;
-    /* คำยาวจะตัดขึ้นบรรทัดใหม่แบบคำ ไม่ใช่ตัวต่อตัว */
-    overflow-wrap: normal;
-    word-break: keep-all;
-    white-space: normal;
-    line-height: 1.4;
-}
- 
-
-/* ===== Bottom Section: Contact ===== */
-.info-section-bottom {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-}
- 
-.info-section-bottom .field-row {
-    gap: 16px 24px;
-}
- 
-
-/* ===== Edit Button ===== */
-.edit-button-wrapper {
-    display: flex;
-    justify-content: flex-end;
-    margin-top: 24px;
-}
- 
-/* .btn-edit ถูกรวมเข้ากับ .btn .btn-primary .btn-lg แล้ว (ดูหมวด "Reusable UI Components") */
-
-
-/* ===== Responsive ===== */
-/* จอแท็บเล็ต: รูปย้ายไปอยู่บนสุด กึ่งกลาง ฟิลด์เต็มความกว้าง */
-@media (max-width: 900px) {
-    .info-section-top {
-        flex-direction: column;
-        align-items: center;
-    }
- 
-    .info-fields {
-        width: 100%;
-        min-width: 0;
-    }
- 
-    .profile-photo {
-        margin: 0 auto;
-    }
-}
- 
-/* จอมือถือแนวนอน / แท็บเล็ตเล็ก: field-row เริ่มตั้งเป็นคอลัมน์เมื่อฟิลด์แคบเกินไป */
-@media (max-width: 560px) {
-    .field-row {
-        flex-direction: column;
-        gap: 16px;
-    }
- 
-    .field-group,
-    .field-large,
-    .field-small,
-    .field-half {
-        flex: 1 1 auto;
-        min-width: 0;
-        width: 100%;
-    }
- 
-    .profile-photo {
-        width: 100%;
-        max-width: 240px;
-        height: 300px;
-    }
- 
-    .card-body {
-        padding: 20px 16px 28px;
-    }
- 
-    .edit-button-wrapper {
-        justify-content: center;
-    }
- 
-    .btn-edit {
-        width: 100%;
-        justify-content: center;
-    }
-}
- 
-/* จอมือถือแคบมาก */
-@media (max-width: 360px) {
-    .profile-photo {
-        max-width: 200px;
-        height: 250px;
-    }
- 
-    .card-title {
-        font-size: 15px;
-    }
-}
-
-
-
-
-
-/* ===== เพิ่มเติม: class ที่ HTML ใช้แต่ยังไม่มีใน main.css ===== */
-
-.card {
-  
-  background: #fff;
-  border: 1px solid #000;
-  border-radius: 16px;
-  overflow: hidden;
-  box-shadow: 0 2px 12px rgba(0,0,0,.06);
-  margin-top: 50px;
-}
-
+/* =========================================================
+   5. Form Components (ใช้หลายหน้า: status_all, submission_status)
+   ========================================================= */
 .form-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -771,9 +310,6 @@ select.input-field {
   color: #323639;
 }
 
-/* .form-input, select.form-input, .status-select ถูกรวมเข้ากับ .input-field แล้ว
-   .btn-primary ถูกรวมเข้ากับ .btn .btn-primary .btn-lg แล้ว (ดูหมวด "Reusable UI Components") */
-
 .status-group { max-width: 280px; }
 
 .btn-submit-wrap {
@@ -786,10 +322,9 @@ select.input-field {
   .form-grid { grid-template-columns: 1fr; }
 }
 
-
-
-/* ===== เพิ่มเติมสำหรับหน้า "ตั้งค่าปรับเปลี่ยน" ===== */
-
+/* =========================================================
+   6. Info Row (หน้า "ตั้งค่าปรับเปลี่ยน" — status_all)
+   ========================================================= */
 .info-row {
   display: flex;
   gap: 32px;
@@ -801,9 +336,9 @@ select.input-field {
   min-width: 300px;
 }
 
-/* .photo-upload และ .file-upload ถูกรวมเข้ากับ .upload-zone แล้ว (ดูหมวด "Reusable UI Components") */
-
-/* Data Table */
+/* =========================================================
+   7. Data Table (ใช้ใน status_all + submission_status)
+   ========================================================= */
 .data-table {
   width: 100%;
   border-collapse: collapse;
@@ -836,8 +371,6 @@ select.input-field {
   padding-top: 16px;
 }
 
-/* .btn-add, .btn-tonal, .btn-edit-cell ถูกรวมเข้ากับ .btn แล้ว (ดูหมวด "Reusable UI Components") */
-
 /* Responsive */
 @media (max-width: 768px) {
   .info-row { flex-direction: column; align-items: center; }
@@ -846,4 +379,5 @@ select.input-field {
   .data-table thead th,
   .data-table tbody td { padding: 8px 10px; }
 }
+
 } /* ปิด @layer legacy */

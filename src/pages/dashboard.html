@@ -18,106 +18,106 @@
   <main class="main-content">
 
     <!-- Student Info Section -->
-    <section class="student-info-section">
+    <section class="mb-4">
       <div class="card-header">
         <span class="material-icons header-icon">how_to_reg</span>
         <h2 class="card-title">ข้อมูลและสถานะของนิสิต</h2>
       </div>
-      <div class="student-info-body">
-        <div class="profile-left">
-          <div class="avatar">
-            <span class="material-icons">person</span>
+      <div class="bg-white border border-black py-[22px] px-[15px] flex gap-[120px]">
+        <div class="flex items-start gap-10">
+          <div class="w-[200px] h-[200px] rounded-full bg-[#CDCDCD] border border-black shrink-0 flex items-center justify-center overflow-hidden">
+            <span class="material-icons text-[100px] text-[#999]">person</span>
           </div>
-          <div class="profile-details">
-            <p class="name">676767 นาย เอกภัพ เจริญพัน</p>
-            <p class="info">069 677 6967</p>
-            <p class="info">677@Up.ac.th</p>
-            <p class="info">อาจารย์ที่ปรึกษา: -</p>
+          <div class="pt-[30px] flex flex-col gap-3">
+            <p class="text-2xl text-[#757575] font-medium">676767 นาย เอกภัพ เจริญพัน</p>
+            <p class="text-xl text-[#757575]">069 677 6967</p>
+            <p class="text-xl text-[#757575]">677@Up.ac.th</p>
+            <p class="text-xl text-[#757575]">อาจารย์ที่ปรึกษา: -</p>
           </div>
         </div>
-        <div class="profile-right">
-          <h3>สถานะการเข้าฝึกงานของนิสิต :</h3>
-          <p class="status-tags">
-            <span class="tag-pending">รอยื่นเอกสาร</span>
-            <span class="tag-separator"> / </span>
-            <span class="tag-approval">รอการอนุมัติ</span>
-            <span class="tag-separator"> / </span>
-            <span class="tag-ready">พร้อมฝึกงาน</span>
+        <div class="pt-[22px]">
+          <h3 class="text-2xl font-semibold text-[#1E1E1E] mb-6">สถานะการเข้าฝึกงานของนิสิต :</h3>
+          <p class="text-xl mb-3">
+            <span class="text-[#E7E54D]">รอยื่นเอกสาร</span>
+            <span class="text-[#757575]"> / </span>
+            <span class="text-[#53DDFF]">รอการอนุมัติ</span>
+            <span class="text-[#757575]"> / </span>
+            <span class="text-[#51FF51]">พร้อมฝึกงาน</span>
           </p>
-          <p class="position-info">ตำแหน่งเข้าสมัครงาน : Java</p>
+          <p class="text-xl text-[#757575]">ตำแหน่งเข้าสมัครงาน : Java</p>
         </div>
       </div>
     </section>
 
     <!-- Internship Data Section -->
-    <section class="internship-section">
-      <h2 class="internship-title">ข้อมูลการเข้าฝึกงานนิสิต</h2>
-      <a href="#" class="btn btn-primary btn-lg add-data-btn">
+    <section class="bg-[#F9FFFF] border border-black rounded-[34px] py-7 px-5 relative">
+      <h2 class="text-5xl font-bold text-[#1E1E1E] mb-[25px]" style="-webkit-text-stroke: 1px #BEEAFF;">ข้อมูลการเข้าฝึกงานนิสิต</h2>
+      <a href="#" class="btn btn-primary btn-lg absolute top-7 right-10">
         <span class="material-icons">add_circle</span>
         เพิ่มข้อมูล
       </a>
 
-      <div class="internship-content">
+      <div class="flex gap-0">
         <!-- CV Column -->
-        <div class="cv-column">
-          <p class="cv-label">ไฟล์ CV :</p>
-          <div class="cv-area">
-            <div class="placeholder-box placeholder-box--cv">
-              <p class="cv-placeholder-text">ยังไม่มี CV</p>
+        <div class="w-[537px] shrink-0">
+          <p class="text-[32px] font-semibold text-[#1E1E1E] mb-[15px] pl-[10px]">ไฟล์ CV :</p>
+          <div class="flex gap-[10px]">
+            <div class="placeholder-box w-[282px] h-[365px]">
+              <p class="text-[32px] text-[#1E1E1E] text-center absolute bottom-[50px] w-full">ยังไม่มี CV</p>
             </div>
-            <div class="cv-sidebar">
-              <div class="gpa-box">
-                <p>GPA : -.--</p>
+            <div class="flex flex-col gap-[11px]">
+              <div class="bg-white border border-black rounded-[10px] py-2 px-[10px] min-w-[203px]">
+                <p class="text-xl text-[#1E1E1E]">GPA : -.--</p>
               </div>
-              <div class="status-cv-box">
-                <p class="label">สถานะ CV :</p>
-                <p class="value">-</p>
+              <div class="bg-white border border-black rounded-[10px] py-2 px-[10px] min-w-[203px]">
+                <p class="text-xl text-[#1E1E1E] mb-2">สถานะ CV :</p>
+                <p class="text-xl text-[#1E1E1E]">-</p>
               </div>
             </div>
           </div>
         </div>
 
         <!-- Training Column -->
-        <div class="training-column">
-          <div class="training-left">
-            <p class="training-label">การเข้าอบรม Soft/Hard skill :</p>
-            <table class="training-table">
+        <div class="flex-1 flex gap-[23px]">
+          <div class="flex-1">
+            <p class="text-2xl font-semibold text-[#1E1E1E] mb-[18px] pl-[10px]">การเข้าอบรม Soft/Hard skill :</p>
+            <table class="w-[362px] border-collapse border border-[#A7A7A7] rounded overflow-hidden text-sm">
               <thead>
                 <tr>
-                  <th style="width: 54px;">ลำดับ</th>
-                  <th style="width: 148px;">หัวข้ออบรม</th>
-                  <th style="width: 76px;">Soft skill</th>
-                  <th style="width: 84px;">Hard skill</th>
+                  <th class="bg-black text-white py-2 px-[10px] text-left font-medium border border-[#777]" style="width: 54px;">ลำดับ</th>
+                  <th class="bg-black text-white py-2 px-[10px] text-left font-medium border border-[#777]" style="width: 148px;">หัวข้ออบรม</th>
+                  <th class="bg-black text-white py-2 px-[10px] text-left font-medium border border-[#777]" style="width: 76px;">Soft skill</th>
+                  <th class="bg-black text-white py-2 px-[10px] text-left font-medium border border-[#777]" style="width: 84px;">Hard skill</th>
                 </tr>
               </thead>
               <tbody>
-                <tr class="empty-row">
-                  <td>&nbsp;</td>
-                  <td>&nbsp;</td>
-                  <td>&nbsp;</td>
-                  <td>&nbsp;</td>
+                <tr>
+                  <td class="bg-white py-2 px-[10px] border border-[#777] align-top h-[220px]">&nbsp;</td>
+                  <td class="bg-white py-2 px-[10px] border border-[#777] align-top">&nbsp;</td>
+                  <td class="bg-white py-2 px-[10px] border border-[#777] align-top">&nbsp;</td>
+                  <td class="bg-white py-2 px-[10px] border border-[#777] align-top">&nbsp;</td>
                 </tr>
               </tbody>
               <tfoot>
                 <tr>
-                  <td>รวมทั้งหมด</td>
-                  <td>&nbsp;</td>
-                  <td>0</td>
-                  <td>0</td>
+                  <td class="bg-[#404040] text-white py-3 px-[10px] border border-[#777] font-medium">รวมทั้งหมด</td>
+                  <td class="bg-[#404040] text-white py-3 px-[10px] border border-[#777] font-medium">&nbsp;</td>
+                  <td class="bg-[#404040] text-white py-3 px-[10px] border border-[#777] font-medium">0</td>
+                  <td class="bg-[#404040] text-white py-3 px-[10px] border border-[#777] font-medium">0</td>
                 </tr>
               </tfoot>
             </table>
           </div>
 
           <!-- Checklist Column -->
-          <div class="checklist-column">
-            <div class="checklist-box">
-              <p>Checklist : -</p>
-              <p>สถานะ Checklist : -</p>
+          <div class="w-[288px]">
+            <div class="border border-[#160AFF] rounded-[10px] px-5 pt-[5px] pb-[15px] mb-6">
+              <p class="text-2xl text-[#1E1E1E] text-center mb-6">Checklist : -</p>
+              <p class="text-2xl text-[#1E1E1E] text-center">สถานะ Checklist : -</p>
             </div>
-            <p class="company-label">ข้อมูลบริษัท</p>
-            <div class="placeholder-box placeholder-box--company">
-              <p>ยังไม่มี ข้อมูลบริษัท</p>
+            <p class="text-2xl text-[#1E1E1E] font-medium mb-6">ข้อมูลบริษัท</p>
+            <div class="placeholder-box w-[285px] min-h-[185px] p-[10px] bg-[#F1F1F1]">
+              <p class="text-[32px] text-[#1E1E1E] text-center">ยังไม่มี ข้อมูลบริษัท</p>
             </div>
           </div>
         </div>
