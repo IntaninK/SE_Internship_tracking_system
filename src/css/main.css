@@ -433,16 +433,10 @@ body {
 }
 
     /* ===== Profile Card ===== */
-.profile-card {
-    background: #ffffff;
-    border-radius: 20px;
-    overflow: hidden;
-    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
-}
- 
 /* Card Header */
 .card-header {
   background: linear-gradient(to right, #200b7f, #1e4cf3);
+  border: 1px solid #000;
   padding: 16px 32px;
   display: flex;
   align-items: center;
@@ -675,4 +669,253 @@ body {
     .card-title {
         font-size: 15px;
     }
+}
+
+
+
+
+
+/* ===== เพิ่มเติม: class ที่ HTML ใช้แต่ยังไม่มีใน main.css ===== */
+
+.card {
+  
+  background: #fff;
+  border: 1px solid #000;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 2px 12px rgba(0,0,0,.06);
+  margin-top: 50px;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px 28px;
+}
+
+.form-grid .full-width { grid-column: 1 / -1; }
+
+.form-group { display: flex; flex-direction: column; gap: 6px; }
+
+.form-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: #323639;
+}
+
+.form-input {
+  height: 44px;
+  padding: 0 14px;
+  background: #F7F7F7;
+  border: 1px solid #CCC;
+  border-radius: 10px;
+  font-size: 14px;
+  color: #1541D2;
+  font-family: inherit;
+  outline: none;
+  transition: border-color .2s;
+}
+
+.form-input:focus { border-color: #1541D2; }
+
+select.form-input {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23666' stroke-width='1.5' fill='none'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  padding-right: 36px;
+}
+
+.status-group { max-width: 280px; }
+
+.status-select {
+  height: 40px;
+  padding: 0 14px;
+  background: #fff;
+  border: 1px solid #CCC;
+  border-radius: 8px;
+  font-size: 13px;
+  font-family: inherit;
+  color: #1E1E1E;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23666' stroke-width='1.5' fill='none'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 32px;
+  cursor: pointer;
+}
+
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 32px;
+  background: linear-gradient(180deg, #1541D2, #0B2268);
+  color: #fff;
+  border: none;
+  border-radius: 40px;
+  font-size: 16px;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+  transition: opacity .2s, transform .15s;
+  box-shadow: 0 4px 16px rgba(21,65,210,.3);
+}
+
+.btn-primary:hover { opacity: .9; transform: translateY(-1px); }
+
+.btn-submit-wrap {
+  display: flex;
+  justify-content: center;
+  padding-top: 16px;
+}
+
+@media (max-width: 768px) {
+  .form-grid { grid-template-columns: 1fr; }
+}
+
+
+
+/* ===== เพิ่มเติมสำหรับหน้า "ตั้งค่าปรับเปลี่ยน" ===== */
+
+.info-row {
+  display: flex;
+  gap: 32px;
+  flex-wrap: wrap;
+}
+
+.info-fields {
+  flex: 1;
+  min-width: 300px;
+}
+
+/* Photo Upload */
+.photo-upload {
+  width: 220px;
+  height: 280px;
+  border: 2px dashed #CCC;
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: #FAFAFA;
+  cursor: pointer;
+  flex-shrink: 0;
+  text-align: center;
+  transition: border-color .2s;
+}
+
+.photo-upload:hover { border-color: #1541D2; }
+.photo-upload .material-icons { font-size: 40px; color: #999; }
+.photo-upload p { font-size: 12px; color: #888; line-height: 1.4; padding: 0 12px; }
+
+/* File Upload */
+.file-upload {
+  border: 2px dashed #CCC;
+  border-radius: 12px;
+  padding: 40px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  background: #FAFAFA;
+  cursor: pointer;
+  transition: border-color .2s;
+}
+
+.file-upload:hover { border-color: #1541D2; }
+.file-upload .material-icons { font-size: 40px; color: #999; }
+.file-upload p { font-size: 13px; color: #888; text-align: center; line-height: 1.5; }
+
+/* Data Table */
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.data-table thead th {
+  background: #1E1E1E;
+  color: #fff;
+  padding: 10px 14px;
+  text-align: left;
+  font-weight: 500;
+}
+
+.data-table tbody td {
+  padding: 10px 14px;
+  border-bottom: 1px solid #E5E5E5;
+  vertical-align: middle;
+}
+
+.data-table tbody tr:hover { background: #F8FBFF; }
+
+.data-table .status-pass { color: #22C55E; font-weight: 500; }
+.data-table .status-fail { color: #EF4444; font-weight: 500; }
+.data-table .status-wait { color: #888; }
+
+.table-footer {
+  display: flex;
+  justify-content: center;
+  padding-top: 16px;
+}
+
+/* Buttons */
+.btn-add {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  background: linear-gradient(135deg, #1541D2, #0B216C);
+  color: #fff;
+  border: none;
+  border-radius: 14px;
+  font-size: 15px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: opacity .2s;
+}
+
+.btn-add:hover { opacity: .85; }
+.btn-add .material-icons { font-size: 22px; }
+
+.btn-tonal {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 20px;
+  background: #E8F0FE;
+  color: #1541D2;
+  border: none;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background .2s;
+}
+
+.btn-tonal:hover { background: #D2E3FC; }
+
+.btn-edit-cell {
+  padding: 4px 12px;
+  font-size: 12px;
+  color: #1541D2;
+  background: #E8F0FE;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .info-row { flex-direction: column; align-items: center; }
+  .photo-upload { width: 180px; height: 230px; }
+  .data-table { font-size: 13px; }
+  .data-table thead th,
+  .data-table tbody td { padding: 8px 10px; }
 }

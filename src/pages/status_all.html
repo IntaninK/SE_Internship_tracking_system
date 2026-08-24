@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ตั้งค่าปรับเปลี่ยน</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Prompt:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <link rel="stylesheet" href="../css/main.css">
+</head>
+<body>
+
+  <!-- Header -->
+    <div id="header-placeholder"></div>
+
+  <!-- Main Content -->
+  <main class="main-content">
+
+    <!-- 1. ข้อมูลส่วนตัวนิสิต -->
+    <section class="card">
+      <div class="card-header">
+        <span class="material-icons header-icon">how_to_reg</span>
+        <h2 class="card-title">ข้อมูลส่วนตัวนิสิต (Student Personal Data)</h2>
+      </div>
+      <div class="card-body">
+        <div class="info-row">
+          <!-- Photo Upload -->
+          <div class="photo-upload">
+            <span class="material-icons">cloud_upload</span>
+            <p>Drag and drop files here, or click to browse<br>JPG/PDF up to 10MB each</p>
+          </div>
+          <!-- Fields -->
+          <div class="info-fields">
+            <div class="form-grid">
+              <div class="form-group">
+                <label class="form-label">ชื่อ-สกุล (ไทย)</label>
+                <input type="text" class="form-input" value="นาย ทอง หลังอิ่ม">
+              </div>
+              <div class="form-group">
+                <label class="form-label">รหัสนิสิต</label>
+                <input type="text" class="form-input" value="670xxxxx">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Name &amp; Surname (English)</label>
+                <input type="text" class="form-input" value="Thong Lang-im">
+              </div>
+              <div class="form-group">
+                <label class="form-label">ชั้นปีที่</label>
+                <input type="text" class="form-input" value="3">
+              </div>
+              <div class="form-group">
+                <label class="form-label">เกรดเฉลี่ย</label>
+                <input type="text" class="form-input" value="3.67">
+              </div>
+              <div class="form-group">
+                <label class="form-label">สาขาวิชา</label>
+                <input type="text" class="form-input" value="วิศวกรรมซอฟต์แวร์">
+              </div>
+            </div>
+            <!-- Contact -->
+            <div class="form-grid" style="margin-top: 20px;">
+              <div class="form-group">
+                <label class="form-label">E-mail</label>
+                <input type="email" class="form-input" placeholder="...">
+              </div>
+              <div class="form-group">
+                <label class="form-label">เบอร์โทร</label>
+                <input type="tel" class="form-input" placeholder="...">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Line ID</label>
+                <input type="text" class="form-input" placeholder="...">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Line ID</label>
+                <input type="text" class="form-input" placeholder="...">
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. ชั่วโมงการอบรม -->
+    <section class="card">
+      <div class="card-header">
+        <span class="material-icons header-icon">assignment</span>
+        <h2 class="card-title">ชั่วโมงการอบรม</h2>
+      </div>
+      <div class="card-body">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>ลำดับ</th>
+              <th>ชื่อกิจกรรมอบรม/Certificate</th>
+              <th>ประเภทชั่วโมง</th>
+              <th>จำนวนชั่วโมง</th>
+              <th>อนุมัติใบCert.</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>1</td>
+              <td>อบรมJava dev</td>
+              <td>Hard skill</td>
+              <td>4</td>
+              <td class="status-pass">✓ ผ่าน</td>
+              <td><button class="btn-edit-cell">แก้ไข</button></td>
+            </tr>
+            <tr>
+              <td>2</td>
+              <td>อบรมBoostrap</td>
+              <td>Hard skill</td>
+              <td>8</td>
+              <td class="status-pass">✓ ผ่าน</td>
+              <td><button class="btn-edit-cell">แก้ไข</button></td>
+            </tr>
+            <tr>
+              <td>3</td>
+              <td>One to be Bootcamps</td>
+              <td>Soft skill</td>
+              <td>6</td>
+              <td class="status-pass">✓ ผ่าน</td>
+              <td><button class="btn-edit-cell">แก้ไข</button></td>
+            </tr>
+            <tr>
+              <td>4</td>
+              <td>Vite and Nodejs Training Booth camp</td>
+              <td>Hard skill</td>
+              <td>5</td>
+              <td class="status-pass">✓ ผ่าน</td>
+              <td><button class="btn-edit-cell">แก้ไข</button></td>
+            </tr>
+            <tr>
+              <td>5</td>
+              <td>การทำงานร่วมกันในสังคม</td>
+              <td>Soft skill</td>
+              <td>4</td>
+              <td class="status-pass">✓ ผ่าน</td>
+              <td><button class="btn-edit-cell">แก้ไข</button></td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="table-footer">
+          <button class="btn-add">
+            <span class="material-icons">add_circle</span>
+            เพิ่มข้อมูล
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. กรอกใบ CV -->
+    <section class="card">
+      <div class="card-header">
+        <span class="material-icons header-icon">how_to_reg</span>
+        <h2 class="card-title">กรอกใบ CV</h2>
+      </div>
+      <div class="card-body">
+        <div class="file-upload">
+          <span class="material-icons">cloud_upload</span>
+          <p>Drag and drop files here, or click to browse<br>PDF up to 10MB each</p>
+          <button class="btn-tonal">Browse Files</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. Checklist -->
+    <section class="card">
+      <div class="card-header">
+        <span class="material-icons header-icon">how_to_reg</span>
+        <h2 class="card-title">Checklist</h2>
+      </div>
+      <div class="card-body">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>ลำดับ</th>
+              <th>Checklist / ชื่อบริษัท</th>
+              <th>สถานะ</th>
+              <th>หมายเหตุ</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>1</td>
+              <td>KBTG (Kasikorn Business Technology Group)</td>
+              <td class="status-pass">✓ ผ่าน</td>
+              <td>-</td>
+              <td><button class="btn-edit-cell">แก้ไข</button></td>
+            </tr>
+            <tr>
+              <td>2</td>
+              <td>SCB TechX</td>
+              <td class="status-fail">✗ ไม่ผ่าน</td>
+              <td>ขาดข้อมูล</td>
+              <td><button class="btn-edit-cell">แก้ไข</button></td>
+            </tr>
+            <tr>
+              <td>3</td>
+              <td>Amity</td>
+              <td class="status-pass">✓ ผ่าน</td>
+              <td>-</td>
+              <td><button class="btn-edit-cell">แก้ไข</button></td>
+            </tr>
+            <tr>
+              <td>4</td>
+              <td>Bluebik Group</td>
+              <td class="status-wait">☐ รอผล</td>
+              <td>-</td>
+              <td><button class="btn-edit-cell">แก้ไข</button></td>
+            </tr>
+            <tr>
+              <td>5</td>
+              <td>Redwood Group</td>
+              <td class="status-pass">✓ ผ่าน</td>
+              <td>-</td>
+              <td><button class="btn-edit-cell">แก้ไข</button></td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="table-footer">
+          <button class="btn-add">
+            <span class="material-icons">add_circle</span>
+            เพิ่มข้อมูล
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5. สถานะการยื่น -->
+    <section class="card">
+      <div class="card-header">
+        <span class="material-icons header-icon">how_to_reg</span>
+        <h2 class="card-title">สถานะการยื่น</h2>
+      </div>
+      <div class="card-body">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>ลำดับ</th>
+              <th>Checklist / ชื่อบริษัท</th>
+              <th>สถานะ</th>
+              <th>หมายเหตุ</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>1</td>
+              <td>Amity (แชท SDK ของไทย ไปตลาดโลกแล้ว)</td>
+              <td>
+                <select class="status-select">
+                  <option>ยังไม่ได้ยื่น</option>
+                  <option>ยื่นแล้ว รอสัมภาษณ์</option>
+                  <option>สัมภาษณ์แล้ว รอผล</option>
+                  <option>สัมภาษณ์ผ่านแล้ว</option>
+                  <option>สัมภาษณ์ไม่ผ่าน ยื่นเพิ่มแล้ว</option>
+                </select>
+              </td>
+              <td>-</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- 6. ข้อมูลบริษัท ที่เข้าฝึกงาน -->
+    <section class="card">
+      <div class="card-header">
+        <span class="material-icons header-icon">how_to_reg</span>
+        <h2 class="card-title">ข้อมูลบริษัท ที่เข้าฝึกงาน</h2>
+      </div>
+      <div class="card-body">
+        <div class="form-grid">
+          <div class="form-group">
+            <label class="form-label">ตำแหน่งที่ฝึก</label>
+            <input type="text" class="form-input" value="Software Developer">
+          </div>
+          <div class="form-group">
+            <label class="form-label">ชื่อแหล่งฝึกงาน (ภาษาไทย)</label>
+            <input type="text" class="form-input" placeholder="...">
+          </div>
+          <div class="form-group">
+            <label class="form-label">ชื่อบุคคลที่ให้ทำหนังสือขอความอนุเคราะห์</label>
+            <input type="text" class="form-input" placeholder="...">
+          </div>
+          <div class="form-group">
+            <label class="form-label">ตำแหน่งบุคคลที่ให้ทำหนังสือขอความอนุเคราะห์</label>
+            <input type="text" class="form-input" placeholder="...">
+          </div>
+          <div class="form-group">
+            <label class="form-label">ที่อยู่บริษัท</label>
+            <input type="text" class="form-input" placeholder="...">
+          </div>
+          <div class="form-group">
+            <label class="form-label">เบอร์โทรติดต่อสถานประกอบการ / แหล่งฝึก</label>
+            <input type="text" class="form-input" value="098-xxx-xxxx">
+          </div>
+          <div class="form-group">
+            <label class="form-label">เบอร์โทรติดต่อสถานประกอบการ / แหล่งฝึก</label>
+            <select class="form-input">
+              <option>044-xxx-xxx</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Email สถานประกอบการ / แหล่งฝึก</label>
+            <input type="email" class="form-input" value="...@gmail.com">
+          </div>
+          <div class="form-group">
+            <label class="form-label">จังหวัด</label>
+            <input type="text" class="form-input" placeholder="...">
+          </div>
+        </div>
+
+        <div class="btn-submit-wrap">
+          <button class="btn-primary">ยืนยันและบันทึก</button>
+        </div>
+      </div>
+    </section>
+
+  </main>
+    <script src="../components/header.js"></script>
+
+</body>
+</html>

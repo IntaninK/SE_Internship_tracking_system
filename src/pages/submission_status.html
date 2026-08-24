@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>สถานะการยื่น และ ข้อมูลบริษัทที่เข้าฝึกงาน</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Prompt:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <link rel="stylesheet" href="../css/main.css">
+</head>
+<body>
+
+  <!-- Header -->
+  <div id="header-placeholder"></div>
+
+  <!-- Main Content -->
+  <main class="main-content">
+
+    <!-- Section: สถานะการยื่น -->
+    <section class="card">
+      <div class="card-header">
+
+        <span class="material-icons header-icon">how_to_reg</span>
+        <h2 class="card-title">สถานะการยื่น</h2>
+      </div>
+      <div class="card-body">
+        <div class="form-group status-group">
+          <label class="form-label">สถานะการยื่นฝึกงาน</label>
+          <select class="status-select">
+            <option>สัมภาษณ์ผ่านแล้ว</option>
+            <option>ยังไม่ได้ยื่น</option>
+            <option>ยื่นแล้ว รอสัมภาษณ์</option>
+            <option>สัมภาษณ์แล้ว รอผล</option>
+            <option>สัมภาษณ์ไม่ผ่าน ยื่นเพิ่มแล้ว</option>
+          </select>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section: ข้อมูลบริษัท ที่เข้าฝึกงาน -->
+    <section class="card">
+      <div class="card-header">
+        <span class="material-icons header-icon">how_to_reg</span>
+        <h2 class="card-title">ข้อมูลบริษัท ที่เข้าฝึกงาน</h2>
+      </div>
+      <div class="card-body">
+        <div class="form-grid">
+          <div class="form-group">
+            <label class="form-label">ตำแหน่งที่ฝึก</label>
+            <input type="text" class="form-input" value="Software Developer">
+          </div>
+          <div class="form-group">
+            <label class="form-label">ชื่อแหล่งฝึกงาน (ภาษาไทย)</label>
+            <input type="text" class="form-input" placeholder="...">
+          </div>
+          <div class="form-group">
+            <label class="form-label">ชื่อบุคคลที่ให้ทำหนังสือขอความอนุเคราะห์</label>
+            <input type="text" class="form-input" placeholder="...">
+          </div>
+          <div class="form-group">
+            <label class="form-label">ตำแหน่งบุคคลที่ให้ทำหนังสือขอความอนุเคราะห์</label>
+            <input type="text" class="form-input" placeholder="...">
+          </div>
+          <div class="form-group">
+            <label class="form-label">ที่อยู่บริษัท</label>
+            <input type="text" class="form-input" placeholder="...">
+          </div>
+          <div class="form-group">
+            <label class="form-label">เบอร์โทรติดต่อสถานประกอบการ / แหล่งฝึก</label>
+            <input type="text" class="form-input" value="098-xxx-xxxx">
+          </div>
+          <div class="form-group">
+            <label class="form-label">เบอร์โทรติดต่อสถานประกอบการ / แหล่งฝึก</label>
+            <select class="form-input">
+              <option>044-xxx-xxx</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Email สถานประกอบการ / แหล่งฝึก</label>
+            <input type="email" class="form-input" value="...@gmail.com">
+          </div>
+          <div class="form-group">
+            <label class="form-label">จังหวัด</label>
+            <input type="text" class="form-input" placeholder="...">
+          </div>
+        </div>
+
+        <div class="btn-submit-wrap">
+          <button class="btn-primary">ยืนยันและบันทึกข้อมูล</button>
+        </div>
+      </div>
+    </section>
+
+  </main>  
+  <script src="../components/header.js"></script>
+</body>
+</html>
