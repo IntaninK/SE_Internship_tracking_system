@@ -4,15 +4,19 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build:css": "tailwindcss -i ./src/css/main.css -o ./src/css/main-output.css --minify",
+    "watch:css": "tailwindcss -i ./src/css/main.css -o ./src/css/main-output.css --watch"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "type": "commonjs",
   "devDependencies": {
+    "@tailwindcss/cli": "^4.3.3",
     "@types/node": "^26.2.0",
-    "prisma": "^7.9.1"
+    "prisma": "^7.9.1",
+    "tailwindcss": "^4.3.3"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.9.1",

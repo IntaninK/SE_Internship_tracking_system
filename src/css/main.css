@@ -1,3 +1,19 @@
+@layer legacy, tailwind-theme, tailwind-utilities;
+
+@import "tailwindcss/theme" layer(tailwind-theme);
+@import "tailwindcss/utilities" layer(tailwind-utilities);
+
+/* บอก Tailwind ให้สแกนหา class ในไฟล์ HTML ตรงไหนบ้าง */
+@source "../pages/*.html";
+@source "../components/*.html";
+
+/* =========================================================
+   CSS เดิมของทีม (hand-written)
+   ครอบด้วย @layer legacy ให้มี priority ต่ำกว่า Tailwind utilities
+   เสมอ ถ้า Tailwind class ชนกับ selector ข้างล่างนี้ Tailwind ชนะ
+   ========================================================= */
+@layer legacy {
+
 * {
   margin: 0;
   padding: 0;
@@ -9,6 +25,146 @@ body {
   background: linear-gradient(180deg, #CEEBFF 0%, #FFFFFF 50%, #CEEBFF 100%);
   min-height: 100vh;
   color: #1E1E1E;
+}
+
+/* =========================================================
+   Reusable UI Components
+   -----------------------------------------------------------
+   หมวดนี้รวม class ที่เคยถูกสร้างซ้ำหลายชื่อ (จาก Figma-to-code
+   ที่ export component คล้ายกันเป็นคนละ class ทุกครั้ง) ให้เหลือ
+   base class เดียว + modifier เพื่อลดโค้ดซ้ำและแก้ทีเดียวได้ทั้งเว็บ
+   ========================================================= */
+
+/* ---- Card / Section Header (สีเดียวกับที่ใช้เดิม #200B7F -> #1E4CF2) ----
+   แทนที่: .section-header, .section-header .material-icons, .section-header h2 */
+.card-header {
+  background: linear-gradient(90deg, #200B7F 0%, #1E4CF2 100%);
+  border: 1px solid #000;
+  padding: 16px 32px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 70px;
+}
+
+.header-icon {
+  font-size: 35px;
+  color: #ffffff;
+  flex-shrink: 0;
+}
+
+.card-title {
+  font-size: clamp(16px, 2.2vw, 22px);
+  font-weight: 600;
+  color: #ffffff;
+  letter-spacing: -0.2px;
+}
+
+/* ---- Buttons ----
+   แทนที่: .btn-primary, .btn-edit, .add-data-btn (สี/หน้าตา), .btn-add, .btn-tonal, .btn-edit-cell
+   ใช้ร่วมกัน: <button class="btn btn-primary btn-lg">...</button> */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: none;
+  border-radius: 40px;
+  font-family: inherit;
+  font-weight: 500;
+  cursor: pointer;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: opacity 0.2s ease, transform 0.15s ease;
+}
+
+.btn:hover { opacity: 0.9; transform: translateY(-1px); }
+.btn .material-icons { font-size: 1.3em; }
+
+/* สี */
+.btn-primary {
+  background: linear-gradient(180deg, #1541D2, #0B2268);
+  color: #fff;
+  box-shadow: 0 4px 16px rgba(21, 65, 210, 0.3);
+}
+
+.btn-tonal {
+  background: #E8F0FE;
+  color: #1541D2;
+  box-shadow: none;
+}
+.btn-tonal:hover { background: #D2E3FC; opacity: 1; transform: none; }
+
+/* ขนาด */
+.btn-lg { padding: 16px 32px; font-size: 18px; }
+.btn-md { padding: 10px 20px; font-size: 15px; }
+.btn-sm { padding: 8px 20px; font-size: 13px; }
+.btn-xs { padding: 4px 12px; font-size: 12px; border-radius: 6px; }
+
+/* ---- Input Field ----
+   แทนที่: .form-input, select.form-input, .status-select, .field-input (div แสดงผลอย่างเดียว)
+   ใช้กับทั้ง <input>, <select>, และ <div> ที่โชว์ค่าแบบ read-only ได้ */
+.input-field {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 0 14px;
+  background: #F7F7F7;
+  border: 1px solid #CCC;
+  border-radius: 10px;
+  font-size: 14px;
+  font-family: inherit;
+  color: #1541D2;
+  outline: none;
+  overflow: hidden;
+  transition: border-color 0.2s;
+}
+
+.input-field:focus { border-color: #1541D2; }
+
+select.input-field {
+  appearance: none;
+  cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23666' stroke-width='1.5' fill='none'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  padding-right: 36px;
+}
+
+/* ---- Upload Zone (dashed drop-zone) ----
+   แทนที่: .photo-upload, .file-upload
+   ใช้ร่วมกับ modifier ขนาด: .upload-zone--photo หรือ .upload-zone--file */
+.upload-zone {
+  border: 2px dashed #CCC;
+  border-radius: 12px;
+  background: #FAFAFA;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+.upload-zone:hover { border-color: #1541D2; }
+.upload-zone .material-icons { font-size: 40px; color: #999; }
+.upload-zone p { font-size: 13px; color: #888; line-height: 1.4; }
+
+.upload-zone--photo { width: 220px; height: 280px; flex-shrink: 0; padding: 0 12px; }
+.upload-zone--file { padding: 40px 20px; }
+
+/* ---- Placeholder Box (กล่องขอบทึบ "ยังไม่มีข้อมูล") ----
+   แทนที่: .cv-placeholder, .company-placeholder */
+.placeholder-box {
+  background: #F4F4F4;
+  border: 1px solid #000;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
 }
 
 /* ===== Header Bar ===== */
@@ -113,24 +269,7 @@ body {
   margin-bottom: 15px;
 }
 
-.section-header {
-  background: linear-gradient(90deg, #200B7F 0%, #1E4CF2 100%);
-  padding: 14px 25px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.section-header .material-icons {
-  font-size: 35px;
-  color: #fff;
-}
-
-.section-header h2 {
-  font-size: 32px;
-  font-weight: 600;
-  color: #fff;
-}
+/* .section-header ถูกรวมเข้ากับ .card-header แล้ว (ดูหมวด "Reusable UI Components" ด้านล่าง) */
 
 .student-info-body {
   background: #fff;
@@ -236,26 +375,12 @@ body {
   -webkit-text-stroke: 1px #BEEAFF;
 }
 
+/* .add-data-btn ตอนนี้เหลือแค่ "ตำแหน่ง" เท่านั้น
+   ส่วนหน้าตา (สี/ขนาด/ตัวอักษร) ใช้ .btn .btn-primary .btn-lg ร่วมกับปุ่มอื่นทั้งเว็บ */
 .add-data-btn {
   position: absolute;
   top: 28px;
   right: 40px;
-  display: flex;
-  align-items: center;
-  gap: 13px;
-  background: linear-gradient(135deg, #1541D2 5%, #0B216C 87%);
-  border: 1px solid #000;
-  border-radius: 19px;
-  padding: 18px 21px;
-  color: #fff;
-  font-size: 24px;
-  font-family: 'Roboto', sans-serif;
-  cursor: pointer;
-  text-decoration: none;
-}
-
-.add-data-btn .material-icons {
-  font-size: 30px;
 }
 
 .internship-content {
@@ -282,17 +407,8 @@ body {
   gap: 10px;
 }
 
-.cv-placeholder {
-  width: 282px;
-  height: 365px;
-  background: #F4F4F4;
-  border: 1px solid #000;
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  position: relative;
-}
+/* .cv-placeholder ถูกรวมเข้ากับ .placeholder-box แล้ว (ดูหมวด "Reusable UI Components") */
+.placeholder-box--cv { width: 282px; height: 365px; }
 
 .cv-placeholder-text {
   font-size: 32px;
@@ -414,23 +530,9 @@ body {
   margin-bottom: 24px;
 }
 
-.company-placeholder {
-  background: #F1F1F1;
-  border: 1px solid #000;
-  border-radius: 10px;
-  padding: 10px;
-  width: 285px;
-  min-height: 185px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.company-placeholder p {
-  font-size: 32px;
-  color: #1E1E1E;
-  text-align: center;
-}
+/* .company-placeholder ถูกรวมเข้ากับ .placeholder-box แล้ว (ดูหมวด "Reusable UI Components") */
+.placeholder-box--company { width: 285px; min-height: 185px; padding: 10px; background: #F1F1F1; }
+.placeholder-box--company p { font-size: 32px; color: #1E1E1E; text-align: center; }
 
     /* ===== Profile Card ===== */
 /* Card Header */
@@ -535,17 +637,8 @@ body {
     line-height: 1.35;
 }
  
-.field-input {
-    min-height: 50px;
-    background-color: #f7f7f7;
-    border: 1px solid #878787;
-    border-radius: 12px;
-    display: flex;
-    align-items: center;
-    padding: 8px 15px;
-    overflow: hidden;
-}
- 
+/* .field-input ถูกรวมเข้ากับ .input-field แล้ว (ดูหมวด "Reusable UI Components") */
+
 .field-value {
     font-size: 15px;
     font-weight: 400;
@@ -577,33 +670,8 @@ body {
     margin-top: 24px;
 }
  
-.btn-edit {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 14px 28px;
-    background: linear-gradient(to bottom, #1541d2, #0b2268);
-    color: #ffffff;
-    border: none;
-    border-radius: 40px;
-    font-family: 'Prompt', sans-serif;
-    font-size: 16px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: opacity 0.2s ease, transform 0.15s ease;
-    box-shadow: 0 4px 16px rgba(21, 65, 210, 0.35);
-    white-space: nowrap;
-}
- 
-.btn-edit:hover {
-    opacity: 0.9;
-    transform: translateY(-1px);
-}
- 
-.btn-edit .material-icons {
-    font-size: 24px;
-}
- 
+/* .btn-edit ถูกรวมเข้ากับ .btn .btn-primary .btn-lg แล้ว (ดูหมวด "Reusable UI Components") */
+
 
 /* ===== Responsive ===== */
 /* จอแท็บเล็ต: รูปย้ายไปอยู่บนสุด กึ่งกลาง ฟิลด์เต็มความกว้าง */
@@ -703,67 +771,10 @@ body {
   color: #323639;
 }
 
-.form-input {
-  height: 44px;
-  padding: 0 14px;
-  background: #F7F7F7;
-  border: 1px solid #CCC;
-  border-radius: 10px;
-  font-size: 14px;
-  color: #1541D2;
-  font-family: inherit;
-  outline: none;
-  transition: border-color .2s;
-}
-
-.form-input:focus { border-color: #1541D2; }
-
-select.form-input {
-  appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23666' stroke-width='1.5' fill='none'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 14px center;
-  padding-right: 36px;
-}
+/* .form-input, select.form-input, .status-select ถูกรวมเข้ากับ .input-field แล้ว
+   .btn-primary ถูกรวมเข้ากับ .btn .btn-primary .btn-lg แล้ว (ดูหมวด "Reusable UI Components") */
 
 .status-group { max-width: 280px; }
-
-.status-select {
-  height: 40px;
-  padding: 0 14px;
-  background: #fff;
-  border: 1px solid #CCC;
-  border-radius: 8px;
-  font-size: 13px;
-  font-family: inherit;
-  color: #1E1E1E;
-  appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23666' stroke-width='1.5' fill='none'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 12px center;
-  padding-right: 32px;
-  cursor: pointer;
-}
-
-.btn-primary {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 12px 32px;
-  background: linear-gradient(180deg, #1541D2, #0B2268);
-  color: #fff;
-  border: none;
-  border-radius: 40px;
-  font-size: 16px;
-  font-weight: 500;
-  font-family: inherit;
-  cursor: pointer;
-  transition: opacity .2s, transform .15s;
-  box-shadow: 0 4px 16px rgba(21,65,210,.3);
-}
-
-.btn-primary:hover { opacity: .9; transform: translateY(-1px); }
 
 .btn-submit-wrap {
   display: flex;
@@ -790,46 +801,7 @@ select.form-input {
   min-width: 300px;
 }
 
-/* Photo Upload */
-.photo-upload {
-  width: 220px;
-  height: 280px;
-  border: 2px dashed #CCC;
-  border-radius: 12px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  background: #FAFAFA;
-  cursor: pointer;
-  flex-shrink: 0;
-  text-align: center;
-  transition: border-color .2s;
-}
-
-.photo-upload:hover { border-color: #1541D2; }
-.photo-upload .material-icons { font-size: 40px; color: #999; }
-.photo-upload p { font-size: 12px; color: #888; line-height: 1.4; padding: 0 12px; }
-
-/* File Upload */
-.file-upload {
-  border: 2px dashed #CCC;
-  border-radius: 12px;
-  padding: 40px 20px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  background: #FAFAFA;
-  cursor: pointer;
-  transition: border-color .2s;
-}
-
-.file-upload:hover { border-color: #1541D2; }
-.file-upload .material-icons { font-size: 40px; color: #999; }
-.file-upload p { font-size: 13px; color: #888; text-align: center; line-height: 1.5; }
+/* .photo-upload และ .file-upload ถูกรวมเข้ากับ .upload-zone แล้ว (ดูหมวด "Reusable UI Components") */
 
 /* Data Table */
 .data-table {
@@ -864,58 +836,14 @@ select.form-input {
   padding-top: 16px;
 }
 
-/* Buttons */
-.btn-add {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 20px;
-  background: linear-gradient(135deg, #1541D2, #0B216C);
-  color: #fff;
-  border: none;
-  border-radius: 14px;
-  font-size: 15px;
-  font-family: inherit;
-  cursor: pointer;
-  transition: opacity .2s;
-}
-
-.btn-add:hover { opacity: .85; }
-.btn-add .material-icons { font-size: 22px; }
-
-.btn-tonal {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 20px;
-  background: #E8F0FE;
-  color: #1541D2;
-  border: none;
-  border-radius: 20px;
-  font-size: 13px;
-  font-weight: 500;
-  font-family: inherit;
-  cursor: pointer;
-  transition: background .2s;
-}
-
-.btn-tonal:hover { background: #D2E3FC; }
-
-.btn-edit-cell {
-  padding: 4px 12px;
-  font-size: 12px;
-  color: #1541D2;
-  background: #E8F0FE;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-}
+/* .btn-add, .btn-tonal, .btn-edit-cell ถูกรวมเข้ากับ .btn แล้ว (ดูหมวด "Reusable UI Components") */
 
 /* Responsive */
 @media (max-width: 768px) {
   .info-row { flex-direction: column; align-items: center; }
-  .photo-upload { width: 180px; height: 230px; }
+  .upload-zone--photo { width: 180px; height: 230px; }
   .data-table { font-size: 13px; }
   .data-table thead th,
   .data-table tbody td { padding: 8px 10px; }
 }
+} /* ปิด @layer legacy */

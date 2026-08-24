@@ -6,7 +6,7 @@
   <title>Dashboard - นิสิต</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
-  <link rel="stylesheet" href="../css/main.css">
+  <link rel="stylesheet" href="../css/main-output.css">
 
 </head>
 <body>
@@ -19,9 +19,9 @@
 
     <!-- Student Info Section -->
     <section class="student-info-section">
-      <div class="section-header">
-        <span class="material-icons">how_to_reg</span>
-        <h2>ข้อมูลและสถานะของนิสิต</h2>
+      <div class="card-header">
+        <span class="material-icons header-icon">how_to_reg</span>
+        <h2 class="card-title">ข้อมูลและสถานะของนิสิต</h2>
       </div>
       <div class="student-info-body">
         <div class="profile-left">
@@ -52,7 +52,7 @@
     <!-- Internship Data Section -->
     <section class="internship-section">
       <h2 class="internship-title">ข้อมูลการเข้าฝึกงานนิสิต</h2>
-      <a href="#" class="add-data-btn">
+      <a href="#" class="btn btn-primary btn-lg add-data-btn">
         <span class="material-icons">add_circle</span>
         เพิ่มข้อมูล
       </a>
@@ -62,7 +62,7 @@
         <div class="cv-column">
           <p class="cv-label">ไฟล์ CV :</p>
           <div class="cv-area">
-            <div class="cv-placeholder">
+            <div class="placeholder-box placeholder-box--cv">
               <p class="cv-placeholder-text">ยังไม่มี CV</p>
             </div>
             <div class="cv-sidebar">
@@ -116,7 +116,7 @@
               <p>สถานะ Checklist : -</p>
             </div>
             <p class="company-label">ข้อมูลบริษัท</p>
-            <div class="company-placeholder">
+            <div class="placeholder-box placeholder-box--company">
               <p>ยังไม่มี ข้อมูลบริษัท</p>
             </div>
           </div>
