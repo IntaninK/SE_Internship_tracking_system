@@ -52,6 +52,7 @@ body {
   background: linear-gradient(90deg, #200B7F 0%, #1E4CF2 100%);
   border: 1px solid #000;
   padding: 16px 32px;
+  border-radius: 16px;
   display: flex;
   align-items: center;
   gap: 14px;
