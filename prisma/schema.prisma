@@ -4,12 +4,246 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
+}
+
+// =====================================================================
+// 1. USER & ROLE
+//    User = ตารางกลางไว้ login เพียงอย่างเดียว (username/email/password)
+//    แล้วแยกโปรไฟล์จริงไปตาม role คือ Student หรือ Staff (1:1)
+// =====================================================================
+
+enum Role {
+  STUDENT
+  ADVISOR            // อาจารย์ที่ปรึกษา
+  COURSE_INSTRUCTOR  // อาจารย์รายวิชา
+  ADMIN
 }
 
 model User {
   id        Int      @id @default(autoincrement())
   username  String
   email     String   @unique
+  password  String   // เก็บเป็น hash เท่านั้น (ของเดิมยังไม่มี field นี้ แต่ต้องมีไว้ login)
+  role      Role
   createdAt DateTime @default(now())
+
+  student Student?
+  staff   Staff?
+}
+
+// =====================================================================
+// 2. STUDENT PROFILE
+// =====================================================================
+
+// สถานะรวมของนิสิต ที่โชว์บนหัวการ์ด "ข้อมูลและสถานะของนิสิต"
+enum InternshipStage {
+  PENDING_DOCUMENTS // รอยื่นเอกสาร
+  PENDING_APPROVAL  // รอการอนุมัติ
+  READY             // พร้อมฝึกงาน
+}
+
+model Student {
+  id              Int             @id @default(autoincrement())
+  userId          Int             @unique
+  user            User            @relation(fields: [userId], references: [id])
+
+  studentCode     String          @unique // รหัสนิสิต เช่น 676767 / 670xxxxx
+  nameTh          String          // ชื่อ-สกุล (ไทย)
+  nameEn          String          // Name & Surname (English)
+  year            Int             // ชั้นปีที่
+  major           String?         // สาขาวิชา
+  gpa             Float?          // เกรดเฉลี่ย
+  phone           String?
+  lineId          String?
+  facebook        String?
+  profileImageUrl String?
+
+  advisorId       Int?
+  advisor         Staff?          @relation("AdvisorToStudents", fields: [advisorId], references: [id])
+
+  stage           InternshipStage @default(PENDING_DOCUMENTS)
+
+  cv              StudentCV?
+  trainingRecords TrainingRecord[]
+  companies       Company[]
+  placement       InternshipPlacement?
+
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+}
+
+// อาจารย์ที่ปรึกษา / อาจารย์รายวิชา — ทั้งสอง role ใช้ตารางเดียวกัน แยกด้วย user.role
+model Staff {
+  id       Int    @id @default(autoincrement())
+  userId   Int    @unique
+  user     User   @relation(fields: [userId], references: [id])
+  name     String
+
+  studentsAdvised Student[] @relation("AdvisorToStudents")
+}
+
+// =====================================================================
+// 3. APPROVAL STATUS (ใช้ร่วมกันกับ CV / Training record / Company checklist)
+//    ผ่าน / ไม่ผ่าน / รออนุมัติ  + หมายเหตุ เหตุผล
+// =====================================================================
+
+enum ApprovalStatus {
+  PENDING   // รออนุมัติ
+  APPROVED  // ผ่าน
+  REJECTED  // ไม่ผ่าน
+}
+
+// =====================================================================
+// 4. CV
+// =====================================================================
+
+model StudentCV {
+  id         Int            @id @default(autoincrement())
+  studentId  Int            @unique
+  student    Student        @relation(fields: [studentId], references: [id])
+
+  fileUrl    String
+  fileName   String?
+
+  status     ApprovalStatus @default(PENDING)
+  note       String?        // หมายเหตุ กรณีไม่ผ่าน
+
+  reviewedById Int?
+  reviewedAt   DateTime?
+
+  uploadedAt DateTime       @default(now())
+}
+
+// =====================================================================
+// 5. SOFT / HARD SKILL TRAINING RECORD (ใบ certificate การอบรม)
+// =====================================================================
+
+enum SkillType {
+  SOFT
+  HARD
+}
+
+model TrainingRecord {
+  id                Int            @id @default(autoincrement())
+  studentId         Int
+  student           Student        @relation(fields: [studentId], references: [id])
+
+  title             String         // ชื่อกิจกรรมอบรม/Certificate เช่น "อบรม Java dev"
+  skillType         SkillType
+  hours             Int            // จำนวนชั่วโมง
+  certificateFileUrl String?
+
+  status            ApprovalStatus @default(PENDING) // อนุมัติใน Cert. (ผ่าน/ไม่ผ่าน)
+  note              String?
+
+  reviewedById      Int?
+  reviewedAt        DateTime?
+
+  createdAt         DateTime       @default(now())
+}
+
+// =====================================================================
+// 6. COMPANY CHECKLIST (นิสิตกรอก checklist 5 ส่วน ต่อ 1 บริษัทที่สนใจยื่น)
+// =====================================================================
+
+// 5 ส่วนคงที่: ความน่าเชื่อถือของบริษัท / สถานที่ตั้งฯ / Tech Stack /
+// Mentorship / Scope of Work — เก็บเป็น "template" กลาง ใช้ร่วมกันทุกบริษัท
+model ChecklistSection {
+  id    Int             @id @default(autoincrement())
+  title String          // เช่น "ส่วนที่ 1 ความน่าเชื่อถือของบริษัท"
+  order Int
+
+  items ChecklistItem[]
+}
+
+model ChecklistItem {
+  id          Int              @id @default(autoincrement())
+  sectionId   Int
+  section     ChecklistSection @relation(fields: [sectionId], references: [id])
+  order       Int
+  description String           // เช่น "1. Google Maps: ปักหมุดแล้วจอสถานที่จริงไหม?"
+
+  answers     CompanyChecklistAnswer[]
+}
+
+// บริษัทที่นิสิตสนใจยื่น (1 นิสิต เพิ่มได้หลายบริษัท) พร้อมสถานะที่อาจารย์ตัดสิน
+model Company {
+  id              Int            @id @default(autoincrement())
+  studentId       Int
+  student         Student        @relation(fields: [studentId], references: [id])
+
+  name            String         // เช่น "บริษัท Magus software"
+
+  checklistStatus ApprovalStatus @default(PENDING) // ผ่าน/ไม่ผ่าน/รออนุมัติ (อาจารย์ตรวจ)
+  checklistNote   String?        // หมายเหตุ เช่น "ขาดข้อมูล"
+
+  reviewedById    Int?
+  reviewedAt      DateTime?
+
+  answers         CompanyChecklistAnswer[]
+  submission      CompanySubmission?
+
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+}
+
+// คำตอบ checklist แต่ละข้อ ต่อ 1 บริษัท (checkbox + รายละเอียดเพิ่ม)
+model CompanyChecklistAnswer {
+  id              Int           @id @default(autoincrement())
+  companyId       Int
+  company         Company       @relation(fields: [companyId], references: [id])
+  checklistItemId Int
+  checklistItem   ChecklistItem @relation(fields: [checklistItemId], references: [id])
+
+  checked         Boolean       @default(false)
+  detail          String?       // รายละเอียดเพิ่ม
+
+  @@unique([companyId, checklistItemId])
+}
+
+// =====================================================================
+// 7. สถานะการยื่น (ปลดล็อกให้กรอกได้ก็ต่อเมื่อ Company.checklistStatus = APPROVED)
+// =====================================================================
+
+enum SubmissionStatus {
+  NOT_SUBMITTED        // ยังไม่ได้ยื่น
+  SUBMITTED_WAITING    // ยื่นแล้ว รอสัมภาษณ์
+  INTERVIEWED_PENDING  // สัมภาษณ์แล้ว รอผล
+  INTERVIEW_PASSED     // สัมภาษณ์ผ่านแล้ว
+  INTERVIEW_FAILED     // สัมภาษณ์ไม่ผ่าน
+  // TODO: ยืนยัน label ที่เหลือให้ตรงกับ dropdown จริงในภาพ (มีบางสถานะที่ตัดคำไม่ชัด)
+}
+
+model CompanySubmission {
+  id        Int              @id @default(autoincrement())
+  companyId Int              @unique
+  company   Company          @relation(fields: [companyId], references: [id])
+
+  status    SubmissionStatus @default(NOT_SUBMITTED)
+  updatedAt DateTime         @updatedAt
+}
+
+// =====================================================================
+// 8. ข้อมูลบริษัทที่เข้าฝึกงานจริง (กรอกครั้งเดียว หลังสัมภาษณ์ผ่านแล้วเลือกที่ไปฝึกจริง)
+// =====================================================================
+
+model InternshipPlacement {
+  id                    Int      @id @default(autoincrement())
+  studentId             Int      @unique
+  student               Student  @relation(fields: [studentId], references: [id])
+
+  companyId             Int?     // ลิงก์กลับไปยังบริษัทใน checklist ที่เลือก (ถ้ามี)
+
+  position              String?  // ตำแหน่งที่ฝึก
+  companyNameTh         String?  // ชื่อแหล่งฝึกงาน (ภาษาไทย)
+  contactPersonName     String?  // ชื่อบุคคลที่ให้หนังสือความอนุเคราะห์
+  contactPersonPosition String?  // ตำแหน่งบุคคลที่ให้หนังสือความอนุเคราะห์
+  companyAddress        String?  // ที่อยู่บริษัท
+  companyPhone1         String?  // เบอร์โทรติดต่อสถานประกอบการ/แหล่งฝึก
+  companyPhone2         String?  // เบอร์โทรติดต่อสถานประกอบการ/แหล่งฝึก (ช่องที่ 2)
+  companyEmail          String?
+  province               String?
+
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
 }
