@@ -23,7 +23,8 @@ model User {
   id        Int      @id @default(autoincrement())
   username  String
   email     String   @unique
-  password  String   // เก็บเป็น hash เท่านั้น (ของเดิมยังไม่มี field นี้ แต่ต้องมีไว้ login)
+  password  String?  // เก็บเป็น hash เท่านั้น (ของเดิมยังไม่มี field นี้ แต่ต้องมีไว้ login)
+                      // ทำเป็น optional เพราะ user ที่ login ผ่าน Microsoft OAuth ไม่มี password ในระบบเราเอง
   role      Role
   createdAt DateTime @default(now())
 
@@ -151,7 +152,7 @@ model TrainingRecord {
 model ChecklistSection {
   id    Int             @id @default(autoincrement())
   title String          // เช่น "ส่วนที่ 1 ความน่าเชื่อถือของบริษัท"
-  order Int
+  order Int             @unique // ใช้เป็น key ให้ seed script upsert แทนการลบทิ้งทั้งหมด
 
   items ChecklistItem[]
 }
@@ -160,10 +161,12 @@ model ChecklistItem {
   id          Int              @id @default(autoincrement())
   sectionId   Int
   section     ChecklistSection @relation(fields: [sectionId], references: [id])
-  order       Int
+  order       Int              // ลำดับข้อภายในหมวด (1, 2, 3, ...)
   description String           // เช่น "1. Google Maps: ปักหมุดแล้วจอสถานที่จริงไหม?"
 
   answers     CompanyChecklistAnswer[]
+
+  @@unique([sectionId, order]) // ใช้เป็น key ให้ seed script upsert แทนการลบทิ้งทั้งหมด
 }
 
 // บริษัทที่นิสิตสนใจยื่น (1 นิสิต เพิ่มได้หลายบริษัท) พร้อมสถานะที่อาจารย์ตัดสิน
@@ -205,13 +208,13 @@ model CompanyChecklistAnswer {
 // 7. สถานะการยื่น (ปลดล็อกให้กรอกได้ก็ต่อเมื่อ Company.checklistStatus = APPROVED)
 // =====================================================================
 
+// ยืนยัน label แล้วจาก dropdown จริงใน status_all.html
 enum SubmissionStatus {
-  NOT_SUBMITTED        // ยังไม่ได้ยื่น
-  SUBMITTED_WAITING    // ยื่นแล้ว รอสัมภาษณ์
-  INTERVIEWED_PENDING  // สัมภาษณ์แล้ว รอผล
-  INTERVIEW_PASSED     // สัมภาษณ์ผ่านแล้ว
-  INTERVIEW_FAILED     // สัมภาษณ์ไม่ผ่าน
-  // TODO: ยืนยัน label ที่เหลือให้ตรงกับ dropdown จริงในภาพ (มีบางสถานะที่ตัดคำไม่ชัด)
+  NOT_SUBMITTED             // ยังไม่ได้ยื่น
+  SUBMITTED_WAITING         // ยื่นแล้ว รอสัมภาษณ์
+  INTERVIEWED_PENDING       // สัมภาษณ์แล้ว รอผล
+  INTERVIEW_PASSED          // สัมภาษณ์ผ่านแล้ว
+  INTERVIEW_FAILED_REAPPLIED // สัมภาษณ์ไม่ผ่าน ยื่นเพิ่มแล้ว
 }
 
 model CompanySubmission {

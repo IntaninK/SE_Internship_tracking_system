@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>เข้าสู่ระบบ</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../css/main.css" />
+  <link rel="stylesheet" href="../css/main-output.css" />
+</head>
+
+<body>
+
+  <!-- ===== จัดกึ่งกลางจอ ===== -->
+  <main class="flex items-center justify-center min-h-screen px-4">
+
+    <!-- ===== Login Card ===== -->
+    <div class="bg-white rounded-[36px] w-full max-w-[623px] pt-[10px] pb-[20px] flex flex-col items-center gap-[35px]"
+         style="box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);">
+
+      <!-- โลโก้มหาวิทยาลัย -->
+      <img
+        src="../img/logo_login.png"
+        alt="โลโก้มหาวิทยาลัยพะเยา / SE"
+        class="w-[429px] max-w-[90%] h-auto object-contain"
+      />
+
+      <!-- ชื่อระบบ -->
+      <p class="text-[24px] text-[#2C51D4] text-center px-6 leading-normal font-medium">
+        ระบบติดตามการเตรียมฝึกงานของนิสิตSE
+      </p>
+
+      <!-- ปุ่มเข้าสู่ระบบ -->
+      <a
+        href="/auth/login"
+        class="flex items-center justify-center gap-[10px] bg-[#138DFF] rounded-[10px] text-white text-[24px] font-bold mx-[35px] w-[calc(100%-70px)] max-w-[553px] h-[66px] hover:opacity-90 transition-opacity"
+      >
+        <!-- Microsoft Icon -->
+        <svg xmlns="http://www.w3.org/2000/svg" width="35" height="36" viewBox="0 0 23 23" class="flex-shrink-0">
+          <rect x="0"  y="0"  width="11" height="11" fill="#F25022"/>
+          <rect x="12" y="0"  width="11" height="11" fill="#7FBA00"/>
+          <rect x="0"  y="12" width="11" height="11" fill="#00A4EF"/>
+          <rect x="12" y="12" width="11" height="11" fill="#FFB900"/>
+        </svg>
+        เข้าสู่ระบบด้วย UP Account
+      </a>
+
+      <!-- คำอธิบายท้ายการ์ด -->
+      <div class="flex flex-col items-center gap-[15px] px-6">
+        <p class="text-[16px] text-[#00BF1A] text-center leading-relaxed">
+          พัฒนาขึ้นเพื่อช่วยให้นิสิต/นักศึกษา สามารถเตรียมความพร้อมก่อนฝึกงาน ได้จากที่นี่
+        </p>
+        <p class="text-[16px] text-[#BF4900] text-center leading-relaxed">
+          เว็บไซต์นี้ปฏิบัติตามกฎหมาย PDPA และไม่มีการบันทึกรหัสผ่านในการเข้าใช้งาน
+        </p>
+      </div>
+
+    </div>
+  </main>
+
+</body>
+</html>
