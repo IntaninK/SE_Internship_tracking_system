@@ -4,13 +4,17 @@ const session = require("express-session");
 const path = require("path");
 
 const authRoutes = require("./src/auth/authRoutes");
+const studentRoutes = require("./src/api/studentRoutes");
 const requireLogin = require("./src/auth/requireLogin");
 
 const app = express();
 
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
 app.use(
   session({
-    secret: process.env.SESSION_SECRET,
+    secret: process.env.SESSION_SECRET || "se_internship_secret_key",
     resave: false,
     saveUninitialized: false,
     cookie: {
@@ -20,24 +24,42 @@ app.use(
   })
 );
 
-// route login/redirect/logout ทั้งหมดอยู่ใต้ /auth/...
+// route login/redirect/logout/me ทั้งหมดอยู่ใต้ /auth/...
 app.use("/auth", authRoutes);
 
-// ตัวอย่างการล็อกหน้า dashboard ไว้หลัง login (จะเพิ่มหน้าอื่นทีหลังก็ได้)
-app.get("/src/pages/dashboard.html", requireLogin, (req, res) => {
-  res.sendFile(path.join(__dirname, "src", "pages", "dashboard.html"));
-});
+// route APIs สำหรับนิสิต ทั้งหมดอยู่ใต้ /api/student/...
+app.use("/api/student", studentRoutes);
 
-// เสิร์ฟไฟล์ static (pages, components, css) จากโฟลเดอร์ src เหมือนเดิม
-// ให้ path ../components/header.html ที่ใช้อยู่ในหน้าเว็บทำงานได้เหมือนเดิม
-app.use(express.static(path.join(__dirname, "src")));
+// เสิร์ฟ static assets ทั่วไป (css, img, components, uploads) ไม่ต้องล็อกอินก็โหลดได้
+app.use("/css", express.static(path.join(__dirname, "src", "css")));
+app.use("/img", express.static(path.join(__dirname, "src", "img")));
+app.use("/components", express.static(path.join(__dirname, "src", "components")));
+app.use("/uploads", express.static(path.join(__dirname, "public", "uploads")));
 
+// หน้าแรก (root): ถ้าล็อกอินแล้วไป dashboard ถ้ายังไม่ล็อกอินให้ไป login.html
 app.get("/", (req, res) => {
-  res.redirect("/pages/dashboard.html");
+  if (req.session && req.session.user) {
+    return res.redirect("/pages/dashboard.html");
+  }
+  res.redirect("/pages/login.html");
 });
+
+// หน้า Login: ถ้าล็อกอินอยู่แล้วให้ข้ามไปหน้า dashboard ทันที
+app.get("/pages/login.html", (req, res) => {
+  if (req.session && req.session.user) {
+    return res.redirect("/pages/dashboard.html");
+  }
+  res.sendFile(path.join(__dirname, "src", "pages", "login.html"));
+});
+
+// ป้องกันหน้าอื่นๆ ทั้งหมดใน /pages/ ด้วย requireLogin (ถ้ายังไม่ล็อกอินจะเด้งไป login.html)
+app.use("/pages", requireLogin, express.static(path.join(__dirname, "src", "pages")));
+
+// Static fallback สำหรับไฟล์อื่นๆ ใน src
+app.use(express.static(path.join(__dirname, "src")));
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Server running: http://localhost:${PORT}`);
-  console.log(`ทดสอบ login: http://localhost:${PORT}/auth/login`);
+  console.log(`หน้า Login: http://localhost:${PORT}/pages/login.html`);
 });

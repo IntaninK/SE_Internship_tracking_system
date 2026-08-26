@@ -2,7 +2,7 @@
 // วิธีใช้: app.get('/pages/dashboard.html', requireLogin, (req, res) => { ... })
 function requireLogin(req, res, next) {
   if (!req.session || !req.session.user) {
-    return res.redirect("/auth/login");
+    return res.redirect("/pages/login.html");
   }
   next();
 }

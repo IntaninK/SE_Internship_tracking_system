@@ -28,7 +28,8 @@
                 <!-- Top Section: Photo + Info Fields -->
                 <div class="flex flex-wrap gap-[32px_50px] mb-10 max-[900px]:flex-col max-[900px]:items-center">
                     <div class="w-[260px] min-w-[180px] max-w-[260px] h-[336px] rounded-[15px] border border-black overflow-hidden flex items-center justify-center bg-[#f0f0f0] shrink mx-auto max-[560px]:w-full max-[560px]:max-w-[240px] max-[560px]:h-[300px] max-[360px]:max-w-[200px] max-[360px]:h-[250px]" style="flex-basis: 260px;">
-                        <img src="https://via.placeholder.com/236x236?text=Profile" alt="Profile Photo" class="w-full h-full object-cover">
+                        <img id="p-photo" src="" alt="Profile Photo" class="w-full h-full object-cover" style="display: none;">
+                        <span id="p-icon" class="material-icons text-[100px] text-gray-400">person</span>
                     </div>
 
                     <div class="flex-1 min-w-[280px] flex flex-col gap-5 max-[900px]:w-full max-[900px]:min-w-0" style="flex: 1 1 320px;">
@@ -37,13 +38,13 @@
                             <div class="flex flex-col gap-[10px] min-w-[140px] max-[560px]:min-w-0 max-[560px]:w-full" style="flex: 1.33 1 200px;">
                                 <label class="text-[15px] font-medium text-[#323639] leading-[1.35]">ชื่อ-สกุล (ไทย)</label>
                                 <div class="input-field">
-                                    <span class="field-value">นาย ทอง หลังอิ่ม</span>
+                                    <span class="field-value" id="p-nameTh">-</span>
                                 </div>
                             </div>
                             <div class="flex flex-col gap-[10px] min-w-[140px] max-[560px]:min-w-0 max-[560px]:w-full" style="flex: 1 1 140px;">
                                 <label class="text-[15px] font-medium text-[#323639] leading-[1.35]">รหัสนิสิต</label>
                                 <div class="input-field">
-                                    <span class="field-value">670xxxxx</span>
+                                    <span class="field-value" id="p-studentCode">-</span>
                                 </div>
                             </div>
                         </div>
@@ -53,13 +54,13 @@
                             <div class="flex flex-col gap-[10px] min-w-[140px] max-[560px]:min-w-0 max-[560px]:w-full" style="flex: 1.33 1 200px;">
                                 <label class="text-[15px] font-medium text-[#323639] leading-[1.35]">Name & Surname (English)</label>
                                 <div class="input-field">
-                                    <span class="field-value">Thong Lang-im</span>
+                                    <span class="field-value" id="p-nameEn">-</span>
                                 </div>
                             </div>
                             <div class="flex flex-col gap-[10px] min-w-[140px] max-[560px]:min-w-0 max-[560px]:w-full" style="flex: 1 1 140px;">
                                 <label class="text-[15px] font-medium text-[#323639] leading-[1.35]">ชั้นปีที่</label>
                                 <div class="input-field">
-                                    <span class="field-value">3</span>
+                                    <span class="field-value" id="p-year">-</span>
                                 </div>
                             </div>
                         </div>
@@ -69,13 +70,13 @@
                             <div class="flex flex-col gap-[10px] min-w-[140px] max-[560px]:min-w-0 max-[560px]:w-full" style="flex: 1.33 1 200px;">
                                 <label class="text-[15px] font-medium text-[#323639] leading-[1.35]">เกรดเฉลี่ย</label>
                                 <div class="input-field">
-                                    <span class="field-value">3.67</span>
+                                    <span class="field-value" id="p-gpa">-</span>
                                 </div>
                             </div>
                             <div class="flex flex-col gap-[10px] min-w-[140px] max-[560px]:min-w-0 max-[560px]:w-full" style="flex: 1 1 140px;">
                                 <label class="text-[15px] font-medium text-[#323639] leading-[1.35]">สาขาวิชา</label>
                                 <div class="input-field">
-                                    <span class="field-value">วิศวกรรมซอฟต์แวร์</span>
+                                    <span class="field-value" id="p-major">วิศวกรรมซอฟต์แวร์</span>
                                 </div>
                             </div>
                         </div>
@@ -89,13 +90,13 @@
                         <div class="flex flex-col gap-[10px] min-w-[140px] max-[560px]:min-w-0 max-[560px]:w-full" style="flex: 1 1 160px;">
                             <label class="text-[15px] font-medium text-[#323639] leading-[1.35]">E-mail</label>
                             <div class="input-field">
-                                <span class="field-value">...</span>
+                                <span class="field-value" id="p-email">-</span>
                             </div>
                         </div>
                         <div class="flex flex-col gap-[10px] min-w-[140px] max-[560px]:min-w-0 max-[560px]:w-full" style="flex: 1 1 160px;">
                             <label class="text-[15px] font-medium text-[#323639] leading-[1.35]">เบอร์โทร</label>
                             <div class="input-field">
-                                <span class="field-value">...</span>
+                                <span class="field-value" id="p-phone">-</span>
                             </div>
                         </div>
                     </div>
@@ -105,13 +106,13 @@
                         <div class="flex flex-col gap-[10px] min-w-[140px] max-[560px]:min-w-0 max-[560px]:w-full" style="flex: 1 1 160px;">
                             <label class="text-[15px] font-medium text-[#323639] leading-[1.35]">Line ID</label>
                             <div class="input-field">
-                                <span class="field-value">...</span>
+                                <span class="field-value" id="p-lineId">-</span>
                             </div>
                         </div>
                         <div class="flex flex-col gap-[10px] min-w-[140px] max-[560px]:min-w-0 max-[560px]:w-full" style="flex: 1 1 160px;">
-                            <label class="text-[15px] font-medium text-[#323639] leading-[1.35]">Line ID</label>
+                            <label class="text-[15px] font-medium text-[#323639] leading-[1.35]">Facebook</label>
                             <div class="input-field">
-                                <span class="field-value">...</span>
+                                <span class="field-value" id="p-facebook">-</span>
                             </div>
                         </div>
                     </div>
@@ -121,14 +122,42 @@
 
         <!-- Edit Button -->
         <div class="flex justify-end mt-6 max-[560px]:justify-center">
-            <button class="btn btn-primary btn-lg max-[560px]:w-full max-[560px]:justify-center">
-                <span class="material-icons">add_circle</span>
+            <a href="/pages/status_all.html" class="btn btn-primary btn-lg max-[560px]:w-full max-[560px]:justify-center no-underline inline-flex items-center gap-2">
+                <span class="material-icons">edit</span>
                 <span>ดู/แก้ไขข้อมูล</span>
-            </button>
+            </a>
         </div>
     </main>
 
     <script src="../components/header.js"></script>
+    <script>
+        fetch('/api/student/profile')
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    if (data.user) document.getElementById('p-email').textContent = data.user.email || '-';
+                    if (data.student) {
+                        const s = data.student;
+                        document.getElementById('p-nameTh').textContent = s.nameTh || '-';
+                        document.getElementById('p-nameEn').textContent = s.nameEn || '-';
+                        document.getElementById('p-studentCode').textContent = s.studentCode || '-';
+                        document.getElementById('p-year').textContent = s.year || '-';
+                        document.getElementById('p-gpa').textContent = s.gpa ? Number(s.gpa).toFixed(2) : '-';
+                        document.getElementById('p-major').textContent = s.major || 'วิศวกรรมซอฟต์แวร์';
+                        document.getElementById('p-phone').textContent = s.phone || '-';
+                        document.getElementById('p-lineId').textContent = s.lineId || '-';
+                        document.getElementById('p-facebook').textContent = s.facebook || '-';
 
+                        if (s.profileImageUrl) {
+                            const photo = document.getElementById('p-photo');
+                            photo.src = s.profileImageUrl;
+                            photo.style.display = 'block';
+                            document.getElementById('p-icon').style.display = 'none';
+                        }
+                    }
+                }
+            })
+            .catch(err => console.error('Error fetching profile:', err));
+    </script>
 </body>
 </html>

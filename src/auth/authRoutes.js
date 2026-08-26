@@ -78,12 +78,57 @@ router.get("/redirect", async (req, res) => {
 router.get("/logout", (req, res) => {
   req.session.destroy(() => {
     const postLogoutRedirect =
-      process.env.MS_POST_LOGOUT_REDIRECT_URI || "http://localhost:3000";
+      process.env.MS_POST_LOGOUT_REDIRECT_URI || "http://localhost:3000/pages/login.html";
+    const tenant = process.env.MS_TENANT_ID || "common";
     const logoutUrl =
-      `https://login.microsoftonline.com/${process.env.MS_TENANT_ID}/oauth2/v2.0/logout` +
+      `https://login.microsoftonline.com/${tenant}/oauth2/v2.0/logout` +
       `?post_logout_redirect_uri=${encodeURIComponent(postLogoutRedirect)}`;
     res.redirect(logoutUrl);
   });
+});
+
+// 4) ดึงข้อมูล User ที่กำลัง Login อยู่ (ส่งให้ frontend ใช้งาน)
+router.get("/me", async (req, res) => {
+  if (!req.session || !req.session.user) {
+    return res.status(401).json({ authenticated: false, message: "ยังไม่ได้เข้าสู่ระบบ" });
+  }
+
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: req.session.user.id },
+      include: {
+        student: {
+          include: {
+            advisor: true,
+            cv: true,
+            trainingRecords: true,
+            companies: true,
+            placement: true,
+          },
+        },
+        staff: true,
+      },
+    });
+
+    if (!user) {
+      return res.status(404).json({ authenticated: false, message: "ไม่พบข้อมูลผู้ใช้" });
+    }
+
+    res.json({
+      authenticated: true,
+      user: {
+        id: user.id,
+        email: user.email,
+        username: user.username,
+        role: user.role,
+      },
+      student: user.student,
+      staff: user.staff,
+    });
+  } catch (err) {
+    console.error("Fetch /auth/me error:", err);
+    res.status(500).json({ error: "ดึงข้อมูลผู้ใช้ไม่สำเร็จ" });
+  }
 });
 
 module.exports = router;

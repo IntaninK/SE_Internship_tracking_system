@@ -34,26 +34,45 @@
             <div class="card-body flex flex-col items-center gap-6">
 
                 <!-- Upload Zone -->
-                <div class="upload-zone upload-zone--file w-full max-w-[932px]" id="dropZone">
-                    <span class="material-icons">cloud_upload</span>
-                    <p>
-                        Drag and drop files here, or click to browse<br />
-                        PDF up to 10MB each
-                    </p>
-                    <label
-                        class="inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-full bg-blue-600 text-white font-medium text-sm cursor-pointer hover:bg-blue-700 transition">
+                <div class="upload-zone upload-zone--file w-full max-w-[932px]" id="dropZone" style="position: relative; min-height: 240px; display: flex; flex-direction: column; align-items: center; justify-content: center; border: 2px dashed #999; border-radius: 12px; padding: 20px;">
+                    
+                    <!-- Default upload content -->
+                    <div id="upload-prompt" class="flex flex-col items-center gap-2">
+                        <span class="material-icons text-5xl text-gray-500">cloud_upload</span>
+                        <p class="text-center text-gray-600">
+                            Drag and drop files here, or click to browse<br />
+                            PDF, JPG, PNG up to 10MB each
+                        </p>
+                    </div>
+
+                    <!-- Preview Container (ภาพที่ 4) -->
+                    <div id="cert-preview-box" style="display: none; width: 100%; max-height: 300px; justify-content: center; align-items: center; overflow: hidden; margin-bottom: 15px;">
+                        <img id="cert-preview-img" src="" alt="Certificate Preview" style="max-width: 100%; max-height: 280px; object-fit: contain; border-radius: 8px; border: 1px solid #ccc;" />
+                        <div id="cert-preview-pdf" style="display: none; align-items: center; gap: 8px; font-weight: 500; color: #d32f2f;">
+                            <span class="material-icons text-4xl">picture_as_pdf</span>
+                            <span id="cert-pdf-name">file.pdf</span>
+                        </div>
+                    </div>
+
+                    <label class="inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-full bg-blue-600 text-white font-medium text-sm cursor-pointer hover:bg-blue-700 transition mt-2">
                         Browse Files
-                        <input type="file" accept=".pdf" class="hidden" />
+                        <input type="file" id="cert-file" accept="image/*,.pdf" class="hidden" />
                     </label>
                 </div>
 
                 <!-- Form Row: ประเภท + จำนวน -->
                 <div class="flex flex-wrap items-center justify-center gap-x-10 gap-y-4 w-full mt-2">
 
+                    <!-- หัวข้ออบรม (optional) -->
+                    <div class="flex items-center gap-3">
+                        <label class="text-[#323639] text-xl font-normal whitespace-nowrap">หัวข้ออบรม</label>
+                        <input type="text" id="cert-title" placeholder="เช่น อบรม Java Dev (ไม่ระบุก็ได้)" class="input-field w-[280px] text-base" />
+                    </div>
+
                     <!-- ประเภทของใบอบรม -->
                     <div class="flex items-center gap-3">
                         <label class="text-[#323639] text-xl font-normal whitespace-nowrap">ประเภทของใบอบรม</label>
-                        <select class="input-field w-[260px] text-base">
+                        <select id="cert-skill-type" class="input-field w-[200px] text-base">
                             <option value="soft">Soft skill</option>
                             <option value="hard">Hard skill</option>
                         </select>
@@ -62,13 +81,13 @@
                     <!-- จำนวนชั่วโมง -->
                     <div class="flex items-center gap-3">
                         <label class="text-[#323639] text-xl font-normal whitespace-nowrap">จำนวน</label>
-                        <input type="number" min="0" value="8" class="input-field w-[139px] text-center text-lg" />
+                        <input type="number" id="cert-hours" min="1" value="8" class="input-field w-[100px] text-center text-lg" />
                         <span class="text-[#323639] text-xl font-normal">ชั่วโมง</span>
                     </div>
                 </div>
 
                 <!-- ปุ่มเพิ่มข้อมูล -->
-                <button
+                <button type="button" id="add-cert-btn"
                     class="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-full bg-green-500 text-white font-medium text-[15px] border-none cursor-pointer hover:bg-green-600 transition mt-2">
                     <span class="material-icons">add_circle</span>
                     เพิ่มข้อมูล
@@ -78,15 +97,148 @@
         </div><!-- /card -->
 
         <!-- ===== ปุ่มยืนยันและกลับหน้าหลัก ===== -->
-         <div class="flex justify-center mt-8 mb-10 border-4-black-solid">
-            <a href="#"
-                class="inline-flex items-center justify-center gap-2 px-10 py-4 rounded-full bg-green-500 text-black font-semibold text-xl border-4 border-black cursor-pointer hover:bg-green-600 transition no-underline">
+        <div class="flex justify-center mt-8 mb-10">
+            <button type="button" id="submit-and-return-btn"
+                class="inline-flex items-center justify-center gap-2 px-10 py-4 rounded-full bg-green-500 text-black font-semibold text-xl border-4 border-black cursor-pointer hover:bg-green-600 transition">
                 ยืนยันและกลับหน้าหลัก
-            </a>
+            </button>
         </div>
 
     </main>
     <script src="../components/header.js"></script>
+    <script>
+        const fileInput = document.getElementById('cert-file');
+        const uploadPrompt = document.getElementById('upload-prompt');
+        const previewBox = document.getElementById('cert-preview-box');
+        const previewImg = document.getElementById('cert-preview-img');
+        const previewPdf = document.getElementById('cert-preview-pdf');
+        const pdfName = document.getElementById('cert-pdf-name');
+
+        let selectedFile = null;
+
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                selectedFile = file;
+                uploadPrompt.style.display = 'none';
+                previewBox.style.display = 'flex';
+
+                if (file.type.startsWith('image/')) {
+                    previewImg.src = URL.createObjectURL(file);
+                    previewImg.style.display = 'block';
+                    previewPdf.style.display = 'none';
+                } else if (file.type === 'application/pdf') {
+                    pdfName.textContent = file.name;
+                    previewImg.style.display = 'none';
+                    previewPdf.style.display = 'flex';
+                }
+            }
+        });
+
+        // Drag & Drop
+        const dropZone = document.getElementById('dropZone');
+        ['dragenter', 'dragover'].forEach(name => {
+            dropZone.addEventListener(name, (e) => {
+                e.preventDefault();
+                dropZone.style.borderColor = '#138DFF';
+            });
+        });
+        ['dragleave', 'drop'].forEach(name => {
+            dropZone.addEventListener(name, (e) => {
+                e.preventDefault();
+                dropZone.style.borderColor = '#999';
+            });
+        });
+        dropZone.addEventListener('drop', (e) => {
+            const file = e.dataTransfer.files[0];
+            if (file) {
+                fileInput.files = e.dataTransfer.files;
+                fileInput.dispatchEvent(new Event('change'));
+            }
+        });
+
+        async function saveTrainingRecord() {
+            const hours = document.getElementById('cert-hours').value;
+            const skillType = document.getElementById('cert-skill-type').value;
+            let title = document.getElementById('cert-title').value;
+
+            if (!hours || hours <= 0) {
+                alert('กรุณากรอกจำนวนชั่วโมงให้ถูกต้อง');
+                return false;
+            }
+
+            if (!title || !title.trim()) {
+                title = skillType === 'hard' ? 'อบรม Hard skill' : 'อบรม Soft skill';
+            }
+
+            const formData = new FormData();
+            formData.append('hours', hours);
+            formData.append('skillType', skillType);
+            formData.append('title', title);
+            if (selectedFile) {
+                formData.append('certificate', selectedFile);
+            }
+
+            const res = await fetch('/api/student/trainings', {
+                method: 'POST',
+                body: formData
+            });
+            const data = await res.json();
+            return data;
+        }
+
+        // ปุ่มเพิ่มข้อมูล (บันทึกและเคลียร์ฟอร์มให้เพิ่มใบถัดไป)
+        document.getElementById('add-cert-btn').addEventListener('click', async () => {
+            const btn = document.getElementById('add-cert-btn');
+            btn.disabled = true;
+            btn.textContent = 'กำลังบันทึก...';
+
+            try {
+                const data = await saveTrainingRecord();
+                if (data && data.success) {
+                    alert('✅ เพิ่มข้อมูลการอบรมเรียบร้อยแล้ว (สามารถเพิ่มใบอื่นต่อได้ หรือกดยืนยันด้านล่างเพื่อกลับหน้าหลัก)');
+                    // Reset form
+                    selectedFile = null;
+                    fileInput.value = '';
+                    document.getElementById('cert-title').value = '';
+                    previewBox.style.display = 'none';
+                    uploadPrompt.style.display = 'flex';
+                } else if (data) {
+                    alert('เกิดข้อผิดพลาด: ' + (data.message || 'เพิ่มข้อมูลไม่สำเร็จ'));
+                }
+            } catch (err) {
+                console.error(err);
+                alert('เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<span class="material-icons">add_circle</span> เพิ่มข้อมูล';
+            }
+        });
+
+        // ปุ่มยืนยันและกลับหน้าหลัก (บันทึกข้อมูลที่กรอกอยู่ แล้วกลับ Dashboard ทันที)
+        document.getElementById('submit-and-return-btn').addEventListener('click', async () => {
+            const btn = document.getElementById('submit-and-return-btn');
+            btn.disabled = true;
+            btn.textContent = 'กำลังบันทึกข้อมูล...';
+
+            try {
+                // ถ้ามีไฟล์หรือระบุชั่วโมงไว้ ให้บันทึกก่อน
+                if (selectedFile || document.getElementById('cert-title').value.trim()) {
+                    const data = await saveTrainingRecord();
+                    if (!data || !data.success) {
+                        alert('เกิดข้อผิดพลาด: ' + (data ? data.message : 'บันทึกไม่สำเร็จ'));
+                        btn.disabled = false;
+                        btn.textContent = 'ยืนยันและกลับหน้าหลัก';
+                        return;
+                    }
+                }
+                window.location.href = '/pages/dashboard.html';
+            } catch (err) {
+                console.error(err);
+                window.location.href = '/pages/dashboard.html';
+            }
+        });
+    </script>
 </body>
 
 </html>

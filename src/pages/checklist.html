@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Check List บริษัท - ระบบติดตามการเตรียมฝึกงานของนิสิต SE</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Prompt:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" />
+  <link rel="stylesheet" href="../css/main-output.css" />
+  <style>
+    .company-card {
+      margin-bottom: 24px;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+      border: 1px solid #d1d5db;
+      background: white;
+    }
+    .company-header {
+      background: linear-gradient(90deg, #1e3a8a, #2563eb);
+      color: white;
+      padding: 12px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .company-name-input {
+      background: white;
+      color: #1e3a8a;
+      font-weight: 600;
+      font-size: 1.1rem;
+      border: none;
+      border-radius: 8px;
+      padding: 6px 14px;
+      width: 100%;
+      max-width: 380px;
+      outline: none;
+    }
+    .section-title {
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: #1d4ed8;
+      margin: 24px 0 12px 0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .checklist-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 20px;
+      font-size: 0.95rem;
+    }
+    .checklist-table th, .checklist-table td {
+      border: 1px solid #e5e7eb;
+      padding: 10px 14px;
+    }
+    .checklist-table th {
+      background-color: #f9fafb;
+      font-weight: 600;
+      text-align: center;
+      color: #374151;
+    }
+    .checklist-table td.desc-col {
+      text-align: left;
+      color: #1f2937;
+      width: 60%;
+    }
+    .checklist-table td.check-col {
+      text-align: center;
+      width: 10%;
+    }
+    .checklist-table td.detail-col {
+      width: 30%;
+    }
+    .custom-checkbox {
+      width: 20px;
+      height: 20px;
+      cursor: pointer;
+      accent-color: #2563eb;
+    }
+    .detail-input {
+      width: 100%;
+      padding: 6px 10px;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      outline: none;
+    }
+    .detail-input:focus {
+      border-color: #2563eb;
+    }
+  </style>
+</head>
+<body class="bg-[#f0f7ff]">
+
+  <!-- Header -->
+  <div id="header-placeholder"></div>
+
+  <!-- Main Content -->
+  <main class="main-content max-w-[1200px] mx-auto py-8 px-4">
+    
+    <!-- Top Box Header -->
+    <div class="bg-white rounded-2xl shadow-md border border-gray-200 p-6 mb-6">
+      <div class="flex items-center justify-between flex-wrap gap-4">
+        <div class="flex items-center gap-3">
+          <span class="material-icons text-3xl text-blue-700">playlist_add_check</span>
+          <h1 class="text-3xl font-bold text-gray-800">Check List บริษัทที่สนใจยื่นฝึกงาน</h1>
+        </div>
+        
+        <!-- ปุ่มเขียว: เพิ่มบริษัท (ภาพที่ 9, 10) -->
+        <button type="button" id="add-company-btn" class="inline-flex items-center gap-2 px-6 py-3 bg-[#00C853] hover:bg-[#00B248] text-white font-semibold rounded-full shadow transition text-lg cursor-pointer border-none">
+          <span class="material-icons">add_circle</span>
+          <span>เพิ่มบริษัท</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Container สำหรับใส่กล่องบริษัทแต่ละแห่ง -->
+    <div id="companies-container">
+      <div class="text-center py-10 text-gray-500 font-medium" id="loading-spinner">กำลังโหลดแบบฟอร์ม Checklist...</div>
+    </div>
+
+    <!-- ปุ่มเขียว: ยืนยันและบันทึกข้อมูล (ภาพที่ 9, 11) -->
+    <div class="flex justify-center mt-10 mb-12">
+      <button type="button" id="save-all-btn" class="inline-flex items-center justify-center gap-3 px-12 py-4 rounded-full bg-[#00C853] hover:bg-[#00B248] text-white font-bold text-2xl shadow-lg border-4 border-black cursor-pointer transition">
+        <span class="material-icons text-3xl">check_circle</span>
+        <span>ยืนยันและบันทึกข้อมูล</span>
+      </button>
+    </div>
+
+  </main>
+
+  <script src="../components/header.js"></script>
+  <script>
+    let templateSections = [];
+    let companiesData = [];
+
+    // โหลด Template ข้อพิจารณา 5 ส่วน และรายชื่อบริษัทเดิม
+    async function loadData() {
+      try {
+        const [tplRes, compRes] = await Promise.all([
+          fetch('/api/student/checklist-template'),
+          fetch('/api/student/companies')
+        ]);
+
+        const tplData = await tplRes.json();
+        const compData = await compRes.json();
+
+        if (tplData.success) {
+          templateSections = tplData.sections;
+        }
+
+        const container = document.getElementById('companies-container');
+        container.innerHTML = '';
+
+        if (compData.success && compData.companies && compData.companies.length > 0) {
+          companiesData = compData.companies;
+          companiesData.forEach((comp, idx) => {
+            renderCompanyCard(comp, idx);
+          });
+        } else {
+          // ถ้ายังไม่มีบริษัท ให้เปิดกล่องบริษัทที่ 1 ให้เริ่มต้น
+          addNewCompanyCard('บริษัท...');
+        }
+      } catch (err) {
+        console.error('Error loading checklist data:', err);
+        document.getElementById('companies-container').innerHTML = '<div class="text-center text-red-500 font-medium">เกิดข้อผิดพลาดในการโหลดข้อมูล</div>';
+      }
+    }
+
+    function renderCompanyCard(comp, index) {
+      const container = document.getElementById('companies-container');
+      const card = document.createElement('div');
+      card.className = 'company-card';
+      card.id = `company-card-${index}`;
+      card.dataset.companyId = comp.id || '';
+
+      // หาคำตอบของบริษัทนี้
+      const answersMap = {};
+      if (comp.answers && Array.isArray(comp.answers)) {
+        comp.answers.forEach(a => {
+          answersMap[a.checklistItemId] = a;
+        });
+      }
+
+      let sectionsHtml = '';
+      templateSections.forEach(sec => {
+        let rowsHtml = '';
+        sec.items.forEach(item => {
+          const ans = answersMap[item.id] || { checked: false, detail: '' };
+          rowsHtml += `
+            <tr>
+              <td class="desc-col">${item.description}</td>
+              <td class="check-col">
+                <input type="checkbox" class="custom-checkbox" data-item-id="${item.id}" ${ans.checked ? 'checked' : ''} />
+              </td>
+              <td class="detail-col">
+                <input type="text" class="detail-input" placeholder="รายละเอียดเพิ่ม" data-item-id="${item.id}" value="${ans.detail || ''}" />
+              </td>
+            </tr>
+          `;
+        });
+
+        sectionsHtml += `
+          <div class="px-6 py-2">
+            <h3 class="section-title">
+              <span class="material-icons text-blue-600">bookmark</span>
+              ${sec.title}
+            </h3>
+            <table class="checklist-table">
+              <thead>
+                <tr>
+                  <th>รายละเอียดที่ต้องพิจารณา</th>
+                  <th>Checklist</th>
+                  <th>รายละเอียดเพิ่ม</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${rowsHtml}
+              </tbody>
+            </table>
+          </div>
+        `;
+      });
+
+      card.innerHTML = `
+        <div class="company-header cursor-pointer" onclick="toggleCompany(${index})">
+          <div class="flex items-center gap-3 flex-1" onclick="event.stopPropagation()">
+            <span class="material-icons text-2xl">business</span>
+            <input type="text" class="company-name-input" value="${comp.name || 'บริษัท...'}" placeholder="พิมพ์ชื่อบริษัทที่นี่..." />
+          </div>
+          <div class="flex items-center gap-3">
+            <button type="button" class="bg-red-500 hover:bg-red-600 text-white rounded-full w-8 h-8 flex items-center justify-center border-none cursor-pointer" onclick="removeCompanyCard(${index}); event.stopPropagation();" title="ลบบริษัทนี้">
+              <span class="material-icons text-xl">remove</span>
+            </button>
+            <span id="chevron-${index}" class="material-icons text-3xl transition-transform transform">expand_more</span>
+          </div>
+        </div>
+        <div id="body-${index}" class="company-body" style="display: block;">
+          ${sectionsHtml}
+        </div>
+      `;
+
+      container.appendChild(card);
+    }
+
+    function addNewCompanyCard(name = 'บริษัท...') {
+      const newIndex = document.querySelectorAll('.company-card').length;
+      renderCompanyCard({ name: name, answers: [] }, newIndex);
+    }
+
+    window.toggleCompany = function(index) {
+      const body = document.getElementById(`body-${index}`);
+      const chevron = document.getElementById(`chevron-${index}`);
+      if (body.style.display === 'none') {
+        body.style.display = 'block';
+        chevron.style.transform = 'rotate(0deg)';
+      } else {
+        body.style.display = 'none';
+        chevron.style.transform = 'rotate(180deg)';
+      }
+    };
+
+    window.removeCompanyCard = function(index) {
+      if (confirm('คุณต้องการลบบริษัทนี้หรือไม่?')) {
+        const card = document.getElementById(`company-card-${index}`);
+        if (card) card.remove();
+      }
+    };
+
+    document.getElementById('add-company-btn').addEventListener('click', () => {
+      addNewCompanyCard('บริษัท...');
+    });
+
+    // บันทึกข้อมูลบริษัททั้งหมด (ปุ่มเขียวด้านล่าง)
+    document.getElementById('save-all-btn').addEventListener('click', async () => {
+      const cards = document.querySelectorAll('.company-card');
+      if (cards.length === 0) {
+        alert('กรุณากด "+ เพิ่มบริษัท" เพื่อใส่ข้อมูลอย่างน้อย 1 บริษัท');
+        return;
+      }
+
+      const saveBtn = document.getElementById('save-all-btn');
+      saveBtn.disabled = true;
+      saveBtn.innerHTML = '<span class="material-icons text-3xl">hourglass_top</span> <span>กำลังบันทึกข้อมูล...</span>';
+
+      try {
+        for (const card of cards) {
+          const nameInput = card.querySelector('.company-name-input');
+          const name = nameInput ? nameInput.value.trim() : '';
+          if (!name || name === 'บริษัท...') {
+            alert('กรุณากรอกชื่อบริษัทให้เรียบร้อย');
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = '<span class="material-icons text-3xl">check_circle</span> <span>ยืนยันและบันทึกข้อมูล</span>';
+            return;
+          }
+
+          const answers = [];
+          const checkboxes = card.querySelectorAll('.custom-checkbox');
+          checkboxes.forEach(cb => {
+            const itemId = cb.dataset.itemId;
+            const detailInput = card.querySelector(`.detail-input[data-item-id="${itemId}"]`);
+            answers.push({
+              checklistItemId: itemId,
+              checked: cb.checked,
+              detail: detailInput ? detailInput.value.trim() : ''
+            });
+          });
+
+          const companyId = card.dataset.companyId;
+
+          if (companyId) {
+            // อัปเดตบริษัทเดิม
+            await fetch(`/api/student/companies/${companyId}`, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ name, answers })
+            });
+          } else {
+            // สร้างบริษัทใหม่
+            await fetch('/api/student/companies', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ name, answers })
+            });
+          }
+        }
+
+        alert('✅ บันทึกข้อมูล Checklist บริษัทสำเร็จ');
+        // นำทางกลับไปยังหน้าตั้งค่าปรับเปลี่ยน (ภาพที่ 6, 7, 8)
+        window.location.href = '/pages/status_all.html';
+      } catch (err) {
+        console.error('Error saving companies:', err);
+        alert('เกิดข้อผิดพลาดในการบันทึกข้อมูล');
+      } finally {
+        saveBtn.disabled = false;
+        saveBtn.innerHTML = '<span class="material-icons text-3xl">check_circle</span> <span>ยืนยันและบันทึกข้อมูล</span>';
+      }
+    });
+
+    loadData();
+  </script>
+</body>
+</html>

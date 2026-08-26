@@ -27,36 +27,36 @@
 
             <!-- Card Body — Form -->
             <div class="card-body">
-                <form class="form-grid">
+                <form id="student-form" class="form-grid">
 
                     <!-- ชื่อ-สกุล (ไทย) -->
                     <div class="form-group">
-                        <label class="form-label">ชื่อ-สกุล (ไทย)</label>
-                        <input type="text" class="input-field" value="นาย ทอง หลังอิ่ม" />
+                        <label class="form-label">ชื่อ-สกุล (ไทย) *</label>
+                        <input type="text" id="nameTh" name="nameTh" class="input-field" required placeholder="นาย ทอง หลังอิ่ม" />
                     </div>
 
                     <!-- Name & Surname (English) -->
                     <div class="form-group">
-                        <label class="form-label">Name & Surname (English)</label>
-                        <input type="text" class="input-field" value="Thong Lang-im" />
+                        <label class="form-label">Name & Surname (English) *</label>
+                        <input type="text" id="nameEn" name="nameEn" class="input-field" required placeholder="Thong Lang-im" />
                     </div>
 
                     <!-- รหัสนิสิต -->
                     <div class="form-group">
-                        <label class="form-label">รหัสนิสิต</label>
-                        <input type="text" class="input-field" value="670xxxxx" />
+                        <label class="form-label">รหัสนิสิต *</label>
+                        <input type="text" id="studentCode" name="studentCode" class="input-field" required placeholder="670xxxxx" />
                     </div>
 
                     <!-- E-mail -->
                     <div class="form-group">
                         <label class="form-label">E-mail</label>
-                        <input type="email" class="input-field" placeholder="..." />
+                        <input type="email" id="email" class="input-field" readonly style="background-color: #f3f4f6;" />
                     </div>
 
                     <!-- ชั้นปีที่ (dropdown) -->
                     <div class="form-group">
                         <label class="form-label">ชั้นปีที่</label>
-                        <select class="input-field">
+                        <select id="year" name="year" class="input-field">
                             <option value="1">1</option>
                             <option value="2">2</option>
                             <option value="3" selected>3</option>
@@ -67,40 +67,113 @@
                     <!-- เกรดเฉลี่ย -->
                     <div class="form-group">
                         <label class="form-label">เกรดเฉลี่ย</label>
-                        <input type="text" class="input-field" value="3.67" />
+                        <input type="number" step="0.01" min="0" max="4.00" id="gpa" name="gpa" class="input-field" placeholder="3.67" />
                     </div>
 
                     <!-- เบอร์โทร -->
                     <div class="form-group">
                         <label class="form-label">เบอร์โทร</label>
-                        <input type="tel" class="input-field" placeholder="..." />
+                        <input type="tel" id="phone" name="phone" class="input-field" placeholder="08xxxxxxxx" />
                     </div>
 
                     <!-- Facebook -->
                     <div class="form-group">
                         <label class="form-label">Facebook</label>
-                        <input type="text" class="input-field" placeholder="..." />
+                        <input type="text" id="facebook" name="facebook" class="input-field" placeholder="Facebook Profile URL หรือ ชื่อ" />
                     </div>
 
                     <!-- Line ID (full width — ช่องเดียวในแถว) -->
                     <div class="form-group full-width" style="max-width:calc(50% - 14px)">
                         <label class="form-label">Line ID</label>
-                        <input type="text" class="input-field" placeholder="..." />
+                        <input type="text" id="lineId" name="lineId" class="input-field" placeholder="Line ID" />
                     </div>
 
+                    <!-- Submit Button -->
+                    <div class="btn-submit-wrap mt-8 w-full full-width flex justify-center" style="grid-column: 1 / -1;">
+                        <button type="submit" id="submit-btn" class="btn btn-success btn-lg">
+                            ยืนยันและไปขั้นตอนถัดไป
+                        </button>
+                    </div>
                 </form>
-
-                <!-- Submit Button -->
-                <div class="btn-submit-wrap mt-8">
-                    <button type="submit" class="btn btn-success btn-lg">
-                        ยืนยันและไปขั้นตอนถัดไป
-                    </button>
-                </div>
             </div>
 
         </div>
     </main>
     <script src="../components/header.js"></script>
+    <script>
+        // ดึงข้อมูลเดิม / ข้อมูลจาก Session มา Prefill
+        fetch('/api/student/profile')
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    if (data.user) {
+                        document.getElementById('email').value = data.user.email || '';
+                        
+                        // ถ้านิสิตยังไม่เคยกรอกข้อมูล ลองเดารหัสจากอีเมล
+                        if (!data.student && data.user.email) {
+                            const emailPrefix = data.user.email.split('@')[0];
+                            if (/^\d+$/.test(emailPrefix)) {
+                                document.getElementById('studentCode').value = emailPrefix;
+                            }
+                        }
+                    }
+                    if (data.student) {
+                        const s = data.student;
+                        if (s.nameTh) document.getElementById('nameTh').value = s.nameTh;
+                        if (s.nameEn) document.getElementById('nameEn').value = s.nameEn;
+                        if (s.studentCode) document.getElementById('studentCode').value = s.studentCode;
+                        if (s.year) document.getElementById('year').value = s.year;
+                        if (s.gpa) document.getElementById('gpa').value = s.gpa;
+                        if (s.phone) document.getElementById('phone').value = s.phone;
+                        if (s.facebook) document.getElementById('facebook').value = s.facebook;
+                        if (s.lineId) document.getElementById('lineId').value = s.lineId;
+                    }
+                }
+            })
+            .catch(err => console.error('Load profile error:', err));
+
+        // Submit Form
+        document.getElementById('student-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const submitBtn = document.getElementById('submit-btn');
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'กำลังบันทึก...';
+
+            const payload = {
+                nameTh: document.getElementById('nameTh').value,
+                nameEn: document.getElementById('nameEn').value,
+                studentCode: document.getElementById('studentCode').value,
+                year: document.getElementById('year').value,
+                gpa: document.getElementById('gpa').value,
+                phone: document.getElementById('phone').value,
+                facebook: document.getElementById('facebook').value,
+                lineId: document.getElementById('lineId').value,
+            };
+
+            try {
+                const res = await fetch('/api/student/profile', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+
+                if (data.success) {
+                    // ไปยังขั้นตอนถัดไป (ภาพที่ 3: Certificate.html)
+                    window.location.href = '/pages/Certificate.html';
+                } else {
+                    alert('เกิดข้อผิดพลาด: ' + (data.message || 'บันทึกไม่สำเร็จ'));
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'ยืนยันและไปขั้นตอนถัดไป';
+                }
+            } catch (err) {
+                console.error(err);
+                alert('เกิดข้อผิดพลาดในการเชื่อมต่อกับเซิร์ฟเวอร์');
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'ยืนยันและไปขั้นตอนถัดไป';
+            }
+        });
+    </script>
 </body>
 
 </html>
