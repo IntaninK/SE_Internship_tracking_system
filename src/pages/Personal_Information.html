@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>กรอกข้อมูลส่วนตัว</title>
+    <link rel="stylesheet" href="../css/main.css" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" />
+    <link rel="stylesheet" href="../css/main-output.css">
+</head>
+
+<body>
+
+    <!-- ===== Header Bar ===== -->
+    <div id="header-placeholder"></div>
+    <!-- ===== Main Content ===== -->
+    <main class="main-content">
+        <div class="card">
+
+            <!-- Card Header -->
+            <div class="card-header">
+                <span class="material-icons header-icon">how_to_reg</span>
+                <h2 class="card-title">ข้อมูลส่วนตัวนิสิต</h2>
+            </div>
+
+            <!-- Card Body — Form -->
+            <div class="card-body">
+                <form class="form-grid">
+
+                    <!-- ชื่อ-สกุล (ไทย) -->
+                    <div class="form-group">
+                        <label class="form-label">ชื่อ-สกุล (ไทย)</label>
+                        <input type="text" class="input-field" value="นาย ทอง หลังอิ่ม" />
+                    </div>
+
+                    <!-- Name & Surname (English) -->
+                    <div class="form-group">
+                        <label class="form-label">Name & Surname (English)</label>
+                        <input type="text" class="input-field" value="Thong Lang-im" />
+                    </div>
+
+                    <!-- รหัสนิสิต -->
+                    <div class="form-group">
+                        <label class="form-label">รหัสนิสิต</label>
+                        <input type="text" class="input-field" value="670xxxxx" />
+                    </div>
+
+                    <!-- E-mail -->
+                    <div class="form-group">
+                        <label class="form-label">E-mail</label>
+                        <input type="email" class="input-field" placeholder="..." />
+                    </div>
+
+                    <!-- ชั้นปีที่ (dropdown) -->
+                    <div class="form-group">
+                        <label class="form-label">ชั้นปีที่</label>
+                        <select class="input-field">
+                            <option value="1">1</option>
+                            <option value="2">2</option>
+                            <option value="3" selected>3</option>
+                            <option value="4">4</option>
+                        </select>
+                    </div>
+
+                    <!-- เกรดเฉลี่ย -->
+                    <div class="form-group">
+                        <label class="form-label">เกรดเฉลี่ย</label>
+                        <input type="text" class="input-field" value="3.67" />
+                    </div>
+
+                    <!-- เบอร์โทร -->
+                    <div class="form-group">
+                        <label class="form-label">เบอร์โทร</label>
+                        <input type="tel" class="input-field" placeholder="..." />
+                    </div>
+
+                    <!-- Facebook -->
+                    <div class="form-group">
+                        <label class="form-label">Facebook</label>
+                        <input type="text" class="input-field" placeholder="..." />
+                    </div>
+
+                    <!-- Line ID (full width — ช่องเดียวในแถว) -->
+                    <div class="form-group full-width" style="max-width:calc(50% - 14px)">
+                        <label class="form-label">Line ID</label>
+                        <input type="text" class="input-field" placeholder="..." />
+                    </div>
+
+                </form>
+
+                <!-- Submit Button -->
+                <div class="btn-submit-wrap mt-8">
+                    <button type="submit" class="btn btn-success btn-lg">
+                        ยืนยันและไปขั้นตอนถัดไป
+                    </button>
+                </div>
+            </div>
+
+        </div>
+    </main>
+    <script src="../components/header.js"></script>
+</body>
+
+</html>

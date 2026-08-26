@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>อัปโหลด Certificate Soft/Hard skill</title>
+
+    <!-- Google Fonts & Material Icons -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" />
+    <link rel="stylesheet" href="../css/main-output.css">
+</head>
+
+<body>
+    <!-- ==================== HEADER BAR ==================== -->
+    <div id="header-placeholder"></div>
+
+    <!-- ==================== MAIN CONTENT ==================== -->
+    <main class="main-content">
+
+        <!-- ===== CARD ===== -->
+        <div class="card">
+
+            <!-- Card Header -->
+            <div class="card-header">
+                <span class="material-icons header-icon">assignment</span>
+                <h1 class="card-title">อัปโหลด Certificate Soft/Hard skill</h1>
+            </div>
+
+            <!-- Card Body -->
+            <div class="card-body flex flex-col items-center gap-6">
+
+                <!-- Upload Zone -->
+                <div class="upload-zone upload-zone--file w-full max-w-[932px]" id="dropZone">
+                    <span class="material-icons">cloud_upload</span>
+                    <p>
+                        Drag and drop files here, or click to browse<br />
+                        PDF up to 10MB each
+                    </p>
+                    <label
+                        class="inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-full bg-blue-600 text-white font-medium text-sm cursor-pointer hover:bg-blue-700 transition">
+                        Browse Files
+                        <input type="file" accept=".pdf" class="hidden" />
+                    </label>
+                </div>
+
+                <!-- Form Row: ประเภท + จำนวน -->
+                <div class="flex flex-wrap items-center justify-center gap-x-10 gap-y-4 w-full mt-2">
+
+                    <!-- ประเภทของใบอบรม -->
+                    <div class="flex items-center gap-3">
+                        <label class="text-[#323639] text-xl font-normal whitespace-nowrap">ประเภทของใบอบรม</label>
+                        <select class="input-field w-[260px] text-base">
+                            <option value="soft">Soft skill</option>
+                            <option value="hard">Hard skill</option>
+                        </select>
+                    </div>
+
+                    <!-- จำนวนชั่วโมง -->
+                    <div class="flex items-center gap-3">
+                        <label class="text-[#323639] text-xl font-normal whitespace-nowrap">จำนวน</label>
+                        <input type="number" min="0" value="8" class="input-field w-[139px] text-center text-lg" />
+                        <span class="text-[#323639] text-xl font-normal">ชั่วโมง</span>
+                    </div>
+                </div>
+
+                <!-- ปุ่มเพิ่มข้อมูล -->
+                <button
+                    class="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-full bg-green-500 text-white font-medium text-[15px] border-none cursor-pointer hover:bg-green-600 transition mt-2">
+                    <span class="material-icons">add_circle</span>
+                    เพิ่มข้อมูล
+                </button>
+
+            </div><!-- /card-body -->
+        </div><!-- /card -->
+
+        <!-- ===== ปุ่มยืนยันและกลับหน้าหลัก ===== -->
+         <div class="flex justify-center mt-8 mb-10 border-4-black-solid">
+            <a href="#"
+                class="inline-flex items-center justify-center gap-2 px-10 py-4 rounded-full bg-green-500 text-black font-semibold text-xl border-4 border-black cursor-pointer hover:bg-green-600 transition no-underline">
+                ยืนยันและกลับหน้าหลัก
+            </a>
+        </div>
+
+    </main>
+    <script src="../components/header.js"></script>
+</body>
+
+</html>
