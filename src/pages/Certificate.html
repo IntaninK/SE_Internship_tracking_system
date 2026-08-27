@@ -31,48 +31,48 @@
             </div>
 
             <!-- Card Body -->
-            <div class="card-body flex flex-col items-center gap-6">
+            <div class="card-body flex flex-col items-center gap-4">
 
                 <!-- Upload Zone -->
-                <div class="upload-zone upload-zone--file w-full max-w-[932px]" id="dropZone" style="position: relative; min-height: 240px; display: flex; flex-direction: column; align-items: center; justify-content: center; border: 2px dashed #999; border-radius: 12px; padding: 20px;">
+                <div class="upload-zone upload-zone--file w-full max-w-[820px]" id="dropZone" style="position: relative; min-height: 160px; display: flex; flex-direction: column; align-items: center; justify-content: center; border: 2px dashed #999; border-radius: 12px; padding: 14px;">
                     
                     <!-- Default upload content -->
-                    <div id="upload-prompt" class="flex flex-col items-center gap-2">
-                        <span class="material-icons text-5xl text-gray-500">cloud_upload</span>
-                        <p class="text-center text-gray-600">
+                    <div id="upload-prompt" class="flex flex-col items-center gap-1">
+                        <span class="material-icons text-3xl text-gray-500">cloud_upload</span>
+                        <p class="text-center text-gray-600 text-sm">
                             Drag and drop files here, or click to browse<br />
                             PDF, JPG, PNG up to 10MB each
                         </p>
                     </div>
 
                     <!-- Preview Container (ภาพที่ 4) -->
-                    <div id="cert-preview-box" style="display: none; width: 100%; max-height: 300px; justify-content: center; align-items: center; overflow: hidden; margin-bottom: 15px;">
-                        <img id="cert-preview-img" src="" alt="Certificate Preview" style="max-width: 100%; max-height: 280px; object-fit: contain; border-radius: 8px; border: 1px solid #ccc;" />
+                    <div id="cert-preview-box" style="display: none; width: 100%; max-height: 200px; justify-content: center; align-items: center; overflow: hidden; margin-bottom: 10px;">
+                        <img id="cert-preview-img" src="" alt="Certificate Preview" style="max-width: 100%; max-height: 180px; object-fit: contain; border-radius: 1px; border: 1px solid #ccc;" />
                         <div id="cert-preview-pdf" style="display: none; align-items: center; gap: 8px; font-weight: 500; color: #d32f2f;">
                             <span class="material-icons text-4xl">picture_as_pdf</span>
                             <span id="cert-pdf-name">file.pdf</span>
                         </div>
                     </div>
 
-                    <label class="inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-full bg-blue-600 text-white font-medium text-sm cursor-pointer hover:bg-blue-700 transition mt-2">
+                    <label class="inline-flex items-center justify-center gap-2 px-5 py-2 rounded-full bg-blue-600 text-white font-medium text-sm cursor-pointer hover:bg-blue-700 transition mt-1">
                         Browse Files
                         <input type="file" id="cert-file" accept="image/*,.pdf" class="hidden" />
                     </label>
                 </div>
 
                 <!-- Form Row: ประเภท + จำนวน -->
-                <div class="flex flex-wrap items-center justify-center gap-x-10 gap-y-4 w-full mt-2">
+                <div class="flex flex-wrap items-center justify-center gap-x-6 gap-y-3 w-full mt-1">
 
                     <!-- หัวข้ออบรม (optional) -->
-                    <div class="flex items-center gap-3">
+                    <div class="flex items-center gap-2">
                         <label class="text-[#323639] text-xl font-normal whitespace-nowrap">หัวข้ออบรม</label>
                         <input type="text" id="cert-title" placeholder="เช่น อบรม Java Dev (ไม่ระบุก็ได้)" class="input-field w-[280px] text-base" />
                     </div>
 
                     <!-- ประเภทของใบอบรม -->
-                    <div class="flex items-center gap-3">
+                    <div class="flex items-center gap-2">
                         <label class="text-[#323639] text-xl font-normal whitespace-nowrap">ประเภทของใบอบรม</label>
-                        <select id="cert-skill-type" class="input-field w-[200px] text-base">
+                        <select id="cert-skill-type" class="input-field w-[160px] text-sm">
                             <option value="soft">Soft skill</option>
                             <option value="hard">Hard skill</option>
                         </select>
@@ -81,15 +81,15 @@
                     <!-- จำนวนชั่วโมง -->
                     <div class="flex items-center gap-3">
                         <label class="text-[#323639] text-xl font-normal whitespace-nowrap">จำนวน</label>
-                        <input type="number" id="cert-hours" min="1" value="8" class="input-field w-[100px] text-center text-lg" />
-                        <span class="text-[#323639] text-xl font-normal">ชั่วโมง</span>
+                        <input type="number" id="cert-hours" min="1" value="8" class="input-field w-[80px] text-center text-base" />
+                        <span class="text-[#323639] text-base font-normal">ชั่วโมง</span>
                     </div>
                 </div>
 
                 <!-- ปุ่มเพิ่มข้อมูล -->
                 <button type="button" id="add-cert-btn"
-                    class="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-full bg-green-500 text-white font-medium text-[15px] border-none cursor-pointer hover:bg-green-600 transition mt-2">
-                    <span class="material-icons">add_circle</span>
+                    class="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-full bg-green-500 text-white font-medium text-sm border-none cursor-pointer hover:bg-green-600 transition mt-1">
+                    <span class="material-icons text-lg">add_circle</span>
                     เพิ่มข้อมูล
                 </button>
 
@@ -97,9 +97,9 @@
         </div><!-- /card -->
 
         <!-- ===== ปุ่มยืนยันและกลับหน้าหลัก ===== -->
-        <div class="flex justify-center mt-8 mb-10">
+        <div class="flex justify-center mt-5 mb-6">
             <button type="button" id="submit-and-return-btn"
-                class="inline-flex items-center justify-center gap-2 px-10 py-4 rounded-full bg-[#00C853] text-white font-bold text-2xl shadow-lg border-3 border-gray-400 cursor-pointer hover:bg-[#00B248] transition">
+                class="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-full bg-[#00C853] text-white font-bold text-lg shadow-lg border-2 border-gray-400 cursor-pointer hover:bg-[#00B248] transition">
                 ยืนยันและกลับหน้าหลัก
             </button>
         </div>
