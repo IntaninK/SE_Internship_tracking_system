@@ -10,38 +10,12 @@ const router = express.Router();
 // ต้อง login ทุก route ภายใต้ /api/student
 router.use(requireLogin);
 
-// ==========================================
-// 1. ตั้งค่าการอัปโหลดไฟล์ด้วย Multer
-// ==========================================
-const uploadDir = path.join(__dirname, "..", "..", "public", "uploads");
-const certDir = path.join(uploadDir, "certificates");
-const cvDir = path.join(uploadDir, "cv");
-const profileDir = path.join(uploadDir, "profiles");
+const { uploadToCloudinary } = require("../utils/cloudinary");
 
-[uploadDir, certDir, cvDir, profileDir].forEach((dir) => {
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
-  }
-});
-
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    if (file.fieldname === "cv") {
-      cb(null, cvDir);
-    } else if (file.fieldname === "certificate") {
-      cb(null, certDir);
-    } else if (file.fieldname === "profileImage") {
-      cb(null, profileDir);
-    } else {
-      cb(null, uploadDir);
-    }
-  },
-  filename: function (req, file, cb) {
-    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
-    const ext = path.extname(file.originalname);
-    cb(null, file.fieldname + "-" + uniqueSuffix + ext);
-  },
-});
+// ==========================================
+// 1. ตั้งค่าการอัปโหลดไฟล์ด้วย Multer (Memory Storage)
+// ==========================================
+const storage = multer.memoryStorage();
 
 const fileFilter = (req, file, cb) => {
   const allowedExts = [".pdf", ".jpg", ".jpeg", ".png", ".webp"];
@@ -117,9 +91,14 @@ router.post("/profile", upload.single("profileImage"), async (req, res) => {
       });
     }
 
-    const profileImageUrl = req.file
-      ? `/uploads/profiles/${req.file.filename}`
-      : undefined;
+    let profileImageUrl = undefined;
+    if (req.file) {
+      profileImageUrl = await uploadToCloudinary(
+        req.file.buffer,
+        req.file.originalname,
+        "profiles"
+      );
+    }
 
     const dataToSave = {
       studentCode: String(studentCode).trim(),
@@ -209,9 +188,14 @@ router.post("/trainings", upload.single("certificate"), async (req, res) => {
       return res.status(400).json({ success: false, message: "กรุณาระบุจำนวนชั่วโมงให้ถูกต้อง" });
     }
 
-    const certificateFileUrl = req.file
-      ? `/uploads/certificates/${req.file.filename}`
-      : null;
+    let certificateFileUrl = null;
+    if (req.file) {
+      certificateFileUrl = await uploadToCloudinary(
+        req.file.buffer,
+        req.file.originalname,
+        "certificates"
+      );
+    }
 
     const normalizedSkillType =
       String(skillType).toLowerCase().includes("hard") ? "HARD" : "SOFT";
@@ -319,7 +303,11 @@ router.post("/cv", upload.single("cv"), async (req, res) => {
       return res.status(400).json({ success: false, message: "กรุณาเลือกไฟล์ CV" });
     }
 
-    const fileUrl = `/uploads/cv/${req.file.filename}`;
+    const fileUrl = await uploadToCloudinary(
+      req.file.buffer,
+      req.file.originalname,
+      "cv"
+    );
     const fileName = req.file.originalname;
 
     const cv = await prisma.studentCV.upsert({
