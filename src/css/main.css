@@ -346,11 +346,12 @@ select.input-field {
 }
 
 .data-table thead th {
-  background: #1E1E1E;
-  color: #fff;
+  background: #f1f5f9;
+  color: #251e1e;
   padding: 10px 14px;
   text-align: left;
   font-weight: 500;
+  border-bottom: 2px solid #001235;
 }
 
 .data-table tbody td {
