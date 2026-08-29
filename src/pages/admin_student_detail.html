@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ตรวจสอบสถานะนิสิต - Admin</title>
+  <link rel="stylesheet" href="../css/main.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" />
+  <link rel="stylesheet" href="../css/main-output.css">
+</head>
+<body>
+
+  <div id="header-placeholder"></div>
+
+  <main class="main-content">
+
+    <!-- ปุ่มกลับ -->
+    <div style="margin-bottom: 16px;">
+      <a href="/pages/dashboard_รายวิชา.html" style="display:inline-flex; align-items:center; gap:4px; color:#2563eb; text-decoration:none; font-weight:500; font-size:14px;">
+        <span class="material-icons" style="font-size:18px;">arrow_back</span> กลับหน้า Dashboard
+      </a>
+    </div>
+
+    <!-- ข้อมูลนิสิตหัวบน -->
+    <div class="card" style="margin-bottom:20px;">
+      <div class="card-header">
+        <span class="material-icons header-icon">person</span>
+        <h2 class="card-title" id="student-header-name">กำลังโหลด...</h2>
+      </div>
+      <div class="card-body">
+        <div style="display:flex; gap:20px; flex-wrap:wrap; align-items:center;">
+          <img id="student-photo" src="" alt="" style="width:80px; height:80px; border-radius:50%; object-fit:cover; display:none; border:3px solid #e2e8f0;" />
+          <div>
+            <p style="font-size:14px; color:#475569;" id="student-detail-code">รหัสนิสิต: -</p>
+            <p style="font-size:14px; color:#475569;" id="student-detail-email">Email: -</p>
+            <p style="font-size:14px; color:#475569;" id="student-detail-advisor">อาจารย์ที่ปรึกษา: -</p>
+            <p style="font-size:14px; color:#475569;" id="student-detail-gpa">GPA: -</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 1. ข้อมูลส่วนตัว (อ่านอย่างเดียว) -->
+    <section class="card">
+      <div class="card-header">
+        <span class="material-icons header-icon">badge</span>
+        <h2 class="card-title">ข้อมูลส่วนตัว</h2>
+      </div>
+      <div class="card-body">
+        <div class="form-grid">
+          <div class="form-group"><label class="form-label">ชื่อ-สกุล (ไทย)</label><input class="input-field" id="d-nameTh" readonly /></div>
+          <div class="form-group"><label class="form-label">ชื่อ-สกุล (English)</label><input class="input-field" id="d-nameEn" readonly /></div>
+          <div class="form-group"><label class="form-label">รหัสนิสิต</label><input class="input-field" id="d-studentCode" readonly /></div>
+          <div class="form-group"><label class="form-label">ชั้นปี</label><input class="input-field" id="d-year" readonly /></div>
+          <div class="form-group"><label class="form-label">GPA</label><input class="input-field" id="d-gpa" readonly /></div>
+          <div class="form-group"><label class="form-label">สาขา</label><input class="input-field" id="d-major" readonly /></div>
+          <div class="form-group"><label class="form-label">เบอร์โทร</label><input class="input-field" id="d-phone" readonly /></div>
+          <div class="form-group"><label class="form-label">Line ID</label><input class="input-field" id="d-lineId" readonly /></div>
+          <div class="form-group"><label class="form-label">Facebook</label><input class="input-field" id="d-facebook" readonly /></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. ชั่วโมงการอบรม (admin ตรวจได้) -->
+    <section class="card">
+      <div class="card-header">
+        <span class="material-icons header-icon">assignment</span>
+        <h2 class="card-title">ชั่วโมงการอบรม</h2>
+        <span style="margin-left:auto; font-size:13px; color:#64748b;" id="training-summary-text"></span>
+      </div>
+      <div class="card-body">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>ลำดับ</th>
+              <th>ชื่อกิจกรรมอบรม/Certificate</th>
+              <th>ประเภท</th>
+              <th>ชั่วโมง</th>
+              <th>สถานะ</th>
+              <th>Comment</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="admin-trainings-tbody">
+            <tr><td colspan="7" class="text-center py-4 text-gray-400">กำลังโหลด...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- 3. กรอกใบ CV (admin ตรวจได้) -->
+    <section class="card">
+      <div class="card-header">
+        <span class="material-icons header-icon">description</span>
+        <h2 class="card-title">กรอกใบ CV</h2>
+      </div>
+      <div class="card-body" id="admin-cv-section">
+        <p class="text-gray-400 text-center py-4">กำลังโหลด...</p>
+      </div>
+    </section>
+
+    <!-- 4. Checklist บริษัท (อ่านอย่างเดียว — อาจารย์ที่ปรึกษาตรวจ) -->
+    <section class="card">
+      <div class="card-header">
+        <span class="material-icons header-icon">checklist</span>
+        <h2 class="card-title">Checklist บริษัท <span style="font-size:12px; color:#94a3b8; font-weight:normal;">(อาจารย์ที่ปรึกษาเป็นผู้ตรวจ)</span></h2>
+      </div>
+      <div class="card-body">
+        <table class="data-table">
+          <thead>
+            <tr><th>ลำดับ</th><th>ชื่อบริษัท</th><th>สถานะ</th><th>หมายเหตุ</th></tr>
+          </thead>
+          <tbody id="admin-companies-tbody">
+            <tr><td colspan="4" class="text-center py-4 text-gray-400">กำลังโหลด...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- 5. สถานะการยื่น (อ่านอย่างเดียว — นิสิตตั้งเอง) -->
+    <section class="card">
+      <div class="card-header">
+        <span class="material-icons header-icon">send</span>
+        <h2 class="card-title">สถานะการยื่น <span style="font-size:12px; color:#94a3b8; font-weight:normal;">(นิสิตเป็นผู้ตั้งสถานะเอง)</span></h2>
+      </div>
+      <div class="card-body">
+        <table class="data-table">
+          <thead>
+            <tr><th>ลำดับ</th><th>ชื่อบริษัท</th><th>สถานะ</th></tr>
+          </thead>
+          <tbody id="admin-submissions-tbody">
+            <tr><td colspan="3" class="text-center py-4 text-gray-400">กำลังโหลด...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- 6. ข้อมูลบริษัท ที่เข้าฝึกงาน (admin อนุมัติได้) -->
+    <section class="card" id="admin-placement-section" style="display:none;">
+      <div class="card-header">
+        <span class="material-icons header-icon">how_to_reg</span>
+        <h2 class="card-title">ข้อมูลบริษัท ที่เข้าฝึกงาน</h2>
+      </div>
+      <div class="card-body" id="admin-placement-body">
+        <p class="text-gray-400 text-center py-4">กำลังโหลด...</p>
+      </div>
+    </section>
+
+    <!-- 7. สรุปข้อมูลเอกสาร -->
+    <section class="card">
+      <div class="card-header">
+        <span class="material-icons header-icon">summarize</span>
+        <h2 class="card-title">สรุปข้อมูลเอกสาร</h2>
+      </div>
+      <div class="card-body" id="admin-summary-body">
+        <p class="text-gray-400 text-center py-4">กำลังโหลด...</p>
+      </div>
+    </section>
+
+  </main>
+
+  <script src="../components/header.js"></script>
+  <script src="../api/admin_student_detail.js"></script>
+</body>
+</html>

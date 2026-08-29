@@ -248,6 +248,11 @@ model InternshipPlacement {
   companyEmail          String?
   province               String?
 
+  status                ApprovalStatus @default(PENDING) // อนุมัติ/ไม่อนุมัติ ที่ฝึกงาน (อาจารย์รายวิชาตั้ง)
+  note                  String?        // หมายเหตุจากอาจารย์ กรณีไม่อนุมัติ
+  reviewedById          Int?           // ID อาจารย์ที่ตรวจ
+  reviewedAt            DateTime?      // วันที่ตรวจ
+
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt
 }

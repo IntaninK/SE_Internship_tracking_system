@@ -14,8 +14,11 @@
     --color-green-600: oklch(62.7% 0.194 149.214);
     --color-green-700: oklch(52.7% 0.154 150.069);
     --color-blue-50: oklch(97% 0.014 254.604);
+    --color-blue-500: oklch(62.3% 0.214 259.815);
     --color-blue-600: oklch(54.6% 0.245 262.881);
     --color-blue-700: oklch(48.8% 0.243 264.376);
+    --color-purple-50: oklch(97.7% 0.014 308.299);
+    --color-purple-100: oklch(94.6% 0.033 307.174);
     --color-gray-100: oklch(96.7% 0.003 264.542);
     --color-gray-200: oklch(92.8% 0.006 264.531);
     --color-gray-300: oklch(87.2% 0.01 258.338);
@@ -72,6 +75,9 @@
   }
   .inset-0 {
     inset: 0px;
+  }
+  .top-1 {
+    top: var(--spacing);
   }
   .top-1\/2 {
     top: calc(1 / 2 * 100%);
@@ -157,6 +163,9 @@
   .mb-\[25px\] {
     margin-bottom: 25px;
   }
+  .ml-2 {
+    margin-left: calc(var(--spacing) * 2);
+  }
   .block {
     display: block;
   }
@@ -181,6 +190,9 @@
   .table {
     display: table;
   }
+  .h-1 {
+    height: var(--spacing);
+  }
   .h-1\.5 {
     height: calc(var(--spacing) * 1.5);
   }
@@ -192,6 +204,9 @@
   }
   .h-8 {
     height: calc(var(--spacing) * 8);
+  }
+  .h-\[60px\] {
+    height: 60px;
   }
   .h-\[66px\] {
     height: 66px;
@@ -231,6 +246,9 @@
   }
   .\!w-\[220px\] {
     width: 220px !important;
+  }
+  .w-1 {
+    width: var(--spacing);
   }
   .w-1\.5 {
     width: calc(var(--spacing) * 1.5);
@@ -319,6 +337,9 @@
   .flex-1 {
     flex: 1;
   }
+  .flex-shrink {
+    flex-shrink: 1;
+  }
   .flex-shrink-0 {
     flex-shrink: 0;
   }
@@ -330,6 +351,10 @@
   }
   .border-collapse {
     border-collapse: collapse;
+  }
+  .-translate-y-1 {
+    --tw-translate-y: calc(var(--spacing) * -1);
+    translate: var(--tw-translate-x) var(--tw-translate-y);
   }
   .-translate-y-1\/2 {
     --tw-translate-y: calc(calc(1 / 2 * 100%) * -1);
@@ -492,6 +517,9 @@
   .bg-\[\#3B82F6\] {
     background-color: #3B82F6;
   }
+  .bg-\[\#6B3FA0\] {
+    background-color: #6B3FA0;
+  }
   .bg-\[\#8B5CF6\] {
     background-color: #8B5CF6;
   }
@@ -542,6 +570,9 @@
   }
   .bg-green-500 {
     background-color: var(--color-green-500);
+  }
+  .bg-purple-100 {
+    background-color: var(--color-purple-100);
   }
   .bg-red-100 {
     background-color: var(--color-red-100);
@@ -611,6 +642,9 @@
   }
   .px-\[15px\] {
     padding-inline: 15px;
+  }
+  .py-0 {
+    padding-block: 0px;
   }
   .py-0\.5 {
     padding-block: calc(var(--spacing) * 0.5);
@@ -735,6 +769,9 @@
   .text-\[16px\] {
     font-size: 16px;
   }
+  .text-\[22px\] {
+    font-size: 22px;
+  }
   .text-\[24px\] {
     font-size: 24px;
   }
@@ -823,6 +860,9 @@
   .text-amber-600 {
     color: var(--color-amber-600);
   }
+  .text-blue-500 {
+    color: var(--color-blue-500);
+  }
   .text-blue-600 {
     color: var(--color-blue-600);
   }
@@ -902,6 +942,11 @@
     transition-timing-function: var(--tw-ease, var(--default-transition-timing-function));
     transition-duration: var(--tw-duration, var(--default-transition-duration));
   }
+  .transition-colors {
+    transition-property: color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, --tw-gradient-from, --tw-gradient-via, --tw-gradient-to;
+    transition-timing-function: var(--tw-ease, var(--default-transition-timing-function));
+    transition-duration: var(--tw-duration, var(--default-transition-duration));
+  }
   .transition-opacity {
     transition-property: opacity;
     transition-timing-function: var(--tw-ease, var(--default-transition-timing-function));
@@ -928,14 +973,23 @@
     .hover\:bg-green-600:hover {
       background-color: var(--color-green-600);
     }
+    .hover\:bg-purple-50:hover {
+      background-color: var(--color-purple-50);
+    }
     .hover\:bg-red-600:hover {
       background-color: var(--color-red-600);
+    }
+    .hover\:text-blue-600:hover {
+      color: var(--color-blue-600);
     }
     .hover\:text-gray-600:hover {
       color: var(--color-gray-600);
     }
     .hover\:text-gray-700:hover {
       color: var(--color-gray-700);
+    }
+    .hover\:underline:hover {
+      text-decoration-line: underline;
     }
     .hover\:opacity-90:hover {
       opacity: 90%;

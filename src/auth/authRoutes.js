@@ -67,7 +67,15 @@ router.get("/redirect", async (req, res) => {
       role: user.role,
     };
 
-    res.redirect("/pages/dashboard.html");
+    // Role-based redirect: แต่ละ role ไป dashboard ที่ต่างกัน
+    let redirectUrl = "/pages/dashboard.html"; // default สำหรับ STUDENT
+    if (user.role === "COURSE_INSTRUCTOR" || user.role === "ADMIN") {
+      redirectUrl = "/pages/dashboard_รายวิชา.html";
+    } else if (user.role === "ADVISOR") {
+      redirectUrl = "/pages/dashboard_ที่ปรึกษา.html";
+    }
+
+    res.redirect(redirectUrl);
   } catch (err) {
     console.error("MSAL acquireTokenByCode error:", err);
     res.status(500).send("login ไม่สำเร็จ ลองใหม่อีกครั้ง");
