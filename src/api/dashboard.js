@@ -67,13 +67,13 @@ fetch('/api/student/dashboard-summary')
 
       const cvStatusEl = document.getElementById('display-cv-status');
       if (data.cv.status === 'APPROVED') {
-        cvStatusEl.textContent = 'ผ่านการตรวจจากอาจารย์แล้ว';
+        cvStatusEl.textContent = 'CVตรวจแล้ว / ผ่าน';
         cvStatusEl.className = 'text-lg text-green-600 font-medium';
       } else if (data.cv.status === 'REJECTED') {
-        cvStatusEl.textContent = 'ไม่ผ่าน: ' + (data.cv.note || 'กรุณาแก้ไข');
+        cvStatusEl.textContent = 'CVไม่ผ่าน / ทำใหม่' + (data.cv.note ? ` (${data.cv.note})` : '');
         cvStatusEl.className = 'text-lg text-red-600 font-medium';
       } else {
-        cvStatusEl.textContent = 'รออาจารย์ตรวจ';
+        cvStatusEl.textContent = 'รอผล (รออาจารย์ตรวจ)';
         cvStatusEl.className = 'text-lg text-amber-600 font-medium';
       }
     }
@@ -100,10 +100,10 @@ fetch('/api/student/dashboard-summary')
     // Checklist Status
     if (data.approvedCompaniesCount > 0) {
       document.getElementById('display-checklist-header').textContent = `Checklist : ${data.companies.length} บริษัท`;
-      document.getElementById('display-checklist-status').innerHTML = `<span class="text-green-600 font-semibold">ดูบริษัทที่ผ่าน (${data.approvedCompaniesCount} ที่)</span>`;
+      document.getElementById('display-checklist-status').innerHTML = `<span class="text-green-600 font-semibold">อาจารย์รีวิวแล้ว / ผ่าน (${data.approvedCompaniesCount} ที่)</span>`;
     } else if (data.companies && data.companies.length > 0) {
       document.getElementById('display-checklist-header').textContent = `Checklist : ${data.companies.length} บริษัท`;
-      document.getElementById('display-checklist-status').textContent = 'สถานะ: รอผลตรวจ';
+      document.getElementById('display-checklist-status').textContent = 'สถานะ: รอผล';
     }
 
     // Placement / Passed Company
