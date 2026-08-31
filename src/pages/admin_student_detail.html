@@ -67,7 +67,6 @@
       <div class="card-header">
         <span class="material-icons header-icon">assignment</span>
         <h2 class="card-title">ชั่วโมงการอบรม</h2>
-        <span style="margin-left:auto; font-size:13px; color:#64748b;" id="training-summary-text"></span>
       </div>
       <div class="card-body">
         <table class="data-table">
@@ -75,17 +74,38 @@
             <tr>
               <th>ลำดับ</th>
               <th>ชื่อกิจกรรมอบรม/Certificate</th>
-              <th>ประเภท</th>
-              <th>ชั่วโมง</th>
-              <th>สถานะ</th>
-              <th>Comment</th>
-              <th>Action</th>
+              <th>ประเภทชั่วโมง</th>
+              <th>จำนวนชั่วโมง</th>
+              <th>อนุมัติใบCert.</th>
+              <th></th>
             </tr>
           </thead>
           <tbody id="admin-trainings-tbody">
-            <tr><td colspan="7" class="text-center py-4 text-gray-400">กำลังโหลด...</td></tr>
+            <tr><td colspan="6" class="text-center py-4 text-gray-400">กำลังโหลด...</td></tr>
           </tbody>
         </table>
+
+        <!-- การอนุมัติชั่วโมงอบรม + คอมเมนต์ -->
+        <div id="training-approval-area" style="display:none; margin-top:24px; display:flex; gap:24px; flex-wrap:wrap;">
+          <div style="flex:1; min-width:260px;">
+            <label style="font-size:15px; font-weight:700; color:#1e3a5f; margin-bottom:8px; display:block;">การอนุมัติชั่วโมงอบรม Soft/Hard Skills</label>
+            <select class="input-field" id="training-batch-status" style="font-size:14px; padding:10px 14px; border-radius:10px; width:100%;">
+              <option value="APPROVED" style="background:#22c55e; color:white;">ผ่าน/ชั่วโมงอบรมครบ</option>
+              <option value="REJECTED" style="background:#ef4444; color:white;">ไม่ผ่าน / ใบ cert ไม่ผ่าน/ชั่วโมงยังไม่ครบ</option>
+            </select>
+          </div>
+          <div style="flex:1; min-width:260px;">
+            <label style="font-size:15px; font-weight:700; color:#1e3a5f; margin-bottom:8px; display:block;">คอมเมนต์ /หมายเหตุปัญหา</label>
+            <textarea class="input-field" id="training-batch-note" rows="3" placeholder="หมายเหตุ" style="font-size:14px; padding:10px 14px; border-radius:10px; width:100%; resize:vertical;"></textarea>
+          </div>
+        </div>
+        <div id="training-save-area" style="display:none; margin-top:16px;">
+          <button class="btn btn-primary btn-md" onclick="saveBatchTrainingStatus()">
+            <span class="material-icons">save</span> บันทึกสถานะชั่วโมงอบรม
+          </button>
+          <span id="training-summary-text" style="margin-left:16px; font-size:13px; color:#64748b;"></span>
+        </div>
+
       </div>
     </section>
 

@@ -59,11 +59,13 @@ function renderProfile(s) {
 }
 
 // ==========================================
-// 2. ชั่วโมงการอบรม (admin ตรวจได้)
+// 2. ชั่วโมงการอบรม (admin ตรวจได้ — แบบ Figma)
 // ==========================================
 function renderTrainings(trainings, summary) {
   const tbody = document.getElementById('admin-trainings-tbody');
   const summaryEl = document.getElementById('training-summary-text');
+  const approvalArea = document.getElementById('training-approval-area');
+  const saveArea = document.getElementById('training-save-area');
   tbody.innerHTML = '';
 
   if (summaryEl) {
@@ -71,14 +73,19 @@ function renderTrainings(trainings, summary) {
   }
 
   if (!trainings || trainings.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-gray-400">ยังไม่มีข้อมูลการอบรม</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-gray-400">ยังไม่มีข้อมูลการอบรม</td></tr>';
+    if (approvalArea) approvalArea.style.display = 'none';
+    if (saveArea) saveArea.style.display = 'none';
     return;
   }
 
+  // แสดง approval area
+  if (approvalArea) approvalArea.style.display = 'flex';
+  if (saveArea) saveArea.style.display = 'block';
+
   trainings.forEach((t, idx) => {
-    let statusBadge = '<span class="status-wait">☐ รอผล</span>';
-    if (t.status === 'APPROVED') statusBadge = '<span class="status-pass">✓ ผ่าน</span>';
-    else if (t.status === 'REJECTED') statusBadge = '<span class="status-fail">✗ ไม่ผ่าน</span>';
+    const isChecked = t.status === 'APPROVED';
+    const certUrl = t.certificateFileUrl || '';
 
     const tr = document.createElement('tr');
     tr.innerHTML = `
@@ -86,40 +93,59 @@ function renderTrainings(trainings, summary) {
       <td>${t.title}</td>
       <td>${t.skillType === 'HARD' ? 'Hard skill' : 'Soft skill'}</td>
       <td>${t.hours}</td>
-      <td>${statusBadge}</td>
-      <td>
-        <input type="text" class="input-field" id="training-note-${t.id}" value="${t.note || ''}" placeholder="Comment..." style="font-size:12px; min-width:120px;" />
+      <td style="text-align:center;">
+        <input type="checkbox" class="training-cert-checkbox" data-id="${t.id}" ${isChecked ? 'checked' : ''} style="width:18px; height:18px; cursor:pointer; accent-color:#2563eb;" />
       </td>
-      <td>
-        <div style="display:flex; gap:4px;">
-          <button class="btn btn-primary btn-xs" onclick="setTrainingStatus(${t.id}, 'APPROVED')" style="font-size:11px;">ผ่าน</button>
-          <button class="btn btn-tonal btn-xs" onclick="setTrainingStatus(${t.id}, 'REJECTED')" style="font-size:11px;">ไม่ผ่าน</button>
-        </div>
+      <td style="text-align:center;">
+        ${certUrl
+          ? `<a href="${certUrl}" target="_blank" style="color:#2563eb; font-size:13px; text-decoration:none; white-space:nowrap;">ดูตัวอย่าง</a>`
+          : '<span style="color:#94a3b8; font-size:12px;">-</span>'
+        }
       </td>
     `;
     tbody.appendChild(tr);
   });
 }
 
-window.setTrainingStatus = async function(trainingId, status) {
-  const noteEl = document.getElementById(`training-note-${trainingId}`);
+// บันทึกสถานะชั่วโมงอบรมทั้งหมด (batch)
+window.saveBatchTrainingStatus = async function() {
+  const statusSelect = document.getElementById('training-batch-status');
+  const noteEl = document.getElementById('training-batch-note');
+  const status = statusSelect ? statusSelect.value : 'APPROVED';
   const note = noteEl ? noteEl.value : '';
 
-  try {
-    const res = await fetch(`/api/admin/students/${studentId}/training/${trainingId}/status`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status, note }),
-    });
-    const data = await res.json();
-    if (data.success) {
-      alert('✅ อัปเดตสถานะสำเร็จ');
-      initStudentDetail();
-    } else {
-      alert('เกิดข้อผิดพลาด: ' + data.message);
+  // ดึง training IDs ทั้งหมดจาก checkbox
+  const checkboxes = document.querySelectorAll('.training-cert-checkbox');
+  if (checkboxes.length === 0) {
+    alert('ไม่มีข้อมูลการอบรม');
+    return;
+  }
+
+  // อัพเดตทุก training record ของนิสิตคนนี้
+  let successCount = 0;
+  let failCount = 0;
+
+  for (const cb of checkboxes) {
+    const trainingId = cb.dataset.id;
+    try {
+      const res = await fetch(`/api/admin/students/${studentId}/training/${trainingId}/status`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status, note }),
+      });
+      const data = await res.json();
+      if (data.success) successCount++;
+      else failCount++;
+    } catch (err) {
+      failCount++;
     }
-  } catch (err) {
-    console.error(err);
+  }
+
+  if (successCount > 0) {
+    alert(`✅ อัปเดตสถานะสำเร็จ ${successCount} รายการ`);
+    initStudentDetail();
+  } else {
+    alert('เกิดข้อผิดพลาดในการอัปเดต');
   }
 };
 
@@ -157,20 +183,25 @@ function renderCv(cv) {
         <p style="font-size:14px; margin-bottom:8px;"><strong>ไฟล์:</strong> ${cv.fileName || 'CV'}</p>
         <p style="font-size:14px; margin-bottom:12px;"><strong>สถานะปัจจุบัน:</strong> ${statusBadge}</p>
         ${cv.note ? `<p style="font-size:13px; color:#64748b; margin-bottom:12px;">หมายเหตุ: ${cv.note}</p>` : ''}
-        <div style="display:flex; flex-direction:column; gap:10px; max-width:300px;">
+        <div style="display:flex; flex-direction:column; gap:10px; max-width:350px;">
+          <label style="font-size:13px; font-weight:600; color:#334155;">ตั้งสถานะ CV</label>
+          <select class="input-field" id="cv-admin-status" style="font-size:13px; padding:8px 10px;">
+            <option value="PENDING" ${cv.status === 'PENDING' ? 'selected' : ''}>☐ รอผล (รออาจารย์ตรวจ)</option>
+            <option value="APPROVED" ${cv.status === 'APPROVED' ? 'selected' : ''}>✓ CVตรวจแล้ว / ผ่าน</option>
+            <option value="REJECTED" ${cv.status === 'REJECTED' ? 'selected' : ''}>✗ CVไม่ผ่าน / ทำใหม่</option>
+          </select>
           <input type="text" class="input-field" id="cv-admin-note" value="${cv.note || ''}" placeholder="Comment / หมายเหตุ..." />
-          <div style="display:flex; gap:8px;">
-            <button class="btn btn-primary btn-sm" onclick="setCvStatus('APPROVED')">✓ ผ่าน</button>
-            <button class="btn btn-tonal btn-sm" onclick="setCvStatus('REJECTED')">✗ ไม่ผ่าน</button>
-          </div>
+          <button class="btn btn-primary btn-sm" onclick="saveCvStatus()" style="width:fit-content;">💾 บันทึกสถานะ CV</button>
         </div>
       </div>
     </div>
   `;
 }
 
-window.setCvStatus = async function(status) {
+window.saveCvStatus = async function() {
+  const selectEl = document.getElementById('cv-admin-status');
   const noteEl = document.getElementById('cv-admin-note');
+  const status = selectEl ? selectEl.value : 'PENDING';
   const note = noteEl ? noteEl.value : '';
 
   try {
@@ -291,17 +322,22 @@ function renderPlacement(placement) {
       <div class="form-group"><label class="form-label">จังหวัด</label><input class="input-field" value="${placement.province || '-'}" readonly /></div>
     </div>
     <div style="margin-top:16px; display:flex; flex-direction:column; gap:10px; max-width:350px;">
+      <label style="font-size:13px; font-weight:600; color:#334155;">ตั้งสถานะอนุมัติที่ฝึกงาน</label>
+      <select class="input-field" id="placement-admin-status" style="font-size:13px; padding:8px 10px;">
+        <option value="PENDING" ${placement.status === 'PENDING' ? 'selected' : ''}>☐ รอผล</option>
+        <option value="APPROVED" ${placement.status === 'APPROVED' ? 'selected' : ''}>✓ อนุมัติที่ฝึกงาน</option>
+        <option value="REJECTED" ${placement.status === 'REJECTED' ? 'selected' : ''}>✗ ไม่อนุมัติที่ฝึกงาน / เปลี่ยนที่ฝึกงาน</option>
+      </select>
       <input type="text" class="input-field" id="placement-admin-note" value="${placement.note || ''}" placeholder="Comment / หมายเหตุ..." />
-      <div style="display:flex; gap:8px;">
-        <button class="btn btn-primary btn-sm" onclick="setPlacementStatus('APPROVED')">✓ อนุมัติที่ฝึกงาน</button>
-        <button class="btn btn-tonal btn-sm" onclick="setPlacementStatus('REJECTED')">✗ ไม่อนุมัติ</button>
-      </div>
+      <button class="btn btn-primary btn-sm" onclick="savePlacementStatus()" style="width:fit-content;">💾 บันทึกสถานะอนุมัติ</button>
     </div>
   `;
 }
 
-window.setPlacementStatus = async function(status) {
+window.savePlacementStatus = async function() {
+  const selectEl = document.getElementById('placement-admin-status');
   const noteEl = document.getElementById('placement-admin-note');
+  const status = selectEl ? selectEl.value : 'PENDING';
   const note = noteEl ? noteEl.value : '';
 
   try {
