@@ -124,19 +124,45 @@
     <section class="card">
       <div class="card-header">
         <span class="material-icons header-icon">checklist</span>
-        <h2 class="card-title">Checklist บริษัท <span style="font-size:12px; color:#94a3b8; font-weight:normal;">(อาจารย์ที่ปรึกษาเป็นผู้ตรวจ)</span></h2>
+        <h2 class="card-title">Checklist</h2>
       </div>
       <div class="card-body">
         <table class="data-table">
           <thead>
-            <tr><th>ลำดับ</th><th>ชื่อบริษัท</th><th>สถานะ</th><th>หมายเหตุ</th></tr>
+            <tr>
+              <th>ลำดับ</th>
+              <th>ชื่อกิจกรรมอบรม/Certificate</th>
+              <th>สถานะ</th>
+              <th></th>
+            </tr>
           </thead>
           <tbody id="admin-companies-tbody">
             <tr><td colspan="4" class="text-center py-4 text-gray-400">กำลังโหลด...</td></tr>
           </tbody>
         </table>
+
+        <!-- สถานะผลรีวิว -->
+        <div id="checklist-review-status" style="margin-top:20px; text-align:center; display:none;">
+          <p style="font-size:15px; font-weight:700; color:#1e3a5f; margin-bottom:8px;">สถานะผลรีวิว</p>
+          <div id="checklist-review-badge"></div>
+        </div>
       </div>
     </section>
+
+    <!-- Modal: ดูตัวอย่าง Checklist -->
+    <div id="checklist-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:1000; justify-content:center; align-items:center; backdrop-filter:blur(2px);">
+      <div style="background:white; border-radius:16px; padding:24px 28px; width:700px; max-width:92%; max-height:85vh; overflow-y:auto; box-shadow:0 10px 30px rgba(0,0,0,0.2);">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+          <h3 style="font-size:18px; font-weight:700; color:#1e293b;" id="checklist-modal-title">Checklist</h3>
+          <button onclick="closeChecklistModal()" style="background:none; border:none; cursor:pointer;">
+            <span class="material-icons" style="color:#94a3b8;">close</span>
+          </button>
+        </div>
+        <div id="checklist-modal-body">
+          <p class="text-gray-400 text-center py-4">กำลังโหลด...</p>
+        </div>
+      </div>
+    </div>
 
     <!-- 5. สถานะการยื่น (อ่านอย่างเดียว — นิสิตตั้งเอง) -->
     <section class="card">

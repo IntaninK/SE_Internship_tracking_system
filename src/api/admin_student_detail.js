@@ -223,33 +223,165 @@ window.saveCvStatus = async function() {
 };
 
 // ==========================================
-// 4. Checklist บริษัท (อ่านอย่างเดียว)
+// 4. Checklist บริษัท (อ่านอย่างเดียว — แบบ Figma + ดูตัวอย่าง modal)
 // ==========================================
+
+// เก็บข้อมูล companies ไว้ใช้ใน modal
+let cachedCompanies = [];
+
 function renderCompanies(companies) {
   const tbody = document.getElementById('admin-companies-tbody');
+  const reviewStatusDiv = document.getElementById('checklist-review-status');
+  const reviewBadge = document.getElementById('checklist-review-badge');
   tbody.innerHTML = '';
+  cachedCompanies = companies || [];
 
   if (!companies || companies.length === 0) {
     tbody.innerHTML = '<tr><td colspan="4" class="text-center py-4 text-gray-400">ยังไม่มีข้อมูล checklist</td></tr>';
+    if (reviewStatusDiv) reviewStatusDiv.style.display = 'none';
     return;
   }
 
   companies.forEach((c, idx) => {
-    let statusBadge = '☐ รอผล';
-    let cls = 'status-wait';
-    if (c.checklistStatus === 'APPROVED') { statusBadge = '✓ อาจารย์รีวิวแล้ว / ผ่าน'; cls = 'status-pass'; }
-    else if (c.checklistStatus === 'REJECTED') { statusBadge = '✗ ไม่ผ่าน'; cls = 'status-fail'; }
+    let statusText = '☐ รอผล';
+    let statusStyle = 'color:#94a3b8;';
+    if (c.checklistStatus === 'APPROVED') {
+      statusText = '✓ ผ่าน';
+      statusStyle = 'color:#22c55e; font-weight:600;';
+    } else if (c.checklistStatus === 'REJECTED') {
+      statusText = '✗ ไม่ผ่าน';
+      statusStyle = 'color:#ef4444; font-weight:600;';
+    }
 
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td>${idx + 1}</td>
       <td>${c.name}</td>
-      <td class="${cls}">${statusBadge}</td>
-      <td>${c.checklistNote || '-'}</td>
+      <td style="${statusStyle}">${statusText}</td>
+      <td style="text-align:center;">
+        <a href="#" onclick="openChecklistModal(${idx}); return false;" style="color:#2563eb; font-size:13px; text-decoration:none;">ดูตัวอย่าง</a>
+      </td>
     `;
     tbody.appendChild(tr);
   });
+
+  // สถานะผลรีวิว
+  if (reviewStatusDiv && reviewBadge) {
+    const hasApproved = companies.some(c => c.checklistStatus === 'APPROVED');
+    const hasRejected = companies.some(c => c.checklistStatus === 'REJECTED');
+    const allPending = companies.every(c => !c.checklistStatus || c.checklistStatus === 'PENDING');
+
+    reviewStatusDiv.style.display = 'block';
+
+    if (hasApproved) {
+      reviewBadge.innerHTML = '<span style="display:inline-block; padding:10px 32px; border-radius:8px; background:#22c55e; color:white; font-size:14px; font-weight:600;">อาจารย์รีวิวแล้ว</span>';
+    } else if (hasRejected) {
+      reviewBadge.innerHTML = '<span style="display:inline-block; padding:10px 32px; border-radius:8px; background:#ef4444; color:white; font-size:14px; font-weight:600;">ไม่ผ่าน / ทำ checklist เพิ่ม</span>';
+    } else if (allPending) {
+      reviewBadge.innerHTML = '<span style="display:inline-block; padding:10px 32px; border-radius:8px; background:#f59e0b; color:white; font-size:14px; font-weight:600;">รอผล</span>';
+    }
+  }
 }
+
+// เปิด Modal ดูตัวอย่าง Checklist ของบริษัท (styling เหมือน checklist.html)
+window.openChecklistModal = function(companyIdx) {
+  const company = cachedCompanies[companyIdx];
+  if (!company) return;
+
+  const modal = document.getElementById('checklist-modal');
+  const title = document.getElementById('checklist-modal-title');
+  const body = document.getElementById('checklist-modal-body');
+
+  // ซ่อน title ด้านบนเดิม เพราะจะใช้ header สีน้ำเงินแทน
+  title.style.display = 'none';
+
+  // จัดกลุ่มคำตอบตาม section
+  const answers = company.answers || [];
+  if (answers.length === 0) {
+    body.innerHTML = `
+      <div style="border-radius:12px; overflow:hidden; box-shadow:0 4px 12px rgba(0,0,0,0.08); border:1px solid #d1d5db; background:white;">
+        <div style="background:linear-gradient(90deg,#1e3a8a,#2563eb); color:white; padding:12px 20px; display:flex; align-items:center; justify-content:space-between;">
+          <div style="display:flex; align-items:center; gap:10px;">
+            <span class="material-icons" style="font-size:24px;">business</span>
+            <span style="font-weight:600; font-size:1.1rem;">${company.name}</span>
+          </div>
+          <button onclick="closeChecklistModal()" style="background:none; border:none; cursor:pointer; color:white; font-size:14px;">ปิด</button>
+        </div>
+        <p style="color:#94a3b8; text-align:center; padding:40px 20px;">นิสิตยังไม่ได้กรอก Checklist สำหรับบริษัทนี้</p>
+      </div>`;
+  } else {
+    // จัดกลุ่มตาม section
+    const sectionMap = {};
+    const sectionOrder = [];
+    answers.forEach(a => {
+      const sectionName = a.checklistItem?.section?.title || 'อื่นๆ';
+      if (!sectionMap[sectionName]) {
+        sectionMap[sectionName] = [];
+        sectionOrder.push(sectionName);
+      }
+      sectionMap[sectionName].push(a);
+    });
+
+    let sectionsHtml = '';
+    sectionOrder.forEach(sectionName => {
+      const items = sectionMap[sectionName];
+      let rowsHtml = '';
+      items.forEach(a => {
+        const itemLabel = a.checklistItem?.description || a.checklistItem?.label || '-';
+        const isChecked = a.checked === true || a.checked === 'true' || a.value === true || a.value === 'true' || a.value === 'PASS';
+        const detail = a.detail || a.note || '';
+
+        rowsHtml += `
+          <tr>
+            <td style="text-align:left; color:#1f2937; width:60%; border:1px solid #e5e7eb; padding:10px 14px;">${itemLabel}</td>
+            <td style="text-align:center; width:10%; border:1px solid #e5e7eb; padding:10px 14px;">
+              <input type="checkbox" ${isChecked ? 'checked' : ''} disabled style="width:20px; height:20px; accent-color:#2563eb; cursor:default;" />
+            </td>
+            <td style="width:30%; border:1px solid #e5e7eb; padding:10px 14px; color:#64748b; font-size:13px;">${detail || '-'}</td>
+          </tr>`;
+      });
+
+      sectionsHtml += `
+        <div style="padding:0 24px 8px 24px;">
+          <h3 style="font-size:1.25rem; font-weight:600; color:#1d4ed8; margin:24px 0 12px 0; display:flex; align-items:center; gap:8px;">
+            <span class="material-icons" style="color:#2563eb;">bookmark</span>
+            ${sectionName}
+          </h3>
+          <table style="width:100%; border-collapse:collapse; margin-bottom:20px; font-size:0.95rem;">
+            <thead>
+              <tr>
+                <th style="background-color:#f9fafb; font-weight:600; text-align:center; color:#374151; border:1px solid #e5e7eb; padding:10px 14px;">รายละเอียดที่ต้องพิจารณา</th>
+                <th style="background-color:#f9fafb; font-weight:600; text-align:center; color:#374151; border:1px solid #e5e7eb; padding:10px 14px;">Checklist</th>
+                <th style="background-color:#f9fafb; font-weight:600; text-align:center; color:#374151; border:1px solid #e5e7eb; padding:10px 14px;">รายละเอียดเพิ่ม</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rowsHtml}
+            </tbody>
+          </table>
+        </div>`;
+    });
+
+    body.innerHTML = `
+      <div style="border-radius:12px; overflow:hidden; box-shadow:0 4px 12px rgba(0,0,0,0.08); border:1px solid #d1d5db; background:white;">
+        <div style="background:linear-gradient(90deg,#1e3a8a,#2563eb); color:white; padding:12px 20px; display:flex; align-items:center; justify-content:space-between;">
+          <div style="display:flex; align-items:center; gap:10px;">
+            <span class="material-icons" style="font-size:24px;">business</span>
+            <span style="font-weight:600; font-size:1.1rem;">${company.name}</span>
+          </div>
+          <button onclick="closeChecklistModal()" style="background:none; border:none; cursor:pointer; color:white; font-size:14px; font-weight:500;">ปิด</button>
+        </div>
+        ${sectionsHtml}
+      </div>`;
+  }
+
+  modal.style.display = 'flex';
+};
+
+window.closeChecklistModal = function() {
+  const modal = document.getElementById('checklist-modal');
+  if (modal) modal.style.display = 'none';
+};
 
 // ==========================================
 // 5. สถานะการยื่น (อ่านอย่างเดียว)
