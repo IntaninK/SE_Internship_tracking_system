@@ -24,6 +24,23 @@ router.get("/dashboard-summary", async (req, res) => {
       },
     });
 
+    // ตรวจสอบและสร้างข้อมูล Staff ให้อัตโนมัติสำหรับ User ที่มี role ADVISOR (ถ้ายังไม่มีในตาราง Staff)
+    const advisorUsers = await prisma.user.findMany({
+      where: { role: { in: ["ADVISOR", "COURSE_INSTRUCTOR"] } },
+      include: { staff: true },
+    });
+
+    for (const u of advisorUsers) {
+      if (!u.staff) {
+        await prisma.staff.create({
+          data: {
+            userId: u.id,
+            name: u.username || u.email,
+          },
+        });
+      }
+    }
+
     // ดึงอาจารย์ที่ปรึกษาทั้งหมด
     const advisors = await prisma.staff.findMany({
       where: { user: { role: { in: ["ADVISOR"] } } },
@@ -531,6 +548,22 @@ router.put("/students/batch-advisor", async (req, res) => {
 // ==========================================
 router.get("/advisors", async (req, res) => {
   try {
+    const advisorUsers = await prisma.user.findMany({
+      where: { role: { in: ["ADVISOR", "COURSE_INSTRUCTOR"] } },
+      include: { staff: true },
+    });
+
+    for (const u of advisorUsers) {
+      if (!u.staff) {
+        await prisma.staff.create({
+          data: {
+            userId: u.id,
+            name: u.username || u.email,
+          },
+        });
+      }
+    }
+
     const advisors = await prisma.staff.findMany({
       where: { user: { role: { in: ["ADVISOR"] } } },
       include: { user: true, studentsAdvised: true },

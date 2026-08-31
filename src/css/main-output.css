@@ -76,9 +76,6 @@
   .inset-0 {
     inset: 0px;
   }
-  .top-1 {
-    top: var(--spacing);
-  }
   .top-1\/2 {
     top: calc(1 / 2 * 100%);
   }
@@ -190,9 +187,6 @@
   .table {
     display: table;
   }
-  .h-1 {
-    height: var(--spacing);
-  }
   .h-1\.5 {
     height: calc(var(--spacing) * 1.5);
   }
@@ -246,9 +240,6 @@
   }
   .\!w-\[220px\] {
     width: 220px !important;
-  }
-  .w-1 {
-    width: var(--spacing);
   }
   .w-1\.5 {
     width: calc(var(--spacing) * 1.5);
@@ -337,9 +328,6 @@
   .flex-1 {
     flex: 1;
   }
-  .flex-shrink {
-    flex-shrink: 1;
-  }
   .flex-shrink-0 {
     flex-shrink: 0;
   }
@@ -351,10 +339,6 @@
   }
   .border-collapse {
     border-collapse: collapse;
-  }
-  .-translate-y-1 {
-    --tw-translate-y: calc(var(--spacing) * -1);
-    translate: var(--tw-translate-x) var(--tw-translate-y);
   }
   .-translate-y-1\/2 {
     --tw-translate-y: calc(calc(1 / 2 * 100%) * -1);
@@ -514,14 +498,8 @@
   .bg-\[\#00C853\] {
     background-color: #00C853;
   }
-  .bg-\[\#3B82F6\] {
-    background-color: #3B82F6;
-  }
   .bg-\[\#6B3FA0\] {
     background-color: #6B3FA0;
-  }
-  .bg-\[\#8B5CF6\] {
-    background-color: #8B5CF6;
   }
   .bg-\[\#138DFF\] {
     background-color: #138DFF;
@@ -642,9 +620,6 @@
   }
   .px-\[15px\] {
     padding-inline: 15px;
-  }
-  .py-0 {
-    padding-block: 0px;
   }
   .py-0\.5 {
     padding-block: calc(var(--spacing) * 0.5);
