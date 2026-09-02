@@ -7,6 +7,158 @@ const router = express.Router();
 // ต้อง login + เป็น admin ทุก route ภายใต้ /api/admin
 router.use(requireAdmin);
 
+const STATUS_LABELS = {
+  readiness: {
+    approvedPlacement: "อนุมัติที่ฝึกงานแล้ว",
+    cvApproved: "ตรวจCVผ่าน",
+    trainingComplete: "ผ่านการตรวจชม.ครบ",
+    cvNotReviewed: "ยังไม่ได้รีวิว CV",
+    noDataOrHoursLack: "ไม่มีข้อมูล/ชม.ไม่ครบ",
+  },
+  training: {
+    passedComplete: "ผ่านการตรวจชม.ครบ",
+    completeNotChecked: "ชม.ครบ ยังไม่ตรวจ",
+    checkedNotPass: "ตรวจแล้ว ยังไม่ผ่าน",
+    hoursNotComplete: "ชั่วโมงยังไม่ครบ",
+  },
+  cv: {
+    reviewed: "รีวิวCVแล้ว",
+    notReviewed: "ยังไม่ได้รีวิว CV",
+    failed: "ไม่ผ่าน CV",
+    noCv: "ยังไม่ทำ CV",
+  },
+  placement: {
+    approved: "อนุมัติที่ฝึกงานแล้ว",
+    rejected: "ไม่อนุมัติที่ฝึกงาน",
+    pending: "รอผล",
+  },
+};
+
+function categorizeStudent(s) {
+  const approvedTrainings = (s.trainingRecords || []).filter((t) => t.status === "APPROVED");
+  const softHours = approvedTrainings
+    .filter((t) => t.skillType === "SOFT")
+    .reduce((sum, t) => sum + t.hours, 0);
+  const hardHours = approvedTrainings
+    .filter((t) => t.skillType === "HARD")
+    .reduce((sum, t) => sum + t.hours, 0);
+  const isTrainingComplete = softHours >= 12 && hardHours >= 18;
+  const hasRejectedTraining = (s.trainingRecords || []).some((t) => t.status === "REJECTED");
+  const hasPendingTraining = (s.trainingRecords || []).some((t) => t.status === "PENDING");
+
+  // 1. สถานะการอบรม (Training)
+  let trainingCategory = "hoursNotComplete";
+  if (isTrainingComplete) {
+    if (hasPendingTraining) {
+      trainingCategory = "completeNotChecked";
+    } else {
+      trainingCategory = "passedComplete";
+    }
+  } else if (hasRejectedTraining) {
+    trainingCategory = "checkedNotPass";
+  } else {
+    trainingCategory = "hoursNotComplete";
+  }
+
+  // 2. สถานะ CV
+  let cvCategory = "noCv";
+  if (!s.cv) {
+    cvCategory = "noCv";
+  } else if (s.cv.status === "APPROVED") {
+    cvCategory = "reviewed";
+  } else if (s.cv.status === "REJECTED") {
+    cvCategory = "failed";
+  } else {
+    cvCategory = "notReviewed";
+  }
+
+  // 3. สถานะอนุมัติฝึกงาน (Placement)
+  let placementCategory = null;
+  if (s.placement) {
+    if (s.placement.status === "APPROVED") {
+      placementCategory = "approved";
+    } else if (s.placement.status === "REJECTED") {
+      placementCategory = "rejected";
+    } else {
+      placementCategory = "pending";
+    }
+  }
+
+  // 4. สถานะความพร้อม (Readiness)
+  let readinessCategory = "noDataOrHoursLack";
+  if (s.placement && s.placement.status === "APPROVED") {
+    readinessCategory = "approvedPlacement";
+  } else if (s.cv && s.cv.status === "APPROVED") {
+    readinessCategory = "cvApproved";
+  } else if (isTrainingComplete) {
+    readinessCategory = "trainingComplete";
+  } else if (s.cv && s.cv.status === "PENDING") {
+    readinessCategory = "cvNotReviewed";
+  } else {
+    readinessCategory = "noDataOrHoursLack";
+  }
+
+  // Overall status (สถานะรวมที่แสดงเป็น Badge เริ่มต้นในตาราง)
+  let overallStatus = "ยังไม่มีข้อมูล";
+  let statusCategory = "none";
+
+  if (s.placement && s.placement.status === "APPROVED") {
+    overallStatus = "อนุมัติที่ฝึกงานแล้ว";
+    statusCategory = "placement_approved";
+  } else if (s.placement && s.placement.status === "REJECTED") {
+    overallStatus = "ไม่อนุมัติที่ฝึกงาน";
+    statusCategory = "placement_rejected";
+  } else if (s.placement && s.placement.status === "PENDING") {
+    overallStatus = "รออนุมัติที่ฝึกงาน";
+    statusCategory = "placement_pending";
+  } else if (s.companies && s.companies.some((c) => c.submission && c.submission.status === "INTERVIEW_PASSED")) {
+    overallStatus = "สัมภาษณ์ผ่านแล้ว";
+    statusCategory = "interview_passed";
+  } else if (s.cv && s.cv.status === "APPROVED" && isTrainingComplete) {
+    overallStatus = "ตรวจCVผ่าน + ชม.ครบ";
+    statusCategory = "ready";
+  } else if (s.cv && s.cv.status === "APPROVED") {
+    overallStatus = "รีวิวCVผ่านแล้ว";
+    statusCategory = "cv_approved";
+  } else if (s.cv && s.cv.status === "REJECTED") {
+    overallStatus = "CVไม่ผ่าน";
+    statusCategory = "cv_rejected";
+  } else if (s.cv && s.cv.status === "PENDING") {
+    overallStatus = "ยังไม่ได้รีวิว CV";
+    statusCategory = "cv_pending";
+  } else if (isTrainingComplete && !hasRejectedTraining) {
+    overallStatus = "ผ่านการตรวจชม.ครบ";
+    statusCategory = "training_complete";
+  } else if (hasRejectedTraining) {
+    overallStatus = "ชั่วโมงอบรมไม่ผ่าน";
+    statusCategory = "training_rejected";
+  } else if (s.trainingRecords && s.trainingRecords.length > 0) {
+    overallStatus = "ชั่วโมงอบรมยังไม่ครบ";
+    statusCategory = "training_incomplete";
+  } else {
+    overallStatus = "ยังไม่มีข้อมูล";
+    statusCategory = "none";
+  }
+
+  return {
+    softHours,
+    hardHours,
+    isTrainingComplete,
+    hasRejectedTraining,
+    hasPendingTraining,
+    trainingCategory,
+    cvCategory,
+    placementCategory,
+    readinessCategory,
+    overallStatus,
+    statusCategory,
+    readinessLabel: STATUS_LABELS.readiness[readinessCategory],
+    trainingLabel: STATUS_LABELS.training[trainingCategory],
+    cvLabel: STATUS_LABELS.cv[cvCategory],
+    placementLabel: placementCategory ? STATUS_LABELS.placement[placementCategory] : "-",
+  };
+}
+
 // ==========================================
 // 1. Dashboard Summary — สรุปสถิตินิสิตทั้งหมด (กราฟวงกลม 4 อัน + สรุปจำนวน)
 // ==========================================
@@ -58,92 +210,43 @@ router.get("/dashboard-summary", async (req, res) => {
 
     // --- กราฟ 1: สถานะความพร้อม ---
     let readinessStats = {
-      approvedPlacement: 0,  // อนุมัติที่ฝึกงานแล้ว
-      cvApproved: 0,         // ตรวจCVผ่าน
-      noDataOrHoursLack: 0,  // ไม่มีข้อมูล/ชม.ไม่ครบ
-      trainingComplete: 0,   // ผ่านการตรวจชม.ครบ
-      cvNotReviewed: 0,      // ยังไม่ได้รีวิว CV
+      approvedPlacement: 0,
+      cvApproved: 0,
+      noDataOrHoursLack: 0,
+      trainingComplete: 0,
+      cvNotReviewed: 0,
     };
 
     // --- กราฟ 2: สถานะการอบรม ---
     let trainingStats = {
-      passedComplete: 0,   // ผ่านการตรวจชม.ครบ
-      completeNotChecked: 0, // ชม.ครบ ยังไม่ตรวจ
-      checkedNotPass: 0,   // ตรวจแล้ว ยังไม่ผ่าน
-      hoursNotComplete: 0, // ชั่วโมงยังไม่ครบ
+      passedComplete: 0,
+      completeNotChecked: 0,
+      checkedNotPass: 0,
+      hoursNotComplete: 0,
     };
 
     // --- กราฟ 3: สถานะการตรวจ CV ---
     let cvStats = {
-      reviewed: 0,     // รีวิวCVแล้ว (ผ่าน)
-      notReviewed: 0,  // ยังไม่ได้รีวิว CV
-      failed: 0,       // ไม่ผ่าน CV
-      noCv: 0,         // ยังไม่ทำ CV
+      reviewed: 0,
+      notReviewed: 0,
+      failed: 0,
+      noCv: 0,
     };
 
     // --- กราฟ 4: สถานะอนุมัติฝึกงาน ---
     let placementStats = {
-      pending: 0,    // รอผล
-      approved: 0,   // อนุมัติที่ฝึกงานแล้ว
-      rejected: 0,   // ไม่อนุมัติที่ฝึกงาน
+      pending: 0,
+      approved: 0,
+      rejected: 0,
     };
 
     students.forEach((s) => {
-      // --- คำนวณชั่วโมง ---
-      const approvedTrainings = s.trainingRecords.filter(t => t.status === "APPROVED");
-      const softHours = approvedTrainings.filter(t => t.skillType === "SOFT").reduce((sum, t) => sum + t.hours, 0);
-      const hardHours = approvedTrainings.filter(t => t.skillType === "HARD").reduce((sum, t) => sum + t.hours, 0);
-      const totalHours = s.trainingRecords.reduce((sum, t) => sum + t.hours, 0);
-      const isTrainingComplete = softHours >= 12 && hardHours >= 18;
-      const hasRejectedTraining = s.trainingRecords.some(t => t.status === "REJECTED");
-      const hasPendingTraining = s.trainingRecords.some(t => t.status === "PENDING");
-
-      // กราฟ 2: สถานะการอบรม
-      if (isTrainingComplete) {
-        if (hasPendingTraining) {
-          trainingStats.completeNotChecked++;
-        } else {
-          trainingStats.passedComplete++;
-        }
-      } else if (hasRejectedTraining) {
-        trainingStats.checkedNotPass++;
-      } else {
-        trainingStats.hoursNotComplete++;
-      }
-
-      // กราฟ 3: สถานะ CV
-      if (!s.cv) {
-        cvStats.noCv++;
-      } else if (s.cv.status === "APPROVED") {
-        cvStats.reviewed++;
-      } else if (s.cv.status === "REJECTED") {
-        cvStats.failed++;
-      } else {
-        cvStats.notReviewed++;
-      }
-
-      // กราฟ 4: สถานะอนุมัติฝึกงาน (เฉพาะนิสิตที่มี placement)
-      if (s.placement) {
-        if (s.placement.status === "APPROVED") {
-          placementStats.approved++;
-        } else if (s.placement.status === "REJECTED") {
-          placementStats.rejected++;
-        } else {
-          placementStats.pending++;
-        }
-      }
-
-      // กราฟ 1: สถานะความพร้อม (ใช้ข้อมูลรวม)
-      if (s.placement && s.placement.status === "APPROVED") {
-        readinessStats.approvedPlacement++;
-      } else if (s.cv && s.cv.status === "APPROVED") {
-        readinessStats.cvApproved++;
-      } else if (isTrainingComplete) {
-        readinessStats.trainingComplete++;
-      } else if (!s.cv) {
-        readinessStats.cvNotReviewed++;
-      } else {
-        readinessStats.noDataOrHoursLack++;
+      const cats = categorizeStudent(s);
+      readinessStats[cats.readinessCategory]++;
+      trainingStats[cats.trainingCategory]++;
+      cvStats[cats.cvCategory]++;
+      if (cats.placementCategory) {
+        placementStats[cats.placementCategory]++;
       }
     });
 
@@ -198,7 +301,7 @@ router.get("/dashboard-summary", async (req, res) => {
 // ==========================================
 router.get("/students", async (req, res) => {
   try {
-    const { page = 1, limit = 12, search, status: filterStatus } = req.query;
+    const { page = 1, limit = 12, search, status: filterStatus, chartType, chartKey } = req.query;
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
     // ดึงนิสิตทั้งหมดพร้อมข้อมูลที่เกี่ยวข้อง
@@ -214,55 +317,15 @@ router.get("/students", async (req, res) => {
       orderBy: { studentCode: "asc" },
     });
 
-    // Map สถานะแต่ละคน
+    // Map สถานะแต่ละคนด้วยฟังก์ชัน categorizeStudent เดียวกัน
     let mapped = allStudents.map((s) => {
-      const approvedTrainings = s.trainingRecords.filter(t => t.status === "APPROVED");
-      const softHours = approvedTrainings.filter(t => t.skillType === "SOFT").reduce((sum, t) => sum + t.hours, 0);
-      const hardHours = approvedTrainings.filter(t => t.skillType === "HARD").reduce((sum, t) => sum + t.hours, 0);
-      const isTrainingComplete = softHours >= 12 && hardHours >= 18;
-      const hasRejectedTraining = s.trainingRecords.some(t => t.status === "REJECTED");
+      const cats = categorizeStudent(s);
 
-      // คำนวณ overallStatus (สถานะรวม)
-      let overallStatus = "ยังไม่มีข้อมูล";
-      let statusCategory = "none";
-
-      if (s.placement && s.placement.status === "APPROVED") {
-        overallStatus = "อนุมัติที่ฝึกงานแล้ว";
-        statusCategory = "placement_approved";
-      } else if (s.placement && s.placement.status === "REJECTED") {
-        overallStatus = "ไม่อนุมัติที่ฝึกงาน";
-        statusCategory = "placement_rejected";
-      } else if (s.placement && s.placement.status === "PENDING") {
-        overallStatus = "รออนุมัติที่ฝึกงาน";
-        statusCategory = "placement_pending";
-      } else if (s.companies.some(c => c.submission && c.submission.status === "INTERVIEW_PASSED")) {
-        overallStatus = "สัมภาษณ์ผ่านแล้ว";
-        statusCategory = "interview_passed";
-      } else if (s.cv && s.cv.status === "APPROVED" && isTrainingComplete) {
-        overallStatus = "ตรวจCVผ่าน + ชม.ครบ";
-        statusCategory = "ready";
-      } else if (s.cv && s.cv.status === "APPROVED") {
-        overallStatus = "รีวิวCVผ่านแล้ว";
-        statusCategory = "cv_approved";
-      } else if (s.cv && s.cv.status === "REJECTED") {
-        overallStatus = "CVไม่ผ่าน";
-        statusCategory = "cv_rejected";
-      } else if (s.cv && s.cv.status === "PENDING") {
-        overallStatus = "ยังไม่ได้รีวิว CV";
-        statusCategory = "cv_pending";
-      } else if (isTrainingComplete && !hasRejectedTraining) {
-        overallStatus = "ผ่านการตรวจชม.ครบ";
-        statusCategory = "training_complete";
-      } else if (hasRejectedTraining) {
-        overallStatus = "ชั่วโมงอบรมไม่ผ่าน";
-        statusCategory = "training_rejected";
-      } else if (s.trainingRecords.length > 0) {
-        overallStatus = "ชั่วโมงอบรมยังไม่ครบ";
-        statusCategory = "training_incomplete";
-      } else {
-        overallStatus = "ยังไม่มีข้อมูล";
-        statusCategory = "none";
-      }
+      let activeStatus = cats.overallStatus;
+      if (chartType === "readiness") activeStatus = cats.readinessLabel;
+      else if (chartType === "training") activeStatus = cats.trainingLabel;
+      else if (chartType === "cv") activeStatus = cats.cvLabel;
+      else if (chartType === "placement") activeStatus = cats.placementLabel;
 
       return {
         id: s.id,
@@ -272,15 +335,38 @@ router.get("/students", async (req, res) => {
         nameEn: s.nameEn,
         advisorName: s.advisor ? s.advisor.name : null,
         advisorId: s.advisorId,
-        overallStatus,
-        statusCategory,
+        overallStatus: cats.overallStatus,
+        statusCategory: cats.statusCategory,
+        activeStatus,
+        trainingCategory: cats.trainingCategory,
+        cvCategory: cats.cvCategory,
+        placementCategory: cats.placementCategory,
+        readinessCategory: cats.readinessCategory,
         cvStatus: s.cv ? s.cv.status : null,
-        trainingApprovedSoft: softHours,
-        trainingApprovedHard: hardHours,
-        isTrainingComplete,
+        trainingApprovedSoft: cats.softHours,
+        trainingApprovedHard: cats.hardHours,
+        isTrainingComplete: cats.isTrainingComplete,
         placementStatus: s.placement ? s.placement.status : null,
       };
     });
+
+    // กรองตาม chartType และ chartKey
+    if (chartType && chartKey) {
+      if (chartType === "readiness") {
+        mapped = mapped.filter((s) => s.readinessCategory === chartKey);
+      } else if (chartType === "training") {
+        mapped = mapped.filter((s) => s.trainingCategory === chartKey);
+      } else if (chartType === "cv") {
+        mapped = mapped.filter((s) => s.cvCategory === chartKey);
+      } else if (chartType === "placement") {
+        mapped = mapped.filter((s) => s.placementCategory === chartKey);
+      }
+    }
+
+    // Filter ตาม legacy status
+    if (filterStatus) {
+      mapped = mapped.filter((s) => s.statusCategory === filterStatus);
+    }
 
     // Filter ตาม search
     if (search) {
@@ -291,11 +377,6 @@ router.get("/students", async (req, res) => {
           s.nameTh.toLowerCase().includes(q) ||
           (s.nameEn && s.nameEn.toLowerCase().includes(q))
       );
-    }
-
-    // Filter ตาม status
-    if (filterStatus) {
-      mapped = mapped.filter((s) => s.statusCategory === filterStatus);
     }
 
     const total = mapped.length;

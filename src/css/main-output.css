@@ -19,6 +19,7 @@
     --color-blue-700: oklch(48.8% 0.243 264.376);
     --color-purple-50: oklch(97.7% 0.014 308.299);
     --color-purple-100: oklch(94.6% 0.033 307.174);
+    --color-purple-700: oklch(49.6% 0.265 301.924);
     --color-gray-100: oklch(96.7% 0.003 264.542);
     --color-gray-200: oklch(92.8% 0.006 264.531);
     --color-gray-300: oklch(87.2% 0.01 258.338);
@@ -162,6 +163,9 @@
   }
   .mb-\[25px\] {
     margin-bottom: 25px;
+  }
+  .ml-1 {
+    margin-left: var(--spacing);
   }
   .ml-2 {
     margin-left: calc(var(--spacing) * 2);
@@ -655,9 +659,6 @@
   .py-4 {
     padding-block: calc(var(--spacing) * 4);
   }
-  .py-6 {
-    padding-block: calc(var(--spacing) * 6);
-  }
   .py-7 {
     padding-block: calc(var(--spacing) * 7);
   }
@@ -886,6 +887,9 @@
   }
   .text-green-700 {
     color: var(--color-green-700);
+  }
+  .text-purple-700 {
+    color: var(--color-purple-700);
   }
   .text-red-500 {
     color: var(--color-red-500);

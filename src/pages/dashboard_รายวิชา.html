@@ -97,7 +97,8 @@
           <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
             <h3 class="text-base font-semibold text-gray-800">
               รายชื่อนิสิต
-              <button onclick="clearFilter()" class="text-xs text-blue-500 ml-2 hover:underline" style="font-weight:normal;">[ล้างตัวกรอง]</button>
+              <span id="active-filter-badge" class="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full ml-1" style="display:none;"></span>
+              <button onclick="clearFilter()" id="btn-clear-filter" class="text-xs text-blue-500 ml-2 hover:underline" style="font-weight:normal; display:none;">[ล้างตัวกรอง]</button>
             </h3>
             <div class="flex items-center gap-2 flex-wrap">
               <div class="relative">
