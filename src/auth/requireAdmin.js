@@ -5,6 +5,12 @@ function requireAdmin(req, res, next) {
   }
 
   const role = req.session.user.role;
+  
+  // อนุญาตให้อาจารย์ที่ปรึกษา (ADVISOR) เข้าดู Profile นิสิตได้ (GET /students/:studentId)
+  if (role === "ADVISOR" && req.method === "GET" && req.path.startsWith("/students/")) {
+    return next();
+  }
+
   if (role !== "COURSE_INSTRUCTOR" && role !== "ADMIN") {
     return res.status(403).json({
       success: false,

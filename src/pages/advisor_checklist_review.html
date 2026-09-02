@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ตรวจ Checklist นิสิต - อาจารย์ที่ปรึกษา</title>
+  <link rel="stylesheet" href="../css/main.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Prompt:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" />
+  <link rel="stylesheet" href="../css/main-output.css">
+  <style>
+    body {
+      font-family: 'Prompt', 'Inter', sans-serif;
+      background-color: #f0f7ff;
+    }
+    .company-card {
+      margin-bottom: 20px;
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+      border: 1px solid #d1d5db;
+      background: white;
+    }
+    .company-header {
+      background: linear-gradient(90deg, #1e3a8a, #2563eb);
+      color: white;
+      padding: 14px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      cursor: pointer;
+      user-select: none;
+    }
+    .company-header:hover {
+      background: linear-gradient(90deg, #1e40af, #1d4ed8);
+    }
+    .section-title {
+      font-size: 1.15rem;
+      font-weight: 600;
+      color: #1d4ed8;
+      margin: 24px 0 12px 0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .checklist-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 20px;
+      font-size: 0.95rem;
+    }
+    .checklist-table th, .checklist-table td {
+      border: 1px solid #e5e7eb;
+      padding: 10px 14px;
+    }
+    .checklist-table th {
+      background-color: #f9fafb;
+      font-weight: 600;
+      text-align: center;
+      color: #374151;
+    }
+    .checklist-table td.desc-col {
+      text-align: left;
+      color: #1f2937;
+      width: 60%;
+    }
+    .checklist-table td.check-col {
+      text-align: center;
+      width: 10%;
+    }
+    .checklist-table td.detail-col {
+      width: 30%;
+    }
+    .custom-checkbox {
+      width: 20px;
+      height: 20px;
+      cursor: not-allowed;
+      accent-color: #2563eb;
+    }
+    .detail-input {
+      width: 100%;
+      padding: 6px 10px;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      background-color: #f8fafc;
+      color: #475569;
+      font-size: 0.9rem;
+    }
+  </style>
+</head>
+<body class="bg-[#f0f7ff] min-h-screen text-gray-800">
+
+  <!-- Header Bar -->
+  <div id="header-placeholder"></div>
+
+  <!-- Main Content -->
+  <main class="main-content max-w-[1200px] mx-auto py-8 px-4">
+
+    <!-- Top Card Header: CH ของนิสิต -->
+    <div class="bg-gradient-to-r from-blue-900 to-blue-700 text-white rounded-2xl shadow-md p-6 mb-6">
+      <div class="flex items-center justify-between flex-wrap gap-4">
+        <div class="flex items-center gap-3">
+          <span class="material-icons text-3xl">fact_check</span>
+          <div>
+            <h1 class="text-2xl font-bold flex items-center gap-2">
+              CH ของนิสิต
+            </h1>
+            <p id="student-info-subtitle" class="text-blue-100 text-sm mt-1">กำลังโหลดข้อมูลนิสิต...</p>
+          </div>
+        </div>
+        
+        <a href="/pages/dashboard_ที่ปรึกษา.html" class="inline-flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-xl text-sm transition no-underline">
+          <span class="material-icons text-base">arrow_back</span>
+          <span>กลับไปหน้า Dashboard</span>
+        </a>
+      </div>
+    </div>
+
+    <!-- Companies Checklist Container -->
+    <div id="companies-checklist-container">
+      <div class="text-center py-16 text-gray-500 font-medium" id="loading-spinner">
+        กำลังโหลดข้อมูล Checklist ของนิสิต...
+      </div>
+    </div>
+
+  </main>
+
+  <script src="../components/header.js"></script>
+  <script src="../api/advisor_checklist_review.js"></script>
+</body>
+</html>

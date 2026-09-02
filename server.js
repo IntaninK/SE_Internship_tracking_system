@@ -6,6 +6,7 @@ const path = require("path");
 const authRoutes = require("./src/auth/authRoutes");
 const studentRoutes = require("./src/api/studentRoutes");
 const adminRoutes = require("./src/api/adminRoutes");
+const advisorRoutes = require("./src/api/advisorRoutes");
 const requireLogin = require("./src/auth/requireLogin");
 
 const app = express();
@@ -33,6 +34,9 @@ app.use("/api/student", studentRoutes);
 
 // route APIs สำหรับอาจารย์รายวิชา/Admin ทั้งหมดอยู่ใต้ /api/admin/...
 app.use("/api/admin", adminRoutes);
+
+// route APIs สำหรับอาจารย์ที่ปรึกษา ทั้งหมดอยู่ใต้ /api/advisor/...
+app.use("/api/advisor", advisorRoutes);
 
 // เสิร์ฟ static assets ทั่วไป (css, img, components, uploads) ไม่ต้องล็อกอินก็โหลดได้
 app.use("/css", express.static(path.join(__dirname, "src", "css")));

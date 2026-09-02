@@ -8,10 +8,25 @@ if (!studentId) {
   document.getElementById('student-header-name').textContent = 'ไม่พบ ID นิสิต';
 }
 
+let currentUserRole = null;
+
 async function initStudentDetail() {
   if (!studentId) return;
 
   try {
+    const meRes = await fetch('/auth/me');
+    const meData = await meRes.json();
+    if (meData.authenticated) {
+      currentUserRole = meData.user.role;
+      if (currentUserRole === 'ADVISOR') {
+        const backBtn = document.querySelector('a[href*="dashboard"]');
+        if (backBtn) {
+          backBtn.href = '/pages/dashboard_ที่ปรึกษา.html';
+          backBtn.innerHTML = '<span class="material-icons" style="font-size:18px;">arrow_back</span> กลับหน้า Dashboard ที่ปรึกษา';
+        }
+      }
+    }
+
     const res = await fetch(`/api/admin/students/${studentId}`);
     const data = await res.json();
     if (!data.success) {
@@ -26,6 +41,24 @@ async function initStudentDetail() {
     renderSubmissions(data.companies);
     renderPlacement(data.placement);
     renderDocumentSummary(data);
+
+    // ถ้าผู้ใช้เป็นอาจารย์ที่ปรึกษา ให้ซ่อนปุ่มตรวจสถานะของ Admin
+    if (currentUserRole === 'ADVISOR') {
+      const trainingApproval = document.getElementById('training-approval-area');
+      const trainingSave = document.getElementById('training-save-area');
+      if (trainingApproval) trainingApproval.style.display = 'none';
+      if (trainingSave) trainingSave.style.display = 'none';
+
+      const cvStatusSelect = document.getElementById('cv-admin-status');
+      if (cvStatusSelect && cvStatusSelect.parentElement) {
+        cvStatusSelect.parentElement.style.display = 'none';
+      }
+
+      const placementStatusSelect = document.getElementById('placement-admin-status');
+      if (placementStatusSelect && placementStatusSelect.parentElement) {
+        placementStatusSelect.parentElement.style.display = 'none';
+      }
+    }
   } catch (err) {
     console.error('Load student detail error:', err);
   }
