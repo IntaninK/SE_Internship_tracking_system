@@ -23,42 +23,100 @@
     </div>
 
     <!-- ข้อมูลนิสิตหัวบน -->
-    <div class="card" style="margin-bottom:20px;">
-      <div class="card-header">
-        <span class="material-icons header-icon">person</span>
-        <h2 class="card-title" id="student-header-name">กำลังโหลด...</h2>
-      </div>
+    <!-- <div class="card" style="margin-bottom:20px;">
       <div class="card-body">
         <div style="display:flex; gap:20px; flex-wrap:wrap; align-items:center;">
-          <img id="student-photo" src="" alt="" style="width:80px; height:80px; border-radius:50%; object-fit:cover; display:none; border:3px solid #e2e8f0;" />
           <div>
             <p style="font-size:14px; color:#475569;" id="student-detail-code">รหัสนิสิต: -</p>
-            <p style="font-size:14px; color:#475569;" id="student-detail-email">Email: -</p>
             <p style="font-size:14px; color:#475569;" id="student-detail-advisor">อาจารย์ที่ปรึกษา: -</p>
             <p style="font-size:14px; color:#475569;" id="student-detail-gpa">GPA: -</p>
           </div>
         </div>
       </div>
-    </div>
+    </div> -->
 
-    <!-- 1. ข้อมูลส่วนตัว (อ่านอย่างเดียว) -->
+    <!-- 1. ข้อมูลนิสิต (อ่านอย่างเดียว) -->
     <section class="card">
       <div class="card-header">
-        <span class="material-icons header-icon">badge</span>
-        <h2 class="card-title">ข้อมูลส่วนตัว</h2>
+        <span class="material-icons header-icon">person</span>
+        <h2 class="card-title" id="student-header-name">กำลังโหลด...</h2>
       </div>
-      <div class="card-body">
-        <div class="form-grid">
-          <div class="form-group"><label class="form-label">ชื่อ-สกุล (ไทย)</label><input class="input-field" id="d-nameTh" readonly /></div>
-          <div class="form-group"><label class="form-label">ชื่อ-สกุล (English)</label><input class="input-field" id="d-nameEn" readonly /></div>
-          <div class="form-group"><label class="form-label">รหัสนิสิต</label><input class="input-field" id="d-studentCode" readonly /></div>
-          <div class="form-group"><label class="form-label">ชั้นปี</label><input class="input-field" id="d-year" readonly /></div>
-          <div class="form-group"><label class="form-label">GPA</label><input class="input-field" id="d-gpa" readonly /></div>
-          <div class="form-group"><label class="form-label">สาขา</label><input class="input-field" id="d-major" readonly /></div>
-          <div class="form-group"><label class="form-label">เบอร์โทร</label><input class="input-field" id="d-phone" readonly /></div>
-          <div class="form-group"><label class="form-label">Line ID</label><input class="input-field" id="d-lineId" readonly /></div>
-          <div class="form-group"><label class="form-label">Facebook</label><input class="input-field" id="d-facebook" readonly /></div>
+      <div class="card-body">  
+        <div class="flex flex-wrap gap-[32px_50px] mb-10 max-[900px]:flex-col max-[900px]:items-center">
+            <div class="w-[260px] min-w-[180px] max-w-[260px] h-[336px] rounded-[15px] border border-black overflow-hidden flex items-center justify-center bg-[#f0f0f0] shrink mx-auto max-[560px]:w-full max-[560px]:max-w-[240px] max-[560px]:h-[300px] max-[360px]:max-w-[200px] max-[360px]:h-[250px]" style="flex-basis: 260px;">
+                <img id="student-photo" src="" alt="Profile Photo" class="w-full h-full object-cover" style="display: none;">
+                <!-- <span id="p-icon" class="material-icons text-[100px] text-gray-400">person</span> -->
+            </div>
+
+            <div class="flex-1 min-w-[280px] flex flex-col gap-5 max-[900px]:w-full max-[900px]:min-w-0" style="flex: 1 1 320px;">
+                <!-- Row 1 -->
+                <div class="flex flex-wrap gap-[16px_24px] max-[560px]:flex-col max-[560px]:gap-4">
+                    <div class="flex flex-col gap-[10px] min-w-[140px] max-[560px]:min-w-0 max-[560px]:w-full" style="flex: 1.33 1 200px;">
+                        <label class="text-[20px] font-semibold text-[#323639] leading-[1.35]">ชื่อ-สกุล (ไทย)</label>
+                        <input class="input-field text-[18px] font-medium" id="d-nameTh" readonly />
+                    </div>
+                    <div class="flex flex-col gap-[10px] min-w-[140px] max-[560px]:min-w-0 max-[560px]:w-full" style="flex: 1 1 140px;">
+                        <label class="text-[20px] font-semibold text-[#323639] leading-[1.35]">รหัสนิสิต</label>
+                        <input class="input-field text-[18px] font-medium" id="d-studentCode" readonly />
+                    </div>
+                </div>
+
+                <!-- Row 2 -->
+                <div class="flex flex-wrap gap-[16px_24px] max-[560px]:flex-col max-[560px]:gap-4">
+                    <div class="flex flex-col gap-[10px] min-w-[140px] max-[560px]:min-w-0 max-[560px]:w-full" style="flex: 1.33 1 200px;">
+                        <label class="text-[20px] font-semibold text-[#323639] leading-[1.35]">Name & Surname (English)</label>
+                        <input class="input-field text-[18px] font-medium" id="d-nameEn" readonly />
+                    </div>
+                    <div class="flex flex-col gap-[10px] min-w-[140px] max-[560px]:min-w-0 max-[560px]:w-full" style="flex: 1 1 140px;">
+                        <label class="text-[20px] font-semibold text-[#323639] leading-[1.35]">ชั้นปีที่</label>
+                        <input class="input-field text-[18px] font-medium" id="d-year" readonly />
+                    </div>
+                </div>
+
+                <!-- Row 3 -->
+                <div class="flex flex-wrap gap-[16px_24px] max-[560px]:flex-col max-[560px]:gap-4">
+                  <div class="flex flex-col gap-[10px] min-w-[140px] max-[560px]:min-w-0 max-[560px]:w-full" style="flex: 1.33 1 200px;">
+                      <label class="text-[20px] font-semibold text-[#323639] leading-[1.35]">อาจารย์ที่ปรึกษา</label>
+                      <input class="input-field text-[18px] font-medium" id="student-detail-advisor" readonly />
+                  </div>
+                  <div class="flex flex-col gap-[10px] min-w-[140px] max-[360px]:min-w-0 max-[560px]:w-full" style="flex: 1.33 1 200px;">
+                      <label class="text-[20px] font-semibold text-[#323639] leading-[1.35]">เกรดเฉลี่ย</label>
+                      <input class="input-field text-[18px] font-medium" id="d-gpa" readonly />
+                  </div>
+                  <div class="flex flex-col gap-[10px] min-w-[140px] max-[360px]:min-w-0 max-[560px]:w-full" style="flex: 1 1 140px;">
+                      <label class="text-[20px] font-semibold text-[#323639] leading-[1.35]">สาขาวิชา</label>
+                      <input class="input-field text-[18px] font-medium" id="d-major" readonly />
+                  </div>
+                </div>
+            </div>
         </div>
+
+        <div class="flex flex-col gap-[10px]">
+            <!-- Row 1 -->
+            <div class="flex flex-wrap gap-[16px_24px] max-[560px]:flex-col max-[560px]:gap-4">
+                <div class="flex flex-col gap-[10px] min-w-[140px] max-[560px]:min-w-0 max-[560px]:w-full" style="flex: 1 1 160px;">
+                    <label class="text-[20px] font-semibold text-[#323639] leading-[1.35]">E-mail</label>
+                    <input class="input-field text-[18px] font-medium" id="student-detail-email" readonly />
+                </div>
+                <div class="flex flex-col gap-[10px] min-w-[140px] max-[560px]:min-w-0 max-[560px]:w-full" style="flex: 1 1 160px;">
+                    <label class="text-[20px] font-semibold  text-[#323639] leading-[1.35]">เบอร์โทร</label>
+                    <input class="input-field text-[18px] font-medium" id="d-phone" readonly />
+                </div>
+            </div>
+
+            <!-- Row 2 -->
+            <div class="flex flex-wrap gap-[16px_24px] max-[560px]:flex-col max-[560px]:gap-4">
+                <div class="flex flex-col gap-[10px] min-w-[140px] max-[560px]:min-w-0 max-[560px]:w-full" style="flex: 1 1 160px;">
+                    <label class="text-[20px] font-semibold text-[#323639] leading-[1.35]">Line ID</label>
+                    <input class="input-field text-[18px] font-medium" id="d-lineId" readonly />
+                </div>
+                <div class="flex flex-col gap-[10px] min-w-[140px] max-[560px]:min-w-0 max-[560px]:w-full" style="flex: 1 1 160px;">
+                    <label class="text-[20px] font-semibold text-[#323639] leading-[1.35]">Facebook</label>
+                    <input class="input-field text-[18px] font-medium" id="d-facebook" readonly />
+                </div>
+            </div>
+        </div>
+
       </div>
     </section>
 
@@ -70,7 +128,7 @@
       </div>
       <div class="card-body">
         <table class="data-table">
-          <thead>
+          <thead class="text-[20px] font-semibold">
             <tr>
               <th>ลำดับ</th>
               <th>ชื่อกิจกรรมอบรม/Certificate</th>
@@ -81,22 +139,22 @@
             </tr>
           </thead>
           <tbody id="admin-trainings-tbody">
-            <tr><td colspan="6" class="text-center py-4 text-gray-400">กำลังโหลด...</td></tr>
+            <tr class="text-[18px]"><td colspan="6" class="text-center py-4 text-gray-400">กำลังโหลด...</td></tr>
           </tbody>
         </table>
 
         <!-- การอนุมัติชั่วโมงอบรม + คอมเมนต์ -->
         <div id="training-approval-area" style="display:none; margin-top:24px; display:flex; gap:24px; flex-wrap:wrap;">
           <div style="flex:1; min-width:260px;">
-            <label style="font-size:15px; font-weight:700; color:#1e3a5f; margin-bottom:8px; display:block;">การอนุมัติชั่วโมงอบรม Soft/Hard Skills</label>
-            <select class="input-field" id="training-batch-status" style="font-size:14px; padding:10px 14px; border-radius:10px; width:100%;">
+            <label style="font-size:18px; font-weight:700; color:#1e3a5f; margin-bottom:8px; display:block;">การอนุมัติชั่วโมงอบรม Soft/Hard Skills</label>
+            <select class="input-field" id="training-batch-status" style="font-size:16px; padding:10px 14px; border-radius:10px; width:100%;">
               <option value="APPROVED" style="background:#22c55e; color:white;">ผ่าน/ชั่วโมงอบรมครบ</option>
               <option value="REJECTED" style="background:#ef4444; color:white;">ไม่ผ่าน / ใบ cert ไม่ผ่าน/ชั่วโมงยังไม่ครบ</option>
             </select>
           </div>
           <div style="flex:1; min-width:260px;">
-            <label style="font-size:15px; font-weight:700; color:#1e3a5f; margin-bottom:8px; display:block;">คอมเมนต์ /หมายเหตุปัญหา</label>
-            <textarea class="input-field" id="training-batch-note" rows="3" placeholder="หมายเหตุ" style="font-size:14px; padding:10px 14px; border-radius:10px; width:100%; resize:vertical;"></textarea>
+            <label style="font-size:18px; font-weight:700; color:#1e3a5f; margin-bottom:8px; display:block;">คอมเมนต์ /หมายเหตุปัญหา</label>
+            <textarea class="input-field" id="training-batch-note" rows="3" placeholder="หมายเหตุ" style="font-size:16px; padding:10px 14px; border-radius:10px; width:100%; resize:vertical;"></textarea>
           </div>
         </div>
         <div id="training-save-area" style="display:none; margin-top:16px;">
@@ -128,7 +186,7 @@
       </div>
       <div class="card-body">
         <table class="data-table">
-          <thead>
+          <thead class="text-[20px] font-semibold">
             <tr>
               <th>ลำดับ</th>
               <th>ชื่อกิจกรรมอบรม/Certificate</th>
@@ -172,7 +230,7 @@
       </div>
       <div class="card-body">
         <table class="data-table">
-          <thead>
+          <thead  class="text-[20px] font-semibold">
             <tr><th>ลำดับ</th><th>ชื่อบริษัท</th><th>สถานะ</th></tr>
           </thead>
           <tbody id="admin-submissions-tbody">

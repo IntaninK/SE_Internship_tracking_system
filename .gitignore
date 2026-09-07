@@ -3,3 +3,5 @@ node_modules
 .env
 
 /generated/prisma
+test01.js
+server_test.js

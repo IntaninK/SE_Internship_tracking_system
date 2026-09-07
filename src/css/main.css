@@ -6,6 +6,7 @@
 /* บอก Tailwind ให้สแกนหา class ในไฟล์ HTML ตรงไหนบ้าง */
 @source "../pages/*.html";
 @source "../components/*.html";
+@source "../api/*.js";
 
 /* =========================================================
    CSS เดิมของทีม (hand-written)

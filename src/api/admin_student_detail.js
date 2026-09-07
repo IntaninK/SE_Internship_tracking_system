@@ -68,24 +68,30 @@ async function initStudentDetail() {
 // 1. ข้อมูลส่วนตัว (อ่านอย่างเดียว)
 // ==========================================
 function renderProfile(s) {
-  document.getElementById('student-header-name').textContent = `${s.studentCode} ${s.nameTh}`;
-  document.getElementById('student-detail-code').textContent = `รหัสนิสิต: ${s.studentCode}`;
-  document.getElementById('student-detail-email').textContent = `Email: ${s.email}`;
-  document.getElementById('student-detail-advisor').textContent = `อาจารย์ที่ปรึกษา: ${s.advisorName || '-'}`;
-  document.getElementById('student-detail-gpa').textContent = `GPA: ${s.gpa ? Number(s.gpa).toFixed(2) : '-'}`;
+  function setText(id, text) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = text;
+  }
+  function setValue(id, value) {
+    const el = document.getElementById(id);
+    if (el) el.value = value;
+  }
+
+  setText('student-header-name', `${s.studentCode} ${s.nameTh}`);
 
   if (s.profileImageUrl) {
     const img = document.getElementById('student-photo');
     img.src = s.profileImageUrl;
     img.style.display = 'block';
   }
-
+  document.getElementById('student-detail-advisor').value = s.advisorName || '';
   document.getElementById('d-nameTh').value = s.nameTh || '';
   document.getElementById('d-nameEn').value = s.nameEn || '';
   document.getElementById('d-studentCode').value = s.studentCode || '';
   document.getElementById('d-year').value = s.year || '';
   document.getElementById('d-gpa').value = s.gpa ? Number(s.gpa).toFixed(2) : '';
   document.getElementById('d-major').value = s.major || '';
+  document.getElementById('student-detail-email').value = s.email || '';
   document.getElementById('d-phone').value = s.phone || '';
   document.getElementById('d-lineId').value = s.lineId || '';
   document.getElementById('d-facebook').value = s.facebook || '';
@@ -122,17 +128,17 @@ function renderTrainings(trainings, summary) {
 
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td>${idx + 1}</td>
-      <td>${t.title}</td>
-      <td>${t.skillType === 'HARD' ? 'Hard skill' : 'Soft skill'}</td>
-      <td>${t.hours}</td>
+      <td style="font-size:16px;">${idx + 1}</td>
+      <td style="font-size:16px;">${t.title}</td>
+      <td style="font-size:16px;">${t.skillType === 'HARD' ? 'Hard skill' : 'Soft skill'}</td>
+      <td style="font-size:16px;">${t.hours}</td>
       <td style="text-align:center;">
         <input type="checkbox" class="training-cert-checkbox" data-id="${t.id}" ${isChecked ? 'checked' : ''} style="width:18px; height:18px; cursor:pointer; accent-color:#2563eb;" />
       </td>
       <td style="text-align:center;">
         ${certUrl
-          ? `<a href="${certUrl}" target="_blank" style="color:#2563eb; font-size:13px; text-decoration:none; white-space:nowrap;">ดูตัวอย่าง</a>`
-          : '<span style="color:#94a3b8; font-size:12px;">-</span>'
+          ? `<a href="${certUrl}" target="_blank" style="color:#2563eb; font-size:16px; text-decoration:none; white-space:nowrap;">ดูตัวอย่าง</a>`
+          : '<span style="color:#94a3b8; font-size:16px;">-</span>'
         }
       </td>
     `;
@@ -194,8 +200,8 @@ function renderCv(cv) {
   }
 
   let statusBadge = '<span class="status-wait">☐ รอผล</span>';
-  if (cv.status === 'APPROVED') statusBadge = '<span class="status-pass">✓ CVตรวจแล้ว / ผ่าน</span>';
-  else if (cv.status === 'REJECTED') statusBadge = `<span class="status-fail">✗ CVไม่ผ่าน / ทำใหม่</span>`;
+  if (cv.status === 'APPROVED') statusBadge = '<span class="status-pass" style="font-size:16px; font-weight:600;">✓ CVตรวจแล้ว / ผ่าน</span>';
+  else if (cv.status === 'REJECTED') statusBadge = `<span class="status-fail" style="font-size:16px; font-weight:600;">✗ CVไม่ผ่าน / ทำใหม่</span>`;
 
   // ตรวจว่าเป็น PDF หรือรูป
   const isPdf = cv.fileUrl && (cv.fileUrl.toLowerCase().endsWith('.pdf') || (cv.fileName && cv.fileName.toLowerCase().endsWith('.pdf')));
@@ -210,21 +216,21 @@ function renderCv(cv) {
   }
 
   section.innerHTML = `
-    <div style="display:flex; gap:20px; flex-wrap:wrap; align-items:flex-start;">
+    <div style="display: flex; justify-content: center; align-items: center; gap:20px; max-width: 700px; margin: 0 auto; padding: 20px;">
       <div>${previewHtml}</div>
-      <div style="flex:1; min-width:250px;">
-        <p style="font-size:14px; margin-bottom:8px;"><strong>ไฟล์:</strong> ${cv.fileName || 'CV'}</p>
-        <p style="font-size:14px; margin-bottom:12px;"><strong>สถานะปัจจุบัน:</strong> ${statusBadge}</p>
-        ${cv.note ? `<p style="font-size:13px; color:#64748b; margin-bottom:12px;">หมายเหตุ: ${cv.note}</p>` : ''}
+      <div style="flex:1; min-width:250px; max-width: 400px;">
+        <p style="font-size:16px; margin-bottom:8px;"><strong>ไฟล์:</strong> ${cv.fileName || 'CV'}</p>
+        <p style="font-size:16px; margin-bottom:12px;"><strong>สถานะปัจจุบัน:</strong> ${statusBadge}</p>
+        ${cv.note ? `<p style="font-size:16px; color:#64748b; margin-bottom:12px;">หมายเหตุ: ${cv.note}</p>` : ''}
         <div style="display:flex; flex-direction:column; gap:10px; max-width:350px;">
-          <label style="font-size:13px; font-weight:600; color:#334155;">ตั้งสถานะ CV</label>
-          <select class="input-field" id="cv-admin-status" style="font-size:13px; padding:8px 10px;">
+          <label style="font-size:16px; font-weight:600; color:#334155;">ตั้งสถานะ CV</label>
+          <select class="input-field" id="cv-admin-status" style="font-size:16px; padding:8px 10px;">
             <option value="PENDING" ${cv.status === 'PENDING' ? 'selected' : ''}>☐ รอผล (รออาจารย์ตรวจ)</option>
             <option value="APPROVED" ${cv.status === 'APPROVED' ? 'selected' : ''}>✓ CVตรวจแล้ว / ผ่าน</option>
             <option value="REJECTED" ${cv.status === 'REJECTED' ? 'selected' : ''}>✗ CVไม่ผ่าน / ทำใหม่</option>
           </select>
           <input type="text" class="input-field" id="cv-admin-note" value="${cv.note || ''}" placeholder="Comment / หมายเหตุ..." />
-          <button class="btn btn-primary btn-sm" onclick="saveCvStatus()" style="width:fit-content;">💾 บันทึกสถานะ CV</button>
+          <button class="btn btn-primary btn-sm" onclick="saveCvStatus()" style="width:fit-content; font-size:18px;">💾 บันทึกสถานะ CV</button>
         </div>
       </div>
     </div>
@@ -288,11 +294,11 @@ function renderCompanies(companies) {
 
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td>${idx + 1}</td>
-      <td>${c.name}</td>
-      <td style="${statusStyle}">${statusText}</td>
+      <td style="font-size:16px;">${idx + 1}</td>
+      <td style="font-size:16px;">${c.name}</td>
+      <td style="font-size:16px; ${statusStyle}">${statusText}</td>
       <td style="text-align:center;">
-        <a href="#" onclick="openChecklistModal(${idx}); return false;" style="color:#2563eb; font-size:13px; text-decoration:none;">ดูตัวอย่าง</a>
+        <a href="#" onclick="openChecklistModal(${idx}); return false;" style="color:#2563eb; font-size:16px; text-decoration:none;">ดูตัวอย่าง</a>
       </td>
     `;
     tbody.appendChild(tr);
@@ -307,11 +313,11 @@ function renderCompanies(companies) {
     reviewStatusDiv.style.display = 'block';
 
     if (hasApproved) {
-      reviewBadge.innerHTML = '<span style="display:inline-block; padding:10px 32px; border-radius:8px; background:#22c55e; color:white; font-size:14px; font-weight:600;">อาจารย์รีวิวแล้ว</span>';
+      reviewBadge.innerHTML = '<span style="display:inline-block; padding:10px 32px; border-radius:8px; background:#22c55e; color:white; font-size:16px; font-weight:600;">อาจารย์รีวิวแล้ว</span>';
     } else if (hasRejected) {
-      reviewBadge.innerHTML = '<span style="display:inline-block; padding:10px 32px; border-radius:8px; background:#ef4444; color:white; font-size:14px; font-weight:600;">ไม่ผ่าน / ทำ checklist เพิ่ม</span>';
+      reviewBadge.innerHTML = '<span style="display:inline-block; padding:10px 32px; border-radius:8px; background:#ef4444; color:white; font-size:16px; font-weight:600;">ไม่ผ่าน / ทำ checklist เพิ่ม</span>';
     } else if (allPending) {
-      reviewBadge.innerHTML = '<span style="display:inline-block; padding:10px 32px; border-radius:8px; background:#f59e0b; color:white; font-size:14px; font-weight:600;">รอผล</span>';
+      reviewBadge.innerHTML = '<span style="display:inline-block; padding:10px 32px; border-radius:8px; background:#f59e0b; color:white; font-size:16px ; font-weight:600;">รอผล</span>';
     }
   }
 }
@@ -338,7 +344,7 @@ window.openChecklistModal = function(companyIdx) {
             <span class="material-icons" style="font-size:24px;">business</span>
             <span style="font-weight:600; font-size:1.1rem;">${company.name}</span>
           </div>
-          <button onclick="closeChecklistModal()" style="background:none; border:none; cursor:pointer; color:white; font-size:14px;">ปิด</button>
+          <button onclick="closeChecklistModal()" style="background:none; border:none; cursor:pointer; color:white; font-size:16px;">ปิด</button>
         </div>
         <p style="color:#94a3b8; text-align:center; padding:40px 20px;">นิสิตยังไม่ได้กรอก Checklist สำหรับบริษัทนี้</p>
       </div>`;
@@ -402,7 +408,7 @@ window.openChecklistModal = function(companyIdx) {
             <span class="material-icons" style="font-size:24px;">business</span>
             <span style="font-weight:600; font-size:1.1rem;">${company.name}</span>
           </div>
-          <button onclick="closeChecklistModal()" style="background:none; border:none; cursor:pointer; color:white; font-size:14px; font-weight:500;">ปิด</button>
+          <button onclick="closeChecklistModal()" style="background:none; border:none; cursor:pointer; color:white; font-size:16px; font-weight:500;">ปิด</button>
         </div>
         ${sectionsHtml}
       </div>`;
@@ -426,7 +432,7 @@ function renderSubmissions(companies) {
   const approvedCompanies = companies.filter(c => c.checklistStatus === 'APPROVED');
 
   if (approvedCompanies.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="3" class="text-center py-4 text-gray-400">ยังไม่มีบริษัทที่ผ่าน checklist</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="3" class="font-size-16 text-center py-4 text-gray-400">ยังไม่มีบริษัทที่ผ่าน checklist</td></tr>';
     return;
   }
 
@@ -444,9 +450,9 @@ function renderSubmissions(companies) {
 
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td>${idx + 1}</td>
-      <td>${c.name}</td>
-      <td>${label}</td>
+      <td style="font-size:16px;">${idx + 1}</td>
+      <td style="font-size:16px;">${c.name}</td>
+      <td style="font-size:16px;">${label}</td>
     `;
     tbody.appendChild(tr);
   });
@@ -476,17 +482,17 @@ function renderPlacement(placement) {
       ${placement.note ? `<span style="color:#64748b; font-size:13px;">หมายเหตุ: ${placement.note}</span>` : ''}
     </div>
     <div class="form-grid">
-      <div class="form-group"><label class="form-label">ตำแหน่งที่ฝึก</label><input class="input-field" value="${placement.position || '-'}" readonly /></div>
-      <div class="form-group"><label class="form-label">ชื่อแหล่งฝึกงาน</label><input class="input-field" value="${placement.companyNameTh || '-'}" readonly /></div>
-      <div class="form-group"><label class="form-label">บุคคลที่ให้ทำหนังสือ</label><input class="input-field" value="${placement.contactPersonName || '-'}" readonly /></div>
-      <div class="form-group"><label class="form-label">ตำแหน่งบุคคล</label><input class="input-field" value="${placement.contactPersonPosition || '-'}" readonly /></div>
-      <div class="form-group"><label class="form-label">ที่อยู่บริษัท</label><input class="input-field" value="${placement.companyAddress || '-'}" readonly /></div>
-      <div class="form-group"><label class="form-label">เบอร์โทร 1</label><input class="input-field" value="${placement.companyPhone1 || '-'}" readonly /></div>
-      <div class="form-group"><label class="form-label">เบอร์โทร 2</label><input class="input-field" value="${placement.companyPhone2 || '-'}" readonly /></div>
-      <div class="form-group"><label class="form-label">Email</label><input class="input-field" value="${placement.companyEmail || '-'}" readonly /></div>
-      <div class="form-group"><label class="form-label">จังหวัด</label><input class="input-field" value="${placement.province || '-'}" readonly /></div>
+      <div class="form-group"><label class="form-label" style="font-size:16px; font-weight:600;">ตำแหน่งที่ฝึก</label><input class="input-field" value="${placement.position || '-'}" readonly /></div>
+      <div class="form-group"><label class="form-label" style="font-size:16px; font-weight:600;">ชื่อแหล่งฝึกงาน</label><input class="input-field" value="${placement.companyNameTh || '-'}" readonly /></div>
+      <div class="form-group"><label class="form-label" style="font-size:16px; font-weight:600;">บุคคลที่ให้ทำหนังสือ</label><input class="input-field" value="${placement.contactPersonName || '-'}" readonly /></div>
+      <div class="form-group"><label class="form-label" style="font-size:16px; font-weight:600;">ตำแหน่งบุคคล</label><input class="input-field" value="${placement.contactPersonPosition || '-'}" readonly /></div>
+      <div class="form-group"><label class="form-label" style="font-size:16px; font-weight:600;">ที่อยู่บริษัท</label><input class="input-field" value="${placement.companyAddress || '-'}" readonly /></div>
+      <div class="form-group"><label class="form-label" style="font-size:16px; font-weight:600;">เบอร์โทร 1</label><input class="input-field" value="${placement.companyPhone1 || '-'}" readonly /></div>
+      <div class="form-group"><label class="form-label" style="font-size:16px; font-weight:600;">เบอร์โทร 2</label><input class="input-field" value="${placement.companyPhone2 || '-'}" readonly /></div>
+      <div class="form-group"><label class="form-label" style="font-size:16px; font-weight:600;">Email</label><input class="input-field" value="${placement.companyEmail || '-'}" readonly /></div>
+      <div class="form-group"><label class="form-label" style="font-size:16px; font-weight:600;">จังหวัด</label><input class="input-field" value="${placement.province || '-'}" readonly /></div>
     </div>
-    <div style="margin-top:16px; display:flex; flex-direction:column; gap:10px; max-width:350px;">
+    <div style="margin: 16px auto 0; display:flex; flex-direction:column; gap:10px; max-width:350px;">
       <label style="font-size:13px; font-weight:600; color:#334155;">ตั้งสถานะอนุมัติที่ฝึกงาน</label>
       <select class="input-field" id="placement-admin-status" style="font-size:13px; padding:8px 10px;">
         <option value="PENDING" ${placement.status === 'PENDING' ? 'selected' : ''}>☐ รอผล</option>
@@ -541,7 +547,7 @@ function renderDocumentSummary(data) {
   const placementStatus = placement ? (placement.status === 'APPROVED' ? '✅ อนุมัติแล้ว' : placement.status === 'REJECTED' ? '❌ ไม่อนุมัติ' : '⏳ รอผล') : '❌ ยังไม่ได้กรอก';
 
   body.innerHTML = `
-    <table class="data-table" style="font-size:14px;">
+    <table class="data-table" style="font-size:16px;">
       <tbody>
         <tr><td style="font-weight:600; width:220px;">ชื่อ-สกุล</td><td>${s.nameTh} (${s.nameEn || '-'})</td></tr>
         <tr><td style="font-weight:600;">รหัสนิสิต</td><td>${s.studentCode}</td></tr>
