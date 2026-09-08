@@ -665,4 +665,113 @@ router.get("/advisors", async (req, res) => {
   }
 });
 
+// ==========================================
+// Export ข้อมูลนิสิตแบบละเอียด (สำหรับ CSV)
+// ==========================================
+router.get("/export", async (req, res) => {
+  try {
+    const students = await prisma.student.findMany({
+      include: {
+        user: true,
+        cv: true,
+        trainingRecords: true,
+        companies: {
+          include: {
+            submission: true,
+          },
+        },
+        placement: true,
+        advisor: true,
+      },
+      orderBy: { studentCode: "asc" },
+    });
+
+    const exportData = students.map((s) => {
+      // คำนวณชั่วโมง Hard Skill ที่ Approved
+      const approvedHard = (s.trainingRecords || [])
+        .filter((t) => t.skillType === "HARD" && t.status === "APPROVED");
+      const hardHours = approvedHard.reduce((sum, t) => sum + t.hours, 0);
+
+      // สถานะการตรวจ Hard Skill
+      const totalHard = (s.trainingRecords || []).filter((t) => t.skillType === "HARD");
+      let hardStatus = "ยังไม่มีข้อมูล";
+      if (totalHard.length > 0) {
+        const allApproved = totalHard.every((t) => t.status === "APPROVED");
+        const hasRejected = totalHard.some((t) => t.status === "REJECTED");
+        if (allApproved && hardHours >= 18) hardStatus = "ผ่าน";
+        else if (hasRejected) hardStatus = "ไม่ผ่าน";
+        else hardStatus = "รออนุมัติ";
+      }
+
+      // สถานะ Checklist รวม
+      const companies = s.companies || [];
+      const hasApproved = companies.some((c) => c.checklistStatus === "APPROVED");
+      const allRejected = companies.length > 0 && companies.every((c) => c.checklistStatus === "REJECTED");
+      let checklistReviewStatus = "รอผล";
+      if (hasApproved) checklistReviewStatus = "อาจารย์รีวิวแล้ว";
+      else if (allRejected) checklistReviewStatus = "ไม่ผ่าน/ทำ checklist เพิ่ม";
+
+      // ผลรีวิว + หมายเหตุ แต่ละบริษัท
+      let resultWaiting = "";
+      let resultAdditional = "";
+      companies.forEach((c) => {
+        const label =
+          c.checklistStatus === "APPROVED" ? "ผ่าน" :
+          c.checklistStatus === "REJECTED" ? "ไม่ผ่าน" : "รอผล";
+        resultWaiting += `${c.name}: ${label}; `;
+        if (c.checklistNote) resultAdditional += `${c.name}: ${c.checklistNote}; `;
+      });
+
+      // สถานะการยื่น
+      let submissionStatus = "";
+      companies.forEach((c) => {
+        if (c.submission) {
+          const label = {
+            NOT_SUBMITTED: "ยังไม่ได้ยื่น",
+            SUBMITTED_WAITING: "ยื่นแล้ว รอสัมภาษณ์",
+            INTERVIEWED_PENDING: "สัมภาษณ์แล้ว รอผล",
+            INTERVIEW_PASSED: "สัมภาษณ์ผ่านแล้ว",
+            INTERVIEW_FAILED_REAPPLIED: "สัมภาษณ์ไม่ผ่าน ยื่นเพิ่มแล้ว",
+          }[c.submission.status] || c.submission.status;
+          submissionStatus += `${c.name}: ${label}; `;
+        }
+      });
+
+      // ข้อมูล Placement
+      const p = s.placement;
+
+      return {
+        id: s.id,
+        studentCode: s.studentCode,
+        nameTh: s.nameTh,
+        email: s.user.email,
+        lineId: s.lineId || "",
+        facebook: s.facebook || "",
+        advisorName: s.advisor ? s.advisor.name : "",
+        cvLink: s.cv ? s.cv.fileUrl : "",
+        hardHours: hardHours,
+        hardStatus: hardStatus,
+        phone: s.phone || "",
+        checklistReviewStatus: checklistReviewStatus,
+        resultWaiting: resultWaiting.trim(),
+        resultAdditional: resultAdditional.trim(),
+        submissionStatus: submissionStatus.trim(),
+        position: p ? p.position || "" : "",
+        companyNameTh: p ? p.companyNameTh || "" : "",
+        contactPersonName: p ? p.contactPersonName || "" : "",
+        contactPersonPosition: p ? p.contactPersonPosition || "" : "",
+        companyAddress: p ? p.companyAddress || "" : "",
+        companyPhone: p ? (p.companyPhone1 || "") : "",
+        companyEmail: p ? p.companyEmail || "" : "",
+        province: p ? p.province || "" : "",
+      };
+    });
+
+    res.json({ success: true, data: exportData });
+  } catch (err) {
+    console.error("GET /api/admin/export error:", err);
+    res.status(500).json({ success: false, message: "ดึงข้อมูล Export ไม่สำเร็จ" });
+  }
+});
+
 module.exports = router;

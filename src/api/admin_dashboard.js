@@ -436,40 +436,92 @@ window.submitBatchAdvisor = async function() {
   }
 };
 
+// Export Excel (ดึงจาก API ข้อมูลครบ)
 // ==========================================
-// Export Excel (ใช้ basic CSV download)
-// ==========================================
-window.exportStudents = function() {
+window.exportStudents = async function() {
   if (selectedStudentIds.size === 0) {
     alert('กรุณาเลือก checkbox นิสิตที่ต้องการ export');
     return;
   }
 
-  // Simple CSV export (ไม่ต้อง library)
-  const rows = [];
-  rows.push(['Student ID', 'ชื่อ-สกุล', 'อาจารย์ที่ปรึกษา', 'สถานะ'].join(','));
-
-  document.querySelectorAll('.student-checkbox:checked').forEach(cb => {
-    const tr = cb.closest('tr');
-    if (tr) {
-      const cells = tr.querySelectorAll('td');
-      rows.push([
-        cells[0].textContent.trim(),
-        cells[1].textContent.trim(),
-        cells[2].textContent.trim(),
-        cells[3].textContent.trim(),
-      ].map(v => `"${v}"`).join(','));
+  try {
+    const res = await fetch('/api/admin/export');
+    const data = await res.json();
+    if (!data.success) {
+      alert('Export ไม่สำเร็จ: ' + data.message);
+      return;
     }
-  });
 
-  const csvContent = '\uFEFF' + rows.join('\n'); // BOM for Excel UTF-8
-  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `รายชื่อนิสิต_${new Date().toISOString().slice(0,10)}.csv`;
-  a.click();
-  URL.revokeObjectURL(url);
+    // กรองเฉพาะนิสิตที่ติ๊ก checkbox
+    const exportList = data.data.filter(s => selectedStudentIds.has(s.id));
+
+    if (exportList.length === 0) {
+      alert('ไม่พบข้อมูลนิสิตที่เลือก');
+      return;
+    }
+
+    const headers = [
+      'STD_ID',
+      'ชื่อ นามสกุล',
+      'Email',
+      'Line ID',
+      'Facebook',
+      'อาจารย์ที่ปรึกษา',
+      'Link ประวัติและผลงาน CV',
+      'จำนวนชั่วโมง Hard Skill',
+      'สถานะการตรวจสอบ ชม. Hard Skill',
+      'เบอร์โทรนิสิต',
+      'อาจารย์รีวิว',
+      'ผลรีวิว (เก็บสถานะครบกำหนดส่ง)',
+      'ผลรีวิว (ช่วงรอผลอ.รีวิว เพิ่มเติม)',
+      'สถานะการยื่น',
+      'ตำแหน่งที่ฝึก',
+      'ชื่อแหล่งฝึกงาน (ชื่อเต็มเป็นภาษาไทย)',
+      'ชื่อบุคคลที่ให้ทำหนังสือขอความอนุเคราะห์',
+      'ตำแหน่งบุคคลที่ให้ทำหนังสือขอความอนุเคราะห์',
+      'ที่อยู่บริษัท',
+      'เบอร์โทรติดต่อสถานประกอบการ / แหล่งฝึก',
+      'Email สถานประกอบการ / แหล่งฝึก',
+      'จังหวัด',
+    ];
+
+    const rows = exportList.map(s => [
+      s.studentCode,
+      s.nameTh,
+      s.email,
+      s.lineId,
+      s.facebook,
+      s.advisorName,
+      s.cvLink,
+      s.hardHours,
+      s.hardStatus,
+      s.phone,
+      s.checklistReviewStatus,
+      s.resultWaiting,
+      s.resultAdditional,
+      s.submissionStatus,
+      s.position,
+      s.companyNameTh,
+      s.contactPersonName,
+      s.contactPersonPosition,
+      s.companyAddress,
+      s.companyPhone,
+      s.companyEmail,
+      s.province,
+    ].map(v => `"${(v ?? '').toString().replace(/"/g, '""')}"`).join(','));
+
+    const csvContent = '\uFEFF' + [headers.map(h => `"${h}"`).join(','), ...rows].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `รายชื่อนิสิต_${new Date().toISOString().slice(0,10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  } catch (err) {
+    console.error('Export error:', err);
+    alert('เกิดข้อผิดพลาดในการ Export');
+  }
 };
 
 // Search event

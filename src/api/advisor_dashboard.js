@@ -278,33 +278,77 @@ function renderPagination(page, totalPages, total) {
 }
 
 // ==========================================
-// Export CSV
+// Export CSV (ดึงจาก API ข้อมูลครบจาก schema)
 // ==========================================
-window.exportStudents = function() {
-  const rows = [
-    ['Student ID', 'ชื่อ-นามสกุล', 'อาจารย์ที่ปรึกษา', 'สถานะ'],
-  ];
-
-  document.querySelectorAll('#students-tbody tr').forEach(tr => {
-    const cells = tr.querySelectorAll('td');
-    if (cells.length >= 4) {
-      rows.push([
-        cells[0].textContent.trim(),
-        cells[1].textContent.trim(),
-        cells[2].textContent.trim(),
-        cells[3].textContent.trim(),
-      ].map(v => `"${v}"`).join(','));
+window.exportStudents = async function() {
+  try {
+    const res = await fetch('/api/advisor/export');
+    const data = await res.json();
+    if (!data.success) {
+      alert('Export ไม่สำเร็จ: ' + data.message);
+      return;
     }
-  });
 
-  const csvContent = '\uFEFF' + rows.join('\n'); // BOM for Excel UTF-8
-  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `รายชื่อนิสิตที่ปรึกษา_${new Date().toISOString().slice(0,10)}.csv`;
-  a.click();
-  URL.revokeObjectURL(url);
+    const headers = [
+      'STD_ID',
+      'ชื่อ นามสกุล',
+      'Email',
+      'Line ID',
+      'Facebook',
+      'Link ประวัติและผลงาน CV',
+      'จำนวนชั่วโมง Hard Skill',
+      'สถานะการตรวจสอบ ชม. Hard Skill',
+      'เบอร์โทรนิสิต',
+      'อาจารย์รีวิว',
+      'ผลรีวิว (เก็บสถานะครบกำหนดส่ง)',
+      'ผลรีวิว (ช่วงรอผลอ.รีวิว เพิ่มเติม)',
+      'สถานะการยื่น',
+      'ตำแหน่งที่ฝึก',
+      'ชื่อแหล่งฝึกงาน (ชื่อเต็มเป็นภาษาไทย)',
+      'ชื่อบุคคลที่ให้ทำหนังสือขอความอนุเคราะห์',
+      'ตำแหน่งบุคคลที่ให้ทำหนังสือขอความอนุเคราะห์',
+      'ที่อยู่บริษัท',
+      'เบอร์โทรติดต่อสถานประกอบการ / แหล่งฝึก',
+      'Email สถานประกอบการ / แหล่งฝึก',
+      'จังหวัด',
+    ];
+
+    const rows = data.data.map(s => [
+      s.studentCode,
+      s.nameTh,
+      s.email,
+      s.lineId,
+      s.facebook,
+      s.cvLink,
+      s.hardHours,
+      s.hardStatus,
+      s.phone,
+      s.checklistReviewStatus,
+      s.resultWaiting,
+      s.resultAdditional,
+      s.submissionStatus,
+      s.position,
+      s.companyNameTh,
+      s.contactPersonName,
+      s.contactPersonPosition,
+      s.companyAddress,
+      s.companyPhone,
+      s.companyEmail,
+      s.province,
+    ].map(v => `"${(v ?? '').toString().replace(/"/g, '""')}"`).join(','));
+
+    const csvContent = '\uFEFF' + [headers.map(h => `"${h}"`).join(','), ...rows].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `รายชื่อนิสิตที่ปรึกษา_${new Date().toISOString().slice(0,10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  } catch (err) {
+    console.error('Export error:', err);
+    alert('เกิดข้อผิดพลาดในการ Export');
+  }
 };
 
 // ==========================================
