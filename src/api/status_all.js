@@ -141,12 +141,19 @@ async function loadTrainings() {
           }
 
           const tr = document.createElement('tr');
+          const certUrl = t.certificateFileUrl || '';
           tr.innerHTML = `
             <td>${idx + 1}</td>
             <td>${t.title}</td>
             <td>${t.skillType === 'HARD' ? 'Hard skill' : 'Soft skill'}</td>
             <td>${t.hours}</td>
             <td class="${statusClass}">${statusText}</td>
+            <td style="text-align:center;">
+              ${certUrl
+                ? `<a href="${certUrl}" target="_blank" style="color:#2563eb; font-size:16px; text-decoration:none; white-space:nowrap;">ดูตัวอย่าง</a>`
+                : '<span style="color:#94a3b8; font-size:16px;">-</span>'
+              }
+            </td>
             <td><button type="button" class="btn btn-tonal btn-xs" onclick="deleteTraining(${t.id})">ลบ</button></td>
           `;
           tbody.appendChild(tr);
