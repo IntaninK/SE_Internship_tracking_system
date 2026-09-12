@@ -148,6 +148,7 @@ async function loadTrainings() {
             <td>${t.skillType === 'HARD' ? 'Hard skill' : 'Soft skill'}</td>
             <td>${t.hours}</td>
             <td class="${statusClass}">${statusText}</td>
+            <td>${t.note || '-'}</td>
             <td style="text-align:center;">
               ${certUrl
                 ? `<a href="${certUrl}" target="_blank" style="color:#2563eb; font-size:16px; text-decoration:none; white-space:nowrap;">ดูตัวอย่าง</a>`
