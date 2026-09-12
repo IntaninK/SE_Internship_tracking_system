@@ -223,7 +223,7 @@ function renderCvPreview(fileUrl, fileName, status, note) {
     cvStatusBadge.textContent = 'สถานะ: ✓ CVตรวจแล้ว / ผ่าน';
     cvStatusBadge.className = 'status-pass';
   } else if (status === 'REJECTED') {
-    cvStatusBadge.textContent = `สถานะ: ✗ CVไม่ผ่าน / ทำใหม่ (${note || 'กรุณาอัปโหลดใหม่'})`;
+    cvStatusBadge.innerHTML = `<div>สถานะ: ✗ CVไม่ผ่าน / ทำใหม่</div><div style="margin-top: 8px;">หมายเหตุ : <span style="color: #ff2828ff;">${note || 'กรุณาอัปโหลดใหม่'}</span></div>`;
     cvStatusBadge.className = 'status-fail';
   } else {
     cvStatusBadge.textContent = 'สถานะ: ☐ รอผล (รออาจารย์ตรวจ)';
