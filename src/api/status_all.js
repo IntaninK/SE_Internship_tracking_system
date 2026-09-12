@@ -26,6 +26,8 @@ async function loadProfile() {
       if (data.user) document.getElementById('prof-email').value = data.user.email || '';
       if (data.student) {
         const s = data.student;
+        await loadAdvisorOptions(s.advisorId ?? s.advisor?.id ?? null);
+        document.getElementById('prof-advisor').value = s.advisor?.name || '-';
         document.getElementById('prof-nameTh').value = s.nameTh || '';
         document.getElementById('prof-nameEn').value = s.nameEn || '';
         document.getElementById('prof-studentCode').value = s.studentCode || '';
@@ -82,10 +84,34 @@ if (photoDropzone && photoInput) {
   });
 }
 
+// โหลดรายชื่ออาจารย์ทั้งหมดมาใส่ dropdown
+async function loadAdvisorOptions(selectedAdvisorId) {
+  try {
+    const res = await fetch('/api/student/advisors');
+    const data = await res.json();
+    const select = document.getElementById('prof-advisor');
+    if (select && data.success) {
+      select.innerHTML = '<option value="">-- เลือกอาจารย์ที่ปรึกษา --</option>';
+      data.advisors.forEach(a => {
+        const opt = document.createElement('option');
+        opt.value = a.id;
+        opt.textContent = a.name;
+        if (selectedAdvisorId && a.id === selectedAdvisorId) {
+          opt.selected = true;
+        }
+        select.appendChild(opt);
+      });
+    }
+  } catch (err) {
+    console.error('Load advisors error:', err);
+  }
+}
+
 // บันทึกข้อมูลส่วนตัว
 const saveProfileBtn = document.getElementById('save-profile-btn');
 if (saveProfileBtn) {
   saveProfileBtn.addEventListener('click', async () => {
+    const advisorSelect = document.getElementById('prof-advisor');
     const payload = {
       nameTh: document.getElementById('prof-nameTh').value,
       nameEn: document.getElementById('prof-nameEn').value,
@@ -96,6 +122,7 @@ if (saveProfileBtn) {
       phone: document.getElementById('prof-phone').value,
       lineId: document.getElementById('prof-lineId').value,
       facebook: document.getElementById('prof-facebook').value,
+      advisorId: advisorSelect.value ? parseInt(advisorSelect.value) : null,
     };
 
     try {

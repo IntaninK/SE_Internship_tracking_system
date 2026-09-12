@@ -34,50 +34,70 @@
             </div>
           </div>
           <!-- Fields -->
-          <div class="info-fields">
-            <div class="form-grid">
-              <div class="form-group">
-                <label class="form-label">ชื่อ-สกุล (ไทย)</label>
-                <input type="text" class="input-field" id="prof-nameTh" value="">
+
+          <div class="flex-1 min-w-[280px] flex flex-col gap-5 max-[900px]:w-full max-[900px]:min-w-0" style="flex: 1 1 320px;">
+
+            <div class="flex flex-wrap gap-[16px_24px] max-[560px]:flex-col max-[560px]:gap-4">
+                <div class="flex flex-col gap-[10px] min-w-[140px] max-[560px]:min-w-0 max-[560px]:w-full" style="flex: 1.33 1 200px;">
+                    <label class="text-[20px] font-semibold text-[#323639] leading-[1.35]">ชื่อ-สกุล (ไทย)</label>
+                    <input class="input-field text-[18px] font-medium" id="prof-nameTh"/>
+                </div>
+                <div class="flex flex-col gap-[10px] min-w-[140px] max-[560px]:min-w-0 max-[560px]:w-full" style="flex: 1 1 140px;">
+                    <label class="text-[20px] font-semibold text-[#323639] leading-[1.35]">รหัสนิสิต</label>
+                    <input class="input-field text-[18px] font-medium" id="prof-studentCode"/>
+                </div>
+            </div>
+
+            <div class="flex flex-wrap gap-[16px_24px] max-[560px]:flex-col max-[560px]:gap-4">
+                <div class="flex flex-col gap-[10px] min-w-[140px] max-[560px]:min-w-0 max-[560px]:w-full" style="flex: 1.33 1 200px;">
+                    <label class="text-[20px] font-semibold text-[#323639] leading-[1.35]">Name & Surname (English)</label>
+                    <input class="input-field text-[18px] font-medium" id="prof-nameEn"/>
+                </div>
+                <div class="flex flex-col gap-[10px] min-w-[140px] max-[560px]:min-w-0 max-[560px]:w-full" style="flex: 1 1 140px;">
+                    <label class="text-[20px] font-semibold text-[#323639] leading-[1.35]">ชั้นปีที่</label>
+                    <input class="input-field text-[18px] font-medium" id="prof-year" readonly />
+                </div>
+            </div>
+
+            <div class="flex flex-wrap gap-[16px_24px] max-[560px]:flex-col max-[560px]:gap-4">
+              <div class="flex flex-col gap-[10px] min-w-[140px] max-[560px]:min-w-0 max-[560px]:w-full" style="flex: 1.33 1 200px;">
+                  <label class="text-[20px] font-semibold text-[#323639] leading-[1.35]">อาจารย์ที่ปรึกษา</label>
+                  <select class="input-field text-[18px] font-medium" id="prof-advisor">
+                    <option value="">-- เลือกอาจารย์ที่ปรึกษา --</option>
+                  </select>
               </div>
-              <div class="form-group">
-                <label class="form-label">รหัสนิสิต</label>
-                <input type="text" class="input-field" id="prof-studentCode" value="">
+              <div class="flex flex-col gap-[10px] min-w-[140px] max-[360px]:min-w-0 max-[560px]:w-full" style="flex: 1.33 1 200px;">
+                  <label class="text-[20px] font-semibold text-[#323639] leading-[1.35]">สาขาวิชา</label>
+                  <input class="input-field text-[18px] font-medium" id="prof-major"/>
               </div>
-              <div class="form-group">
-                <label class="form-label">Name &amp; Surname (English)</label>
-                <input type="text" class="input-field" id="prof-nameEn" value="">
-              </div>
-              <div class="form-group">
-                <label class="form-label">ชั้นปีที่</label>
-                <input type="text" class="input-field" id="prof-year" value="3">
-              </div>
-              <div class="form-group">
-                <label class="form-label">เกรดเฉลี่ย</label>
-                <input type="text" class="input-field" id="prof-gpa" value="">
-              </div>
-              <div class="form-group">
-                <label class="form-label">สาขาวิชา</label>
-                <input type="text" class="input-field" id="prof-major" value="วิศวกรรมซอฟต์แวร์">
+              <div class="flex flex-col gap-[10px] min-w-[140px] max-[360px]:min-w-0 max-[560px]:w-full" style="flex: 1 1 140px;">
+                  <label class="text-[20px] font-semibold text-[#323639] leading-[1.35]">เกรดเฉลี่ย</label>
+                  <input class="input-field text-[18px] font-medium" id="prof-gpa"/>                            
               </div>
             </div>
-            <!-- Contact -->
-            <div class="form-grid" style="margin-top: 20px;">
-              <div class="form-group">
-                <label class="form-label">E-mail</label>
-                <input type="email" class="input-field" id="prof-email" placeholder="..." readonly>
+        
+
+          <div class="flex flex-col gap-[10px]">
+              <div class="flex flex-wrap gap-[16px_24px] max-[560px]:flex-col max-[560px]:gap-4">
+                  <div class="flex flex-col gap-[10px] min-w-[140px] max-[560px]:min-w-0 max-[560px]:w-full" style="flex: 1 1 160px;">
+                      <label class="text-[20px] font-semibold text-[#323639] leading-[1.35]">E-mail</label>
+                      <input class="input-field text-[18px] font-medium" id="prof-email"  value=""/>
+                  </div>
+                  <div class="flex flex-col gap-[10px] min-w-[140px] max-[560px]:min-w-0 max-[560px]:w-full" style="flex: 1 1 160px;">
+                      <label class="text-[20px] font-semibold  text-[#323639] leading-[1.35]">เบอร์โทร</label>
+                      <input class="input-field text-[18px] font-medium" id="prof-phone"  value=""/>
+                  </div>
               </div>
-              <div class="form-group">
-                <label class="form-label">เบอร์โทร</label>
-                <input type="tel" class="input-field" id="prof-phone" placeholder="...">
-              </div>
-              <div class="form-group">
-                <label class="form-label">Line ID</label>
-                <input type="text" class="input-field" id="prof-lineId" placeholder="...">
-              </div>
-              <div class="form-group">
-                <label class="form-label">Facebook</label>
-                <input type="text" class="input-field" id="prof-facebook" placeholder="...">
+
+              <div class="flex flex-wrap gap-[16px_24px] max-[560px]:flex-col max-[560px]:gap-4">
+                  <div class="flex flex-col gap-[10px] min-w-[140px] max-[560px]:min-w-0 max-[560px]:w-full" style="flex: 1 1 160px;">
+                      <label class="text-[20px] font-semibold text-[#323639] leading-[1.35]">Line ID</label>
+                      <input class="input-field text-[18px] font-medium" id="prof-lineId"  value=""/>
+                  </div>
+                  <div class="flex flex-col gap-[10px] min-w-[140px] max-[560px]:min-w-0 max-[560px]:w-full" style="flex: 1 1 160px;">
+                      <label class="text-[20px] font-semibold text-[#323639] leading-[1.35]">Facebook</label>
+                      <input class="input-field text-[18px] font-medium" id="prof-facebook"  value=""/>
+                  </div>
               </div>
             </div>
           </div>

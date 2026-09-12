@@ -41,17 +41,17 @@ body {
 /* ---- Card ---- */
 .card {
   background: #fff;
-  border: 1px solid #000;
+  border: 1px solid #d1d5db;
   border-radius: 16px;
   overflow: hidden;
-  box-shadow: 0 2px 12px rgba(0,0,0,.06);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
   margin-top: 50px;
 }
 
 /* ---- Card Header (gradient สีน้ำเงิน) ---- */
 .card-header {
-  background: linear-gradient(90deg, #200B7F 0%, #1E4CF2 100%);
-  border: 1px solid #000;
+  background: linear-gradient(90deg, #1e3a8a, #2563eb);
+  border: 1px solid #d1d5db;
   padding: 16px 32px;
   display: flex;
   align-items: center;

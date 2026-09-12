@@ -16,16 +16,12 @@
 
     <!-- Main Content -->
     <main class="main-content">
-        <div class="card">
-            <!-- Card Header -->
+        <section class="card">
             <div class="card-header">
-                <span class="material-icons header-icon">how_to_reg</span>
+                <span class="material-icons header-icon">person</span>
                 <h2 class="card-title">ข้อมูลส่วนตัวนิสิต (Student Personal Data)</h2>
             </div>
-
-            <!-- Card Body -->
-            <div class="card-body">
-                <!-- Top Section: Photo + Info Fields -->
+            <div class="card-body">  
                 <div class="flex flex-wrap gap-[32px_50px] mb-10 max-[900px]:flex-col max-[900px]:items-center">
                     <div class="w-[260px] min-w-[180px] max-w-[260px] h-[336px] rounded-[15px] border border-black overflow-hidden flex items-center justify-center bg-[#f0f0f0] shrink mx-auto max-[560px]:w-full max-[560px]:max-w-[240px] max-[560px]:h-[300px] max-[360px]:max-w-[200px] max-[360px]:h-[250px]" style="flex-basis: 260px;">
                         <img id="p-photo" src="" alt="Profile Photo" class="w-full h-full object-cover" style="display: none;">
@@ -36,89 +32,72 @@
                         <!-- Row 1 -->
                         <div class="flex flex-wrap gap-[16px_24px] max-[560px]:flex-col max-[560px]:gap-4">
                             <div class="flex flex-col gap-[10px] min-w-[140px] max-[560px]:min-w-0 max-[560px]:w-full" style="flex: 1.33 1 200px;">
-                                <label class="text-[15px] font-medium text-[#323639] leading-[1.35]">ชื่อ-สกุล (ไทย)</label>
-                                <div class="input-field">
-                                    <span class="field-value" id="p-nameTh">-</span>
-                                </div>
+                                <label class="text-[20px] font-semibold text-[#323639] leading-[1.35]">ชื่อ-สกุล (ไทย)</label>
+                                <input class="input-field text-[18px] font-medium" id="p-nameTh" readonly />
                             </div>
                             <div class="flex flex-col gap-[10px] min-w-[140px] max-[560px]:min-w-0 max-[560px]:w-full" style="flex: 1 1 140px;">
-                                <label class="text-[15px] font-medium text-[#323639] leading-[1.35]">รหัสนิสิต</label>
-                                <div class="input-field">
-                                    <span class="field-value" id="p-studentCode">-</span>
-                                </div>
+                                <label class="text-[20px] font-semibold text-[#323639] leading-[1.35]">รหัสนิสิต</label>
+                                <input class="input-field text-[18px] font-medium" id="p-studentCode" readonly />
                             </div>
                         </div>
 
                         <!-- Row 2 -->
                         <div class="flex flex-wrap gap-[16px_24px] max-[560px]:flex-col max-[560px]:gap-4">
                             <div class="flex flex-col gap-[10px] min-w-[140px] max-[560px]:min-w-0 max-[560px]:w-full" style="flex: 1.33 1 200px;">
-                                <label class="text-[15px] font-medium text-[#323639] leading-[1.35]">Name & Surname (English)</label>
-                                <div class="input-field">
-                                    <span class="field-value" id="p-nameEn">-</span>
-                                </div>
+                                <label class="text-[20px] font-semibold text-[#323639] leading-[1.35]">Name & Surname (English)</label>
+                                <input class="input-field text-[18px] font-medium" id="p-nameEn" readonly />
                             </div>
                             <div class="flex flex-col gap-[10px] min-w-[140px] max-[560px]:min-w-0 max-[560px]:w-full" style="flex: 1 1 140px;">
-                                <label class="text-[15px] font-medium text-[#323639] leading-[1.35]">ชั้นปีที่</label>
-                                <div class="input-field">
-                                    <span class="field-value" id="p-year">-</span>
-                                </div>
+                                <label class="text-[20px] font-semibold text-[#323639] leading-[1.35]">ชั้นปีที่</label>
+                                <input class="input-field text-[18px] font-medium" id="p-year" readonly />
                             </div>
                         </div>
 
                         <!-- Row 3 -->
                         <div class="flex flex-wrap gap-[16px_24px] max-[560px]:flex-col max-[560px]:gap-4">
-                            <div class="flex flex-col gap-[10px] min-w-[140px] max-[560px]:min-w-0 max-[560px]:w-full" style="flex: 1.33 1 200px;">
-                                <label class="text-[15px] font-medium text-[#323639] leading-[1.35]">เกรดเฉลี่ย</label>
-                                <div class="input-field">
-                                    <span class="field-value" id="p-gpa">-</span>
-                                </div>
-                            </div>
-                            <div class="flex flex-col gap-[10px] min-w-[140px] max-[560px]:min-w-0 max-[560px]:w-full" style="flex: 1 1 140px;">
-                                <label class="text-[15px] font-medium text-[#323639] leading-[1.35]">สาขาวิชา</label>
-                                <div class="input-field">
-                                    <span class="field-value" id="p-major">วิศวกรรมซอฟต์แวร์</span>
-                                </div>
-                            </div>
+                        <div class="flex flex-col gap-[10px] min-w-[140px] max-[560px]:min-w-0 max-[560px]:w-full" style="flex: 1.33 1 200px;">
+                            <label class="text-[20px] font-semibold text-[#323639] leading-[1.35]">อาจารย์ที่ปรึกษา</label>
+                            <input class="input-field text-[18px] font-medium" id="p-advisor" readonly />
+                        </div>
+                        <div class="flex flex-col gap-[10px] min-w-[140px] max-[360px]:min-w-0 max-[560px]:w-full" style="flex: 1.33 1 200px;">
+
+                            <label class="text-[20px] font-semibold text-[#323639] leading-[1.35]">สาขาวิชา</label>
+                            <input class="input-field text-[18px] font-medium" id="p-major" readonly />
+                        </div>
+                        <div class="flex flex-col gap-[10px] min-w-[140px] max-[360px]:min-w-0 max-[560px]:w-full" style="flex: 1 1 140px;">
+                            <label class="text-[20px] font-semibold text-[#323639] leading-[1.35]">เกรดเฉลี่ย</label>
+                            <input class="input-field text-[18px] font-medium" id="p-gpa" readonly />                            
+                        </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Bottom Section: Contact Info -->
                 <div class="flex flex-col gap-[10px]">
-                    <!-- Row 1 -->
                     <div class="flex flex-wrap gap-[16px_24px] max-[560px]:flex-col max-[560px]:gap-4">
                         <div class="flex flex-col gap-[10px] min-w-[140px] max-[560px]:min-w-0 max-[560px]:w-full" style="flex: 1 1 160px;">
-                            <label class="text-[15px] font-medium text-[#323639] leading-[1.35]">E-mail</label>
-                            <div class="input-field">
-                                <span class="field-value" id="p-email">-</span>
-                            </div>
+                            <label class="text-[20px] font-semibold text-[#323639] leading-[1.35]">E-mail</label>
+                            <input class="input-field text-[18px] font-medium" id="p-email" readonly />
                         </div>
                         <div class="flex flex-col gap-[10px] min-w-[140px] max-[560px]:min-w-0 max-[560px]:w-full" style="flex: 1 1 160px;">
-                            <label class="text-[15px] font-medium text-[#323639] leading-[1.35]">เบอร์โทร</label>
-                            <div class="input-field">
-                                <span class="field-value" id="p-phone">-</span>
-                            </div>
+                            <label class="text-[20px] font-semibold  text-[#323639] leading-[1.35]">เบอร์โทร</label>
+                            <input class="input-field text-[18px] font-medium" id="p-phone" readonly />
                         </div>
                     </div>
 
-                    <!-- Row 2 -->
                     <div class="flex flex-wrap gap-[16px_24px] max-[560px]:flex-col max-[560px]:gap-4">
                         <div class="flex flex-col gap-[10px] min-w-[140px] max-[560px]:min-w-0 max-[560px]:w-full" style="flex: 1 1 160px;">
-                            <label class="text-[15px] font-medium text-[#323639] leading-[1.35]">Line ID</label>
-                            <div class="input-field">
-                                <span class="field-value" id="p-lineId">-</span>
-                            </div>
+                            <label class="text-[20px] font-semibold text-[#323639] leading-[1.35]">Line ID</label>
+                            <input class="input-field text-[18px] font-medium" id="p-lineId" readonly />
                         </div>
                         <div class="flex flex-col gap-[10px] min-w-[140px] max-[560px]:min-w-0 max-[560px]:w-full" style="flex: 1 1 160px;">
-                            <label class="text-[15px] font-medium text-[#323639] leading-[1.35]">Facebook</label>
-                            <div class="input-field">
-                                <span class="field-value" id="p-facebook">-</span>
-                            </div>
+                            <label class="text-[20px] font-semibold text-[#323639] leading-[1.35]">Facebook</label>
+                            <input class="input-field text-[18px] font-medium" id="p-facebook" readonly />
                         </div>
                     </div>
                 </div>
+
             </div>
-        </div>
+        </section>
 
         <!-- Edit Button -->
         <div class="flex justify-end mt-6 max-[560px]:justify-center">
