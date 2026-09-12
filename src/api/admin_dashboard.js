@@ -107,6 +107,7 @@ function renderPieChart(containerId, chartType, segments, headerLabel, tableId, 
   }
 
   container.innerHTML = `
+    <h4 class="text-xs font-bold text-blue-700 mb-2 text-center">${headerLabel}</h4>
     <div class="flex items-start gap-4">
       <div class="relative w-[100px] h-[100px] flex-shrink-0">
         <svg viewBox="0 0 36 36" class="w-full h-full -rotate-90">

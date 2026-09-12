@@ -31,7 +31,7 @@ async function loadDashboardSummary() {
       { key: 'reviewed', label: 'อาจารย์รีวิวแล้ว', value: c.reviewed, color: '#FF3EA5' },
       { key: 'pending', label: 'รอผล', value: c.pending, color: '#FFD233' },
       { key: 'failed', label: 'ไม่ผ่าน /ทำchecklist เพิ่ม', value: c.failed, color: '#EF4444' },
-    ], 'สถานะ', 'checklist-legend-table', checklistTotal || data.totalStudents);
+    ], 'สถานะ Checklist', 'checklist-legend-table', checklistTotal || data.totalStudents);
 
     // --- กราฟ 2: สถานะความพร้อม ---
     const r = data.readinessStats;
@@ -77,6 +77,7 @@ function renderPieChart(containerId, chartType, segments, headerLabel, tableId, 
   }
 
   container.innerHTML = `
+    <h4 class="text-xs font-bold text-blue-700 mb-2 text-center">${headerLabel}</h4>
     <div class="flex flex-col sm:flex-row items-center gap-6 flex-1">
       <div class="relative w-[120px] h-[120px] flex-shrink-0">
         <svg viewBox="0 0 36 36" class="w-full h-full -rotate-90">
