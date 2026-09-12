@@ -744,6 +744,7 @@ router.get("/export", async (req, res) => {
         id: s.id,
         studentCode: s.studentCode,
         nameTh: s.nameTh,
+        year: s.year,
         email: s.user.email,
         lineId: s.lineId || "",
         facebook: s.facebook || "",
