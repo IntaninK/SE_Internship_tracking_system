@@ -1,12 +1,13 @@
 {
   "name": "se_intership_tracking",
   "version": "1.0.0",
-  "description": "",
+  "description": "ระบบติดตามการเตรียมความพร้อมเข้าฝึกงานของนิสิตSE",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "build:css": "tailwindcss -i ./src/css/main.css -o ./src/css/main-output.css --minify",
-    "watch:css": "tailwindcss -i ./src/css/main.css -o ./src/css/main-output.css --watch"
+    "watch:css": "tailwindcss -i ./src/css/main.css -o ./src/css/main-output.css --watch",
+    "start": "node server.js"
   },
   "keywords": [],
   "author": "",
@@ -23,12 +24,20 @@
     "@neondatabase/serverless": "^1.1.0",
     "@prisma/adapter-neon": "^7.10.0",
     "@prisma/adapter-pg": "^7.9.1",
-    "@prisma/client": "7.10.0",
+    "@prisma/client": "^7.10.0",
     "cloudinary": "^2.11.0",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
     "express-session": "^1.19.0",
     "multer": "^2.2.0",
     "pg": "^8.23.0"
-  }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/IntaninK/SE_Internship_tracking_system.git"
+  },
+  "bugs": {
+    "url": "https://github.com/IntaninK/SE_Internship_tracking_system/issues"
+  },
+  "homepage": "https://github.com/IntaninK/SE_Internship_tracking_system#readme"
 }
