@@ -452,6 +452,7 @@ router.get("/export", async (req, res) => {
       return {
         studentCode: s.studentCode,
         nameTh: s.nameTh,
+        year: s.year,
         email: s.user.email,
         lineId: s.lineId || "",
         facebook: s.facebook || "",

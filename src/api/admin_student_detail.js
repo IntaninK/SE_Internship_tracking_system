@@ -123,8 +123,14 @@ function renderTrainings(trainings, summary) {
   if (saveArea) saveArea.style.display = 'block';
 
   trainings.forEach((t, idx) => {
-    const isChecked = t.status === 'APPROVED';
     const certUrl = t.certificateFileUrl || '';
+
+    let statusBadge = '<span style="color:#d97706; background:#fef3c7; border:1px solid #fde68a; font-size:13px; font-weight:600; padding:2px 8px; border-radius:6px;">⏳ รอตรวจ</span>';
+    if (t.status === 'APPROVED') {
+      statusBadge = '<span style="color:#16a34a; background:#dcfce7; border:1px solid #86efac; font-size:13px; font-weight:600; padding:2px 8px; border-radius:6px;">✓ ผ่าน</span>';
+    } else if (t.status === 'REJECTED') {
+      statusBadge = '<span style="color:#dc2626; background:#fee2e2; border:1px solid #fca5a5; font-size:13px; font-weight:600; padding:2px 8px; border-radius:6px;">✗ ไม่ผ่าน</span>';
+    }
 
     const tr = document.createElement('tr');
     tr.innerHTML = `
@@ -132,8 +138,11 @@ function renderTrainings(trainings, summary) {
       <td style="font-size:16px;">${t.title}</td>
       <td style="font-size:16px;">${t.skillType === 'HARD' ? 'Hard skill' : 'Soft skill'}</td>
       <td style="font-size:16px;">${t.hours}</td>
-      <td style="text-align:center;">
-        <input type="checkbox" class="training-cert-checkbox" data-id="${t.id}" ${isChecked ? 'checked' : ''} style="width:18px; height:18px; cursor:pointer; accent-color:#2563eb;" />
+      <td style="text-align:center; vertical-align:middle;">
+        <div style="display:inline-flex; align-items:center; justify-content:center; gap:8px;">
+          <input type="checkbox" class="training-cert-checkbox" data-id="${t.id}" style="width:18px; height:18px; cursor:pointer; accent-color:#2563eb;" />
+          ${statusBadge}
+        </div>
       </td>
       <td style="text-align:center;">
         ${certUrl
@@ -144,44 +153,58 @@ function renderTrainings(trainings, summary) {
     `;
     tbody.appendChild(tr);
   });
+
+  // ผูกการทำงาน Checkbox เลือกทั้งหมด (Select All)
+  const selectAll = document.getElementById('training-select-all');
+  if (selectAll) {
+    selectAll.checked = false;
+    selectAll.onchange = function() {
+      document.querySelectorAll('.training-cert-checkbox').forEach(cb => {
+        cb.checked = selectAll.checked;
+      });
+    };
+  }
 }
 
-// บันทึกสถานะชั่วโมงอบรมทั้งหมด (batch)
+// บันทึกสถานะชั่วโมงอบรม: นำสถานะจาก Dropdown ไปใช้กับรายการที่ติ๊ก Checkbox เลือกไว้
 window.saveBatchTrainingStatus = async function() {
   const statusSelect = document.getElementById('training-batch-status');
   const noteEl = document.getElementById('training-batch-note');
-  const status = statusSelect ? statusSelect.value : 'APPROVED';
-  const note = noteEl ? noteEl.value : '';
+  const targetStatus = statusSelect ? statusSelect.value : 'APPROVED';
+  const note = noteEl ? noteEl.value.trim() : '';
 
-  // ดึง training IDs ทั้งหมดจาก checkbox
-  const checkboxes = document.querySelectorAll('.training-cert-checkbox');
-  if (checkboxes.length === 0) {
-    alert('ไม่มีข้อมูลการอบรม');
+  // ดึงเฉพาะ Checkbox รายการที่อาจารย์ติ๊กเลือก
+  const selectedCheckboxes = document.querySelectorAll('.training-cert-checkbox:checked');
+  if (selectedCheckboxes.length === 0) {
+    alert('กรุณาติ๊ก Checkbox เลือกรายการที่ต้องการเปลี่ยนสถานะอย่างน้อย 1 รายการ');
     return;
   }
 
-  // อัพเดตทุก training record ของนิสิตคนนี้
   let successCount = 0;
   let failCount = 0;
 
-  for (const cb of checkboxes) {
+  for (const cb of selectedCheckboxes) {
     const trainingId = cb.dataset.id;
     try {
       const res = await fetch(`/api/admin/students/${studentId}/training/${trainingId}/status`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status, note }),
+        body: JSON.stringify({ status: targetStatus, note }),
       });
       const data = await res.json();
-      if (data.success) successCount++;
-      else failCount++;
+      if (data.success) {
+        successCount++;
+      } else {
+        failCount++;
+      }
     } catch (err) {
       failCount++;
     }
   }
 
+  const statusLabel = targetStatus === 'APPROVED' ? 'ผ่าน (อนุมัติ)' : 'ไม่ผ่าน';
   if (successCount > 0) {
-    alert(`✅ อัปเดตสถานะสำเร็จ ${successCount} รายการ`);
+    alert(`✅ บันทึกสถานะ "${statusLabel}" สำหรับ ${successCount} รายการที่เลือกเรียบร้อยแล้ว`);
     initStudentDetail();
   } else {
     alert('เกิดข้อผิดพลาดในการอัปเดต');

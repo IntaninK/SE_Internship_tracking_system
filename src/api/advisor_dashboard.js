@@ -293,6 +293,7 @@ window.exportStudents = async function() {
     const headers = [
       'STD_ID',
       'ชื่อ นามสกุล',
+      'ปีการศึกษา',
       'Email',
       'Line ID',
       'Facebook',
@@ -317,6 +318,7 @@ window.exportStudents = async function() {
     const rows = data.data.map(s => [
       s.studentCode,
       s.nameTh,
+      s.year,
       s.email,
       s.lineId,
       s.facebook,

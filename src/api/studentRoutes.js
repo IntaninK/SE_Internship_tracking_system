@@ -655,7 +655,7 @@ router.get("/dashboard-summary", async (req, res) => {
       });
     }
 
-    // รวมชั่วโมง
+    // รวมชั่วโมงทั้งหมด
     const totalSoft = student.trainingRecords
       .filter((t) => t.skillType === "SOFT")
       .reduce((sum, t) => sum + t.hours, 0);
@@ -663,6 +663,34 @@ router.get("/dashboard-summary", async (req, res) => {
     const totalHard = student.trainingRecords
       .filter((t) => t.skillType === "HARD")
       .reduce((sum, t) => sum + t.hours, 0);
+
+    // รวมชั่วโมงเฉพาะที่อาจารย์อนุมัติแล้ว (APPROVED)
+    const approvedTrainings = student.trainingRecords.filter((t) => t.status === "APPROVED");
+    const approvedSoft = approvedTrainings
+      .filter((t) => t.skillType === "SOFT")
+      .reduce((sum, t) => sum + t.hours, 0);
+    const approvedHard = approvedTrainings
+      .filter((t) => t.skillType === "HARD")
+      .reduce((sum, t) => sum + t.hours, 0);
+
+        // คำนวณสถานะการอบรมโดยรวม และดึงหมายเหตุปัญหาจากอาจารย์
+    let trainingStatus = "PENDING";
+    let trainingNote = "";
+
+    const hasRejected = student.trainingRecords.some((t) => t.status === "REJECTED");
+    const rejectedRecord = student.trainingRecords.find((t) => t.status === "REJECTED" && t.note);
+    if (rejectedRecord) {
+      trainingNote = rejectedRecord.note;
+    }
+
+    if (approvedSoft >= 12 && approvedHard >= 18 && !hasRejected) {
+      trainingStatus = "APPROVED";
+    } else if (hasRejected || (student.trainingRecords.length > 0 && student.trainingRecords.every(t => t.status === "REJECTED"))) {
+      trainingStatus = "REJECTED";
+    } else if (student.trainingRecords.length > 0) {
+      trainingStatus = "PENDING";
+    }
+
 
     // บริษัทที่ผ่าน
     const approvedCompanies = student.companies.filter((c) => c.checklistStatus === "APPROVED");
@@ -696,6 +724,10 @@ router.get("/dashboard-summary", async (req, res) => {
         records: student.trainingRecords,
         totalSoft,
         totalHard,
+        approvedSoft,
+        approvedHard,
+        status: trainingStatus,
+        note: trainingNote,
       },
       companies: student.companies,
       approvedCompaniesCount: approvedCompanies.length,
