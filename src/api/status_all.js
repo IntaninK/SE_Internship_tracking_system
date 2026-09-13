@@ -616,11 +616,26 @@ function updateRequirementCard(containerId, isDone, title, desc) {
   }
 }
 
+// ฟังก์ชันดึงข้อมูลอาจารย์ที่ปรึกษาล่าสุดมาอัปเดตใน Dropdown
+async function reloadAdvisorOnly() {
+  try {
+    const res = await fetch('/api/student/profile');
+    const data = await res.json();
+    if (data.success && data.student) {
+      const s = data.student;
+      await loadAdvisorOptions(s.advisorId ?? s.advisor?.id ?? null);
+    }
+  } catch (err) {
+    console.error('Reload advisor error:', err);
+  }
+}
+
 // เริ่มโหลดข้อมูลเมื่อเข้าหน้าเว็บ
 initPage();
 
-// ⚡ เมื่อมีสัญญาณ Real-time จาก Socket.io ให้อัปเดตตารางและสถานะทันที
+// ⚡ เมื่อมีสัญญาณ Real-time จาก Socket.io ให้อัปเดตตาราง, สถานะ และอาจารย์ที่ปรึกษาทันที
 window.addEventListener('app:data-updated', () => {
+  reloadAdvisorOnly();
   loadTrainings();
   loadCv();
   loadCompanies();

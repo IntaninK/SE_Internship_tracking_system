@@ -73,7 +73,7 @@ router.get("/advisors", async(req, res) => {
   try {
     const advisors = await prisma.staff.findMany({
       where: {
-        user: { role: { in: ["ADVISOR", "COURSE_INSTRUCTOR" ] } },
+        user: { role: { in: ["ADVISOR", "COURSE_INSTRUCTOR", "ADMIN"] } },
       },
       select: {
         id: true, name: true,

@@ -268,9 +268,6 @@
   .h-\[66px\] {
     height: 66px;
   }
-  .h-\[85px\] {
-    height: 85px;
-  }
   .h-\[100px\] {
     height: 100px;
   }
@@ -318,9 +315,6 @@
   }
   .w-\[80px\] {
     width: 80px;
-  }
-  .w-\[85px\] {
-    width: 85px;
   }
   .w-\[100px\] {
     width: 100px;
@@ -1161,9 +1155,6 @@
     }
     .hover\:bg-blue-50:hover {
       background-color: var(--color-blue-50);
-    }
-    .hover\:bg-blue-100:hover {
-      background-color: var(--color-blue-100);
     }
     .hover\:bg-blue-700:hover {
       background-color: var(--color-blue-700);
