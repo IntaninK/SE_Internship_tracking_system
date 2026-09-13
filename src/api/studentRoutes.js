@@ -69,6 +69,24 @@ router.get("/profile", async (req, res) => {
   }
 });
 
+router.get("/advisors", async(req, res) => {
+  try {
+    const advisors = await prisma.staff.findMany({
+      where: {
+        user: { role: { in: ["ADVISOR", "COURSE_INSTRUCTOR" ] } },
+      },
+      select: {
+        id: true, name: true,
+      },
+      orderBy: { name: "asc" },
+    });
+    res.json({ success: true, advisors});
+  } catch (err) {
+    console.error("GET /api/student/advisors error:", err);
+    res.status(500).json({ success: false, message: "ดึงรายชื่ออาจารย์ที่ปรึกษาไม่สำเร็จ" });
+  }
+});
+
 router.post("/profile", upload.single("profileImage"), async (req, res) => {
   try {
     const userId = req.session.user.id;
@@ -82,6 +100,7 @@ router.post("/profile", upload.single("profileImage"), async (req, res) => {
       phone,
       lineId,
       facebook,
+      advisorId,
     } = req.body;
 
     if (!studentCode || !nameTh || !nameEn) {
@@ -110,6 +129,7 @@ router.post("/profile", upload.single("profileImage"), async (req, res) => {
       phone: phone ? String(phone).trim() : null,
       lineId: lineId ? String(lineId).trim() : null,
       facebook: facebook ? String(facebook).trim() : null,
+      advisorId: advisorId ? parseInt(advisorId, 10) : null,
     };
 
     if (profileImageUrl) {

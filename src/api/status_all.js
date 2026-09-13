@@ -27,7 +27,7 @@ async function loadProfile() {
       if (data.student) {
         const s = data.student;
         await loadAdvisorOptions(s.advisorId ?? s.advisor?.id ?? null);
-        document.getElementById('prof-advisor').value = s.advisor?.name || '-';
+
         document.getElementById('prof-nameTh').value = s.nameTh || '';
         document.getElementById('prof-nameEn').value = s.nameEn || '';
         document.getElementById('prof-studentCode').value = s.studentCode || '';
@@ -96,7 +96,7 @@ async function loadAdvisorOptions(selectedAdvisorId) {
         const opt = document.createElement('option');
         opt.value = a.id;
         opt.textContent = a.name;
-        if (selectedAdvisorId && a.id === selectedAdvisorId) {
+        if (selectedAdvisorId && Number(a.id) === Number(selectedAdvisorId)) {
           opt.selected = true;
         }
         select.appendChild(opt);
