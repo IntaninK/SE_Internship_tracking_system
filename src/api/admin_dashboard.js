@@ -566,3 +566,8 @@ window.clearFilter = function() {
 
 // เริ่มโหลด
 initAdminDashboard();
+
+// ⚡ เมื่อมีสัญญาณ Real-time จาก Socket.io ให้อัปเดต Dashboard อาจารย์รายวิชาทันที
+window.addEventListener('app:data-updated', () => {
+  initAdminDashboard();
+});

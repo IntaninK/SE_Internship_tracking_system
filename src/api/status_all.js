@@ -618,3 +618,12 @@ function updateRequirementCard(containerId, isDone, title, desc) {
 
 // เริ่มโหลดข้อมูลเมื่อเข้าหน้าเว็บ
 initPage();
+
+// ⚡ เมื่อมีสัญญาณ Real-time จาก Socket.io ให้อัปเดตตารางและสถานะทันที
+window.addEventListener('app:data-updated', () => {
+  loadTrainings();
+  loadCv();
+  loadCompanies();
+  loadSubmissions();
+  loadPlacement();
+});

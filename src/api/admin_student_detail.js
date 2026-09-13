@@ -590,3 +590,8 @@ function renderDocumentSummary(data) {
 
 // เริ่มโหลด
 initStudentDetail();
+
+// ⚡ เมื่อมีสัญญาณ Real-time จาก Socket.io ให้อัปเดตรายละเอียดนิสิตทันที
+window.addEventListener('app:data-updated', () => {
+  initStudentDetail();
+});

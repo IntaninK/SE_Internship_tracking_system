@@ -441,3 +441,8 @@ window.submitBatchStatus = async function() {
 
 // เริ่มโหลด
 initAdvisorDashboard();
+
+// ⚡ เมื่อมีสัญญาณ Real-time จาก Socket.io ให้อัปเดต Dashboard อาจารย์ที่ปรึกษาทันที
+window.addEventListener('app:data-updated', () => {
+  initAdvisorDashboard();
+});

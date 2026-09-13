@@ -1,4 +1,7 @@
 require("dotenv").config();
+const http = require("http");
+const { Server } = require("socket.io");
+
 const express = require("express");
 const session = require("express-session");
 const path = require("path");
@@ -10,6 +13,21 @@ const advisorRoutes = require("./src/api/advisorRoutes");
 const requireLogin = require("./src/auth/requireLogin");
 
 const app = express();
+const server = http.createServer(app);
+const io = new Server(server);
+
+app.set("io", io);
+
+app.use("/api", (req, res, next) => {
+  if (["POST", "PUT", "PATCH", "DELETE"].includes(req.method)) {
+    res.on("finish", () => {
+      if (res.statusCode >= 200 && res.statusCode < 300) {
+        io.emit("data-updated", { path: req.originalUrl, method: req.method });
+      }
+    });
+  }
+  next();
+});
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -79,7 +97,7 @@ app.use("/pages", requireLogin, express.static(path.join(__dirname, "src", "page
 app.use(express.static(path.join(__dirname, "src")));
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
+server.listen(PORT, () => {
   console.log(`Server running: http://localhost:${PORT}`);
   console.log(`หน้า Login: http://localhost:${PORT}/pages/login.html`);
 });

@@ -50,3 +50,27 @@ fetch('../components/header.html')
     .catch(error => {
         console.error('โหลดheader ไม่สำเร็จ', error);
     });
+
+// ==========================================
+// เชื่อมต่อ Real-time Socket.io อัตโนมัติทุกหน้า
+// ==========================================
+(function setupRealtime() {
+  function startSocket() {
+    if (typeof io !== 'undefined' && !window.appSocket) {
+      const socket = io();
+      window.appSocket = socket;
+      socket.on('data-updated', (info) => {
+        window.dispatchEvent(new CustomEvent('app:data-updated', { detail: info }));
+      });
+    }
+  }
+
+  if (typeof io === 'undefined') {
+    const s = document.createElement('script');
+    s.src = '/socket.io/socket.io.js';
+    s.onload = startSocket;
+    document.head.appendChild(s);
+  } else {
+    startSocket();
+  }
+})();

@@ -1,7 +1,8 @@
 // dashboard.js - ดึงข้อมูลสรุปนิสิตแสดงใน Dashboard
-fetch('/api/student/dashboard-summary')
-  .then(res => res.json())
-  .then(data => {
+function loadDashboardData() {
+  fetch('/api/student/dashboard-summary')
+    .then(res => res.json())
+    .then(data => {
     if (!data.success) return;
 
     const actionBtn = document.getElementById('dashboard-action-btn');
@@ -175,3 +176,12 @@ fetch('/api/student/dashboard-summary')
     }
   })
   .catch(err => console.error('Error fetching dashboard summary:', err));
+}
+
+// โหลดข้อมูลครั้งแรก
+loadDashboardData();
+
+// ⚡ เมื่อมีสัญญาณ Real-time จาก Socket.io ให้อัปเดต Dashboard ทันที
+window.addEventListener('app:data-updated', () => {
+  loadDashboardData();
+});
