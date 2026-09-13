@@ -20,7 +20,7 @@
     <div class="flex flex-col xl:flex-row gap-6">
 
       <!-- ===== Left Column: Charts + Bottom Row ===== -->
-      <div class="flex flex-col gap-6 xl:w-[52%]">
+      <div class="flex flex-col gap-0.5 xl:w-[52%]">
 
         <!-- Card: สถานะของนิสิตในแต่ละขั้นตอน -->
         <div class="card">
@@ -93,25 +93,33 @@
         </div>
         <div class="card-body">
           <!-- Controls -->
-          <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
-            <h3 class="text-base font-semibold text-gray-800">
-              รายชื่อนิสิต
-              <span id="active-filter-badge" class="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full ml-1" style="display:none;"></span>
-              <button onclick="clearFilter()" id="btn-clear-filter" class="text-xs text-blue-500 ml-2 hover:underline" style="font-weight:normal; display:none;">[ล้างตัวกรอง]</button>
-            </h3>
-            <div class="flex items-center gap-2 flex-wrap">
-              <div class="relative">
-                <span class="material-icons absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">search</span>
-                <input type="text" placeholder="Search item..." id="student-search" class="input-field !pl-10 !w-[180px]" />
-              </div>
-              <button class="btn btn-primary btn-sm" onclick="openSetStatusModal()">
-                <span class="material-icons text-sm">settings</span> ตั้งสถานะนิสิต
-              </button>
-              <button class="btn btn-primary btn-sm" onclick="openSetAdvisorModal()">
-                <span class="material-icons text-sm">person_add</span> ตั้งอาจารย์ที่ปรึกษา
-              </button>
-            </div>
-          </div>
+          <div class="flex flex-col gap-3 mb-4">
+  <!-- แถวบน: หัวข้อ + ป้ายกรอง -->
+  <div class="flex items-center flex-wrap gap-2">
+    <h3 class="text-base font-semibold text-gray-800">รายชื่อนิสิต</h3>
+    <span id="active-filter-badge" class="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full" style="display:none;"></span>
+    <button onclick="clearFilter()" id="btn-clear-filter" class="text-xs text-gray-600 bg-red-100 hover:bg-red-200 px-2 py-0.5 rounded-full inline-flex items-center gap-1 transition-colors" style="display:none; box-shadow:none; border:none;">
+      <span class="material-icons" style="font-size:12px;">close</span>
+      ล้างตัวกรอง
+    </button>
+  </div>
+
+  <!-- แถวล่าง: ช่องค้นหา + ปุ่ม -->
+  <div class="flex items-center gap-2 flex-wrap justify-end sm:justify-between">
+    <div class="relative flex-1 min-w-[150px] max-w-[220px]">
+      <span class="material-icons absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">search</span>
+      <input type="text" placeholder="Search item..." id="student-search" class="input-field !pl-10 w-full" />
+    </div>
+    <div class="flex items-center gap-2 flex-wrap">
+      <button class="btn btn-primary btn-sm" onclick="openSetStatusModal()">
+        <span class="material-icons text-sm">settings</span> ตั้งสถานะนิสิต
+      </button>
+      <button class="btn btn-primary btn-sm" onclick="openSetAdvisorModal()">
+        <span class="material-icons text-sm">person_add</span> ตั้งอาจารย์ที่ปรึกษา
+      </button>
+    </div>
+  </div>
+</div>
 
           <!-- Table -->
           <div class="overflow-x-auto">

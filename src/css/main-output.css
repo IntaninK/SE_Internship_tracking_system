@@ -3,7 +3,9 @@
 @layer legacy, tailwind-theme, tailwind-utilities;
 @layer tailwind-theme {
   :root, :host {
+    --color-red-50: oklch(97.1% 0.013 17.38);
     --color-red-100: oklch(93.6% 0.032 17.717);
+    --color-red-200: oklch(88.5% 0.062 18.334);
     --color-red-300: oklch(80.8% 0.114 19.571);
     --color-red-500: oklch(63.7% 0.237 25.331);
     --color-red-600: oklch(57.7% 0.245 27.325);
@@ -266,6 +268,9 @@
   .h-\[66px\] {
     height: 66px;
   }
+  .h-\[85px\] {
+    height: 85px;
+  }
   .h-\[100px\] {
     height: 100px;
   }
@@ -314,6 +319,9 @@
   .w-\[80px\] {
     width: 80px;
   }
+  .w-\[85px\] {
+    width: 85px;
+  }
   .w-\[100px\] {
     width: 100px;
   }
@@ -347,6 +355,9 @@
   .max-w-\[90\%\] {
     max-width: 90%;
   }
+  .max-w-\[220px\] {
+    max-width: 220px;
+  }
   .max-w-\[260px\] {
     max-width: 260px;
   }
@@ -376,6 +387,9 @@
   }
   .min-w-\[140px\] {
     min-width: 140px;
+  }
+  .min-w-\[150px\] {
+    min-width: 150px;
   }
   .min-w-\[180px\] {
     min-width: 180px;
@@ -450,6 +464,12 @@
   }
   .justify-end {
     justify-content: flex-end;
+  }
+  .gap-0 {
+    gap: 0px;
+  }
+  .gap-0\.5 {
+    gap: calc(var(--spacing) * 0.5);
   }
   .gap-1 {
     gap: var(--spacing);
@@ -628,6 +648,9 @@
       background-color: color-mix(in oklab, var(--color-black) 50%, transparent);
     }
   }
+  .bg-blue-50 {
+    background-color: var(--color-blue-50);
+  }
   .bg-blue-600 {
     background-color: var(--color-blue-600);
   }
@@ -654,6 +677,9 @@
   }
   .bg-purple-100 {
     background-color: var(--color-purple-100);
+  }
+  .bg-red-50 {
+    background-color: var(--color-red-50);
   }
   .bg-red-100 {
     background-color: var(--color-red-100);
@@ -999,6 +1025,12 @@
   .text-blue-700 {
     color: var(--color-blue-700);
   }
+  .text-gray-100 {
+    color: var(--color-gray-100);
+  }
+  .text-gray-300 {
+    color: var(--color-gray-300);
+  }
   .text-gray-400 {
     color: var(--color-gray-400);
   }
@@ -1130,6 +1162,9 @@
     .hover\:bg-blue-50:hover {
       background-color: var(--color-blue-50);
     }
+    .hover\:bg-blue-100:hover {
+      background-color: var(--color-blue-100);
+    }
     .hover\:bg-blue-700:hover {
       background-color: var(--color-blue-700);
     }
@@ -1144,6 +1179,9 @@
     }
     .hover\:bg-purple-50:hover {
       background-color: var(--color-purple-50);
+    }
+    .hover\:bg-red-200:hover {
+      background-color: var(--color-red-200);
     }
     .hover\:bg-red-600:hover {
       background-color: var(--color-red-600);
@@ -1240,6 +1278,9 @@
     }
     .sm\:items-center {
       align-items: center;
+    }
+    .sm\:justify-between {
+      justify-content: space-between;
     }
   }
   @media (width >= 48rem) {

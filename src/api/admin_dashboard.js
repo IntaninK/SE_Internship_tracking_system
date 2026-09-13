@@ -107,8 +107,8 @@ function renderPieChart(containerId, chartType, segments, headerLabel, tableId, 
   }
 
   container.innerHTML = `
-    <h4 class="text-xs font-bold text-blue-700 mb-2 text-center">${headerLabel}</h4>
-    <div class="flex items-start gap-4">
+    <h4 class="text-sm font-bold text-blue-700 mb-2 text-center">${headerLabel}</h4>
+    <div class="flex items-start gap-1">
       <div class="relative w-[100px] h-[100px] flex-shrink-0">
         <svg viewBox="0 0 36 36" class="w-full h-full -rotate-90">
           ${svgCircles}
@@ -118,7 +118,7 @@ function renderPieChart(containerId, chartType, segments, headerLabel, tableId, 
           <span class="text-lg font-bold text-gray-800">${total}</span>
         </div>
       </div>
-      <table class="text-[9px] border-collapse" id="${tableId}">
+      <table class="text-[11px] border-collapse" id="${tableId}">
         <thead>
           <tr>
             <th class="text-left pr-3 pb-1 font-medium text-gray-600">${headerLabel}</th>
