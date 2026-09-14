@@ -68,7 +68,7 @@
               <span class="material-icons absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">search</span>
               <input type="text" placeholder="Search item..." id="student-search" class="input-field !pl-10 !w-[180px]" />
             </div>
-            <select id="year-filter" class="input-field !w-auto !min-w-[100px]" style="height:36px; font-size:13px; padding:4px 10px; border-radius:8px;">
+            <select id="year-filter" onchange="onYearFilterChange()" class="input-field !w-auto !min-w-[100px]" style="height:36px; font-size:13px; padding:4px 10px; border-radius:8px;">
               <option value="">ทุกชั้นปี</option>
             </select>
             <button class="btn btn-primary btn-sm" onclick="openSetStatusModal()">

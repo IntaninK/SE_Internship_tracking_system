@@ -177,13 +177,22 @@ async function loadStudents() {
       url += `&chartType=${encodeURIComponent(currentFilter.chartType)}&chartKey=${encodeURIComponent(currentFilter.chartKey)}`;
     }
     const yearFilter = document.getElementById('year-filter');
-    if (yearFilter && yearFilter.value) url += `&yearPrefix=${encodeURIComponent(yearFilter.value)}`;
+    const selectedYear = yearFilter ? yearFilter.value : '';
+    if (selectedYear) url += `&yearPrefix=${encodeURIComponent(selectedYear)}`;
 
     const res = await fetch(url);
     const data = await res.json();
     if (!data.success) return;
 
-    renderStudentTable(data.students, data.total, data.page, data.totalPages);
+    let studentsToRender = data.students || [];
+    let totalToRender = data.total;
+    // Fallback: กรองฝั่ง client-side เพิ่มเติม เพื่อให้แสดงผลทันทีแม้ backend ยังไม่ได้ restart
+    if (selectedYear) {
+      studentsToRender = studentsToRender.filter(s => s.studentCode && s.studentCode.startsWith(selectedYear));
+      totalToRender = studentsToRender.length;
+    }
+
+    renderStudentTable(studentsToRender, totalToRender, data.page, Math.max(1, Math.ceil(totalToRender / pageLimit)));
   } catch (err) {
     console.error('Load students error:', err);
   }
@@ -544,12 +553,14 @@ if (searchInput) {
 }
 
 // Year filter event
+window.onYearFilterChange = function() {
+  currentPage = 1;
+  loadStudents();
+};
+
 const yearFilterEl = document.getElementById('year-filter');
 if (yearFilterEl) {
-  yearFilterEl.addEventListener('change', () => {
-    currentPage = 1;
-    loadStudents();
-  });
+  yearFilterEl.addEventListener('change', window.onYearFilterChange);
 }
 
 // ดึงรายปีจากรหัสนิสิตทั้งหมดมาใส่ Dropdown
