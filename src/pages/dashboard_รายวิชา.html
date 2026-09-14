@@ -106,9 +106,14 @@
 
   <!-- แถวล่าง: ช่องค้นหา + ปุ่ม -->
   <div class="flex items-center gap-2 flex-wrap justify-end sm:justify-between">
-    <div class="relative flex-1 min-w-[150px] max-w-[220px]">
-      <span class="material-icons absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">search</span>
-      <input type="text" placeholder="Search item..." id="student-search" class="input-field !pl-10 w-full" />
+    <div class="flex items-center gap-2 flex-1">
+      <div class="relative min-w-[150px] max-w-[220px]">
+        <span class="material-icons absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">search</span>
+        <input type="text" placeholder="Search item..." id="student-search" class="input-field !pl-10 w-full" />
+      </div>
+      <select id="year-filter" class="input-field !w-auto !min-w-[100px]" style="height:36px; font-size:13px; padding:4px 10px; border-radius:8px;">
+        <option value="">ทุกชั้นปี</option>
+      </select>
     </div>
     <div class="flex items-center gap-2 flex-wrap">
       <button class="btn btn-primary btn-sm" onclick="openSetStatusModal()">

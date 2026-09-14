@@ -379,6 +379,12 @@ router.get("/students", async (req, res) => {
       );
     }
 
+    // Filter ตามปีของรหัสนิสิต (2 หลักแรก เช่น 67, 68)
+    const yearPrefix = req.query.yearPrefix;
+    if (yearPrefix) {
+      mapped = mapped.filter((s) => s.studentCode && s.studentCode.startsWith(yearPrefix));
+    }
+
     const total = mapped.length;
     const paginated = mapped.slice(skip, skip + parseInt(limit));
 

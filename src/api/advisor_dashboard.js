@@ -13,6 +13,7 @@ let openDropdownStudentId = null;
 async function initAdvisorDashboard() {
   await loadDashboardSummary();
   await loadStudents();
+  await populateYearFilter('/api/advisor/students');
 }
 
 // ==========================================
@@ -143,6 +144,8 @@ async function loadStudents() {
     if (currentFilter) {
       url += `&chartType=${encodeURIComponent(currentFilter.chartType)}&chartKey=${encodeURIComponent(currentFilter.chartKey)}`;
     }
+    const yearFilter = document.getElementById('year-filter');
+    if (yearFilter && yearFilter.value) url += `&yearPrefix=${encodeURIComponent(yearFilter.value)}`;
 
     const res = await fetch(url);
     const data = await res.json();
@@ -391,6 +394,42 @@ if (searchInput) {
       loadStudents();
     }, 300);
   });
+}
+
+// Year filter event
+const yearFilterEl = document.getElementById('year-filter');
+if (yearFilterEl) {
+  yearFilterEl.addEventListener('change', () => {
+    currentPage = 1;
+    loadStudents();
+  });
+}
+
+// ดึงรายปีจากรหัสนิสิตทั้งหมดมาใส่ Dropdown
+async function populateYearFilter(apiUrl) {
+  try {
+    const select = document.getElementById('year-filter');
+    if (!select) return;
+    const currentVal = select.value;
+    const res = await fetch(`${apiUrl}?page=1&limit=9999`);
+    const data = await res.json();
+    if (!data.success || !Array.isArray(data.students)) return;
+    const years = [...new Set(
+      data.students
+        .filter(s => s.studentCode && s.studentCode.length >= 2)
+        .map(s => s.studentCode.substring(0, 2))
+    )].sort();
+    select.innerHTML = '<option value="">ทุกชั้นปี</option>';
+    years.forEach(y => {
+      const opt = document.createElement('option');
+      opt.value = y;
+      opt.textContent = `ปี ${y} (25${y})`;
+      if (y === currentVal) opt.selected = true;
+      select.appendChild(opt);
+    });
+  } catch (err) {
+    console.error('Populate year filter error:', err);
+  }
 }
 
 // ==========================================
