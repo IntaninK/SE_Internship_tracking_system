@@ -216,7 +216,6 @@ window.saveBatchTrainingStatus = async function() {
 // ==========================================
 function renderCv(cv) {
   const section = document.getElementById('admin-cv-section');
-
   if (!cv) {
     section.innerHTML = '<p class="text-gray-400 text-center py-4">นิสิตยังไม่ได้อัปโหลด CV</p>';
     return;
@@ -226,17 +225,8 @@ function renderCv(cv) {
   if (cv.status === 'APPROVED') statusBadge = '<span class="status-pass" style="font-size:16px; font-weight:600;">✓ CVตรวจแล้ว / ผ่าน</span>';
   else if (cv.status === 'REJECTED') statusBadge = `<span class="status-fail" style="font-size:16px; font-weight:600;">✗ CVไม่ผ่าน / ทำใหม่</span>`;
 
-  // ตรวจว่าเป็น PDF หรือรูป
-  const isPdf = cv.fileUrl && (cv.fileUrl.toLowerCase().endsWith('.pdf') || (cv.fileName && cv.fileName.toLowerCase().endsWith('.pdf')));
-
-  let previewHtml;
-  if (isPdf) {
-    // ถ้าเป็น Cloudinary PDF ให้แปลงเป็น .jpg
-    const displayUrl = cv.fileUrl.includes('cloudinary.com') ? cv.fileUrl.replace(/\.pdf$/i, '.jpg') : cv.fileUrl;
-    previewHtml = `<img src="${displayUrl}" alt="CV" style="max-width:300px; max-height:400px; border-radius:8px; border:1px solid #e2e8f0; cursor:pointer;" onclick="window.open('${cv.fileUrl}', '_blank')" />`;
-  } else {
-    previewHtml = `<img src="${cv.fileUrl}" alt="CV" style="max-width:300px; max-height:400px; border-radius:8px; border:1px solid #e2e8f0; cursor:pointer;" onclick="window.open('${cv.fileUrl}', '_blank')" />`;
-  }
+  const displayUrl = getCvDisplayUrl(cv);
+  const previewHtml = `<img src="${displayUrl}" alt="CV" style="max-width:450px; max-height:550px; border-radius:8px; border:1px solid #e2e8f0; cursor:pointer;" onclick="window.open('${cv.fileUrl}', '_blank')" />`;
 
   section.innerHTML = `
     <div style="display: flex; justify-content: center; align-items: center; gap:20px; max-width: 700px; margin: 0 auto; padding: 20px;">

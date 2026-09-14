@@ -57,15 +57,20 @@ function loadDashboardData() {
     if (data.cv && data.cv.fileUrl) {
       window.currentCvUrl = data.cv.fileUrl;
       document.getElementById('cv-placeholder-text').style.display = 'none';
-      
-      if (data.cv.fileUrl.endsWith('.pdf')) {
-        document.getElementById('cv-pdf-preview').style.display = 'flex';
-      } else {
-        const cvImg = document.getElementById('cv-preview-image');
-        cvImg.src = data.cv.fileUrl;
-        cvImg.style.display = 'block';
-      }
 
+      // เรียกฟังก์ชันกลาง (ใช้ตัวเดียวกับหน้า admin)
+      const displayUrl = getCvDisplayUrl(data.cv);
+
+      const cvImg = document.getElementById('cv-preview-image');
+      cvImg.src = displayUrl;
+      cvImg.style.display = 'block';
+      cvImg.style.cursor = 'pointer';
+      cvImg.onclick = () => window.open(data.cv.fileUrl, '_blank');
+
+      const pdfPreview = document.getElementById('cv-pdf-preview');
+      if (pdfPreview) pdfPreview.style.display = 'none';
+
+      // ⬇️ ย้าย cvStatusEl เข้ามาไว้ข้างในนี้ด้วย ปิด { ตรงนี้แทน
       const cvStatusEl = document.getElementById('display-cv-status');
       if (data.cv.status === 'APPROVED') {
         cvStatusEl.innerHTML = '<span class="text-xs font-semibold text-green-700 bg-green-100 border border-green-300 px-2 py-0.5 rounded-md inline-block">CVตรวจแล้ว / ผ่าน</span>';
@@ -77,7 +82,7 @@ function loadDashboardData() {
       } else {
         cvStatusEl.innerHTML = '<span class="text-xs font-semibold text-amber-700 bg-yellow-100 border border-yellow-400 px-2 py-0.5 rounded-md inline-block">รอผล (รออาจารย์ตรวจ)</span>';
       }
-    }
+    } // ← ปิด if ตรงนี้เท่านั้น ไม่ปิดก่อนหน้านี้
 
     // Training Table
     if (data.trainings && data.trainings.records && data.trainings.records.length > 0) {
@@ -165,7 +170,7 @@ function loadDashboardData() {
 
     // Placement / Passed Company
     if (data.placement && data.placement.companyNameTh) {
-      document.getElementById('display-position').textContent = `ตำแหน่งเข้าสมัครงาน : ${data.placement.position || '-'}`;
+      document.getElementById('display-position').textContent = `${data.placement.position || '-'}`;
       document.getElementById('company-placeholder-text').style.display = 'none';
       document.getElementById('company-details').style.display = 'flex';
       document.getElementById('comp-name').textContent = data.placement.companyNameTh || '-';
