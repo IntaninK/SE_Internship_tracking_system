@@ -3,7 +3,6 @@
 @layer legacy, tailwind-theme, tailwind-utilities;
 @layer tailwind-theme {
   :root, :host {
-    --color-red-50: oklch(97.1% 0.013 17.38);
     --color-red-100: oklch(93.6% 0.032 17.717);
     --color-red-200: oklch(88.5% 0.062 18.334);
     --color-red-300: oklch(80.8% 0.114 19.571);
@@ -262,18 +261,6 @@
   .h-36 {
     height: calc(var(--spacing) * 36);
   }
-  .h-\[3px\] {
-    height: 3px;
-  }
-  .h-\[4\] {
-    height: 4;
-  }
-  .h-\[37px\] {
-    height: 37px;
-  }
-  .h-\[40px\] {
-    height: 40px;
-  }
   .h-\[60px\] {
     height: 60px;
   }
@@ -286,26 +273,11 @@
   .h-\[120px\] {
     height: 120px;
   }
-  .h-\[210px\] {
-    height: 210px;
-  }
   .h-\[336px\] {
     height: 336px;
   }
-  .h-\[350px\] {
-    height: 350px;
-  }
-  .h-\[370px\] {
-    height: 370px;
-  }
-  .h-\[375px\] {
-    height: 375px;
-  }
   .h-\[376px\] {
     height: 376px;
-  }
-  .h-\[400px\] {
-    height: 400px;
   }
   .h-auto {
     height: auto;
@@ -744,9 +716,6 @@
   .object-cover {
     object-fit: cover;
   }
-  .p-1 {
-    padding: var(--spacing);
-  }
   .p-2 {
     padding: calc(var(--spacing) * 2);
   }
@@ -1096,9 +1065,6 @@
   }
   .text-yellow-800 {
     color: var(--color-yellow-800);
-  }
-  .italic {
-    font-style: italic;
   }
   .no-underline {
     text-decoration-line: none;

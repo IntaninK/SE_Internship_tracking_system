@@ -35,23 +35,48 @@ function loadDashboardData() {
       document.getElementById('profile-icon').style.display = 'none';
     }
 
-    // Stage Indicators
-    const stage = s.stage;
-    const pDocs = document.getElementById('stage-pending-docs');
-    const pAppr = document.getElementById('stage-pending-appr');
-    const pReady = document.getElementById('stage-ready');
+// Stage Indicators — เวอร์ชันแก้ให้ตรงกับดีไซน์การ์ดปัจจุบัน (step-card / step-num)
+const stage = s.stage;
 
-    pDocs.className = 'text-[#757575]';
-    pAppr.className = 'text-[#757575]';
-    pReady.className = 'text-[#757575]';
+const stageConfig = {
+  PENDING_DOCUMENTS: {
+    cardId: 'stage-pending-docs',
+    numId: null, // จะหาเอาจาก querySelector ด้านล่าง
+    label: 'รอยื่นเอกสาร',
+  },
+  PENDING_APPROVAL: {
+    cardId: 'stage-pending-appr',
+    label: 'รอการอนุมัติ',
+  },
+  READY: {
+    cardId: 'stage-ready',
+    label: 'พร้อมฝึกงาน',
+  },
+};
 
-    if (stage === 'PENDING_DOCUMENTS') {
-      pDocs.className = 'text-[#E7E54D] font-bold';
-    } else if (stage === 'PENDING_APPROVAL') {
-      pAppr.className = 'text-[#53DDFF] font-bold';
-    } else if (stage === 'READY') {
-      pReady.className = 'text-[#51FF51] font-bold';
-    }
+// ใส่ active ให้เฉพาะการ์ดที่ตรงกับ stage ปัจจุบัน
+const activeConf = stageConfig[stage];
+if (activeConf) {
+  const card = document.getElementById(activeConf.cardId);
+  if (card) {
+    card.classList.add('step-card--active');
+    const numEl = card.querySelector('.step-num');
+    const titleEl = card.querySelector('.step-card-title');
+    const subEl = card.querySelector('.step-card-sub');
+    if (numEl) numEl.classList.add('step-num--active');
+    if (titleEl) titleEl.classList.add('step-card-title--active');
+    if (subEl) subEl.classList.add('step-card-sub--active');
+  }
+
+  // อัปเดตแท็ก "ขั้นตอนปัจจุบัน" ด้านบนด้วย
+  const tagEl = document.querySelector('.current-step-tag');
+  if (tagEl) {
+    tagEl.innerHTML = `
+      <span class="w-1.5 h-1.5 rounded-full bg-yellow-400 pulse-dot" style="display:inline-block;"></span>
+      ขั้นตอนปัจจุบัน: ${activeConf.label}
+    `;
+  }
+}
 
     // CV
     if (data.cv && data.cv.fileUrl) {
