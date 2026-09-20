@@ -122,6 +122,10 @@ router.get("/me", async (req, res) => {
       return res.status(404).json({ authenticated: false, message: "ไม่พบข้อมูลผู้ใช้" });
     }
 
+    // ซิงค์ session ให้ตรงกับข้อมูลล่าสุดใน Database เสมอ
+    req.session.user.role = user.role;
+    if (user.username) req.session.user.username = user.username;
+
     res.json({
       authenticated: true,
       user: {

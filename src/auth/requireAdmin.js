@@ -1,7 +1,25 @@
+const prisma = require("../db");
+
 // Middleware: ตรวจสิทธิ์ว่าเป็น STAFF หรือ ADMIN
-function requireAdmin(req, res, next) {
+async function requireAdmin(req, res, next) {
   if (!req.session || !req.session.user) {
     return res.redirect("/pages/login.html");
+  }
+
+  // ซิงค์ role ล่าสุดจาก Database เผื่อกรณีเปลี่ยน role ใน DB ขณะที่ session เดิมยังเปิดอยู่
+  if (req.session.user.role !== "STAFF" && req.session.user.role !== "ADMIN") {
+    try {
+      const dbUser = await prisma.user.findUnique({
+        where: { id: req.session.user.id },
+        select: { role: true, username: true },
+      });
+      if (dbUser) {
+        req.session.user.role = dbUser.role;
+        if (dbUser.username) req.session.user.username = dbUser.username;
+      }
+    } catch (err) {
+      console.error("requireAdmin sync role error:", err);
+    }
   }
 
   const role = req.session.user.role;

@@ -6,6 +6,22 @@ async function requireAdvisor(req, res, next) {
     return res.redirect("/pages/login.html");
   }
 
+  // ซิงค์ role ล่าสุดจาก Database เผื่อกรณีเปลี่ยน role ใน DB ขณะที่ session เดิมยังเปิดอยู่
+  if (req.session.user.role !== "ADVISOR" && req.session.user.role !== "STAFF" && req.session.user.role !== "ADMIN") {
+    try {
+      const dbUser = await prisma.user.findUnique({
+        where: { id: req.session.user.id },
+        select: { role: true, username: true },
+      });
+      if (dbUser) {
+        req.session.user.role = dbUser.role;
+        if (dbUser.username) req.session.user.username = dbUser.username;
+      }
+    } catch (err) {
+      console.error("requireAdvisor sync role error:", err);
+    }
+  }
+
   const role = req.session.user.role;
   if (role !== "ADVISOR" && role !== "STAFF" && role !== "ADMIN") {
     return res.status(403).json({
