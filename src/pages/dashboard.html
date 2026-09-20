@@ -365,7 +365,7 @@
             <span class="text-xs font-semibold text-gray-500">สถานะการเข้าฝึกงานของนิสิต</span>
             <span class="current-step-tag">
               <span class="w-1.5 h-1.5 rounded-full bg-yellow-400 pulse-dot" style="display:inline-block;"></span>
-              ขั้นตอนปัจจุบัน: รอยื่นเอกสาร
+              <span id="current-step-label">ขั้นตอนปัจจุบัน: รอยื่นเอกสาร</span>
             </span>
           </div>
 
@@ -444,7 +444,7 @@
               </div>
               <p id="cv-placeholder-text" class="text-sm font-medium text-gray-700">ยังไม่มี CV</p>
               <p id="cv-hint-text" class="text-xs text-gray-400 mt-1" style="max-width: 220px;">คลิกเพื่อเลือกไฟล์</p>
-              <img id="cv-preview-image" src="" alt="CV Preview" style="width:100%; max-width:300px; height:100%; border-radius:8px; border:1px solid #e2e8f0; cursor:pointer; object-fit:contain;" onclick="window.open(this.src, '_blank')" />
+              <img id="cv-preview-image" src="" alt="CV Preview" style="display: none; width:100%; max-width:300px; height:100%; border-radius:8px; border:1px solid #e2e8f0; cursor:pointer; object-fit:contain;" onclick="window.open(this.src, '_blank')" />
               <div id="cv-pdf-preview" style="display: none; flex-direction: column; align-items: center; gap: 8px;">
                 <span class="material-icons text-6xl text-red-600">picture_as_pdf</span>
                 <span class="text-sm font-medium text-blue-600 underline cursor-pointer" onclick="if(window.currentCvUrl) window.open(window.currentCvUrl, '_blank')">เปิดดูไฟล์ PDF</span>
@@ -598,7 +598,7 @@
 
   </main>
   <script src="../components/header.js"></script>
-  <script src="../api/dashboard.js"></script>
   <script src="../api/cv_previews.js"></script>
+  <script src="../api/dashboard.js"></script>
 </body>
 </html>

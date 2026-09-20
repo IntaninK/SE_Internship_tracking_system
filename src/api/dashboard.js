@@ -41,42 +41,47 @@ const stage = s.stage;
 const stageConfig = {
   PENDING_DOCUMENTS: {
     cardId: 'stage-pending-docs',
-    numId: null, // จะหาเอาจาก querySelector ด้านล่าง
-    label: 'รอยื่นเอกสาร',
+    tagLabel: 'รอยื่นเอกสาร',
   },
   PENDING_APPROVAL: {
     cardId: 'stage-pending-appr',
-    label: 'รอการอนุมัติ',
+    tagLabel: 'รอการอนุมัติ',
   },
   READY: {
     cardId: 'stage-ready',
-    label: 'พร้อมฝึกงาน',
+    tagLabel: 'พร้อมฝึกงาน',
   },
 };
 
-// ใส่ active ให้เฉพาะการ์ดที่ตรงกับ stage ปัจจุบัน
-const activeConf = stageConfig[stage];
-if (activeConf) {
-  const card = document.getElementById(activeConf.cardId);
-  if (card) {
-    card.classList.add('step-card--active');
-    const numEl = card.querySelector('.step-num');
-    const titleEl = card.querySelector('.step-card-title');
-    const subEl = card.querySelector('.step-card-sub');
-    if (numEl) numEl.classList.add('step-num--active');
-    if (titleEl) titleEl.classList.add('step-card-title--active');
-    if (subEl) subEl.classList.add('step-card-sub--active');
+function updateStageIndicator(stage) {
+  // 1. รีเซ็ตทุกการ์ดกลับเป็นสถานะปกติก่อนเสมอ (กัน state ค้างจากรอบก่อน)
+  Object.values(stageConfig).forEach(cfg => {
+    const card = document.getElementById(cfg.cardId);
+    if (!card) return; // null-safe ตามที่โปรเจกต์นี้ยึดไว้เสมอ
+    card.classList.remove('step-card--active');
+    card.querySelector('.step-num')?.classList.remove('step-num--active');
+    card.querySelector('.step-card-title')?.classList.remove('step-card-title--active');
+    card.querySelector('.step-card-sub')?.classList.remove('step-card-sub--active');
+  });
+
+  // 2. เปิด active ให้เฉพาะการ์ดที่ตรงกับ stage ปัจจุบัน
+  const active = stageConfig[stage];
+  if (!active) return;
+
+  const activeCard = document.getElementById(active.cardId);
+  if (activeCard) {
+    activeCard.classList.add('step-card--active');
+    activeCard.querySelector('.step-num')?.classList.add('step-num--active');
+    activeCard.querySelector('.step-card-title')?.classList.add('step-card-title--active');
+    activeCard.querySelector('.step-card-sub')?.classList.add('step-card-sub--active');
   }
 
-  // อัปเดตแท็ก "ขั้นตอนปัจจุบัน" ด้านบนด้วย
-  const tagEl = document.querySelector('.current-step-tag');
-  if (tagEl) {
-    tagEl.innerHTML = `
-      <span class="w-1.5 h-1.5 rounded-full bg-yellow-400 pulse-dot" style="display:inline-block;"></span>
-      ขั้นตอนปัจจุบัน: ${activeConf.label}
-    `;
-  }
+  // 3. อัปเดต tag ข้อความ "ขั้นตอนปัจจุบัน: ..." ด้านบน
+  const label = document.getElementById('current-step-label');
+  if (label) label.textContent = `ขั้นตอนปัจจุบัน: ${active.tagLabel}`;
 }
+
+updateStageIndicator(stage);
 
     // CV
     if (data.cv && data.cv.fileUrl) {
