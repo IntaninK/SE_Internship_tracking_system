@@ -178,8 +178,37 @@
       </div>
     </section>
 
+    <!-- Card แสดงเงื่อนไขการปลดล็อก Checklist และสถานะการยื่น (ส่วนที่ 4 และ 5) -->
+    <section class="card" id="checklist-locked-card" style="display: none; border: 2px dashed #93c5fd; background-color: #f8fafc;">
+      <div class="card-header" style="background: #f1f5f9; border-bottom: 1px solid #e2e8f0;">
+        <span class="material-icons header-icon" style="color: #2563eb;">lock</span>
+        <h2 class="card-title" style="color: #334155;">เงื่อนไขการปลดล็อก "Checklist และสถานะการยื่น"</h2>
+      </div>
+      <div class="card-body" style="padding: 20px;">
+        <p style="color: #475569; font-size: 15px; margin-bottom: 16px; font-weight: 500;">
+          กรุณาทำตามขั้นตอนด้านบนให้ครบถ้วนทั้ง 2 ข้อ เพื่อปลดล็อกการทำ Checklist บริษัทและติดตามสถานะการยื่น:
+        </p>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px;">
+          <div id="step-req-training" style="display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-radius: 10px; background: white; border: 1px solid #e2e8f0;">
+            <span class="material-icons" id="step-req-training-icon" style="color: #94a3b8; font-size: 24px;">hourglass_empty</span>
+            <div>
+              <p style="font-weight: 600; font-size: 14px; margin: 0;" id="step-req-training-title">1. ชั่วโมงการอบรม</p>
+              <p style="font-size: 12px; color: #64748b; margin: 2px 0 0 0;" id="step-req-training-desc">Soft 0/12 ชม. | Hard 0/18 ชม.</p>
+            </div>
+          </div>
+          <div id="step-req-cv" style="display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-radius: 10px; background: white; border: 1px solid #e2e8f0;">
+            <span class="material-icons" id="step-req-cv-icon" style="color: #94a3b8; font-size: 24px;">hourglass_empty</span>
+            <div>
+              <p style="font-weight: 600; font-size: 14px; margin: 0;" id="step-req-cv-title">2. กรอกใบ CV</p>
+              <p style="font-size: 12px; color: #64748b; margin: 2px 0 0 0;" id="step-req-cv-desc">รออาจารย์ตรวจผ่าน</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <!-- 4. Checklist -->
-    <section class="card">
+    <section class="card" id="checklist-section">
       <div class="card-header">
         <span class="material-icons header-icon">how_to_reg</span>
         <h2 class="card-title">Checklist</h2>
@@ -211,7 +240,7 @@
     </section>
 
     <!-- 5. สถานะการยื่น -->
-    <section class="card">
+    <section class="card" id="submission-section">
       <div class="card-header">
         <span class="material-icons header-icon">how_to_reg</span>
         <h2 class="card-title">สถานะการยื่น</h2>

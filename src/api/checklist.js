@@ -6,6 +6,30 @@ let companiesData = [];
 // โหลด Template ข้อพิจารณา 5 ส่วน และรายชื่อบริษัทเดิม
 async function loadData() {
   try {
+    // 🔒 ตรวจสอบเงื่อนไขว่าผ่านชั่วโมงอบรมและ CV หรือยัง
+    const [trainRes, cvRes] = await Promise.all([
+      fetch('/api/student/trainings'),
+      fetch('/api/student/cv')
+    ]);
+    const trainData = await trainRes.json();
+    const cvData = await cvRes.json();
+
+    const approvedSoftHours = (trainData.trainings || [])
+      .filter(t => t.status === 'APPROVED' && t.skillType === 'SOFT')
+      .reduce((sum, t) => sum + (Number(t.hours) || 0), 0);
+    const approvedHardHours = (trainData.trainings || [])
+      .filter(t => t.status === 'APPROVED' && t.skillType === 'HARD')
+      .reduce((sum, t) => sum + (Number(t.hours) || 0), 0);
+
+    const isTrainingComplete = approvedSoftHours >= 12 && approvedHardHours >= 18;
+    const isCvApproved = cvData.success && cvData.cv && cvData.cv.status === 'APPROVED';
+
+    if (!isTrainingComplete || !isCvApproved) {
+      alert('⚠️ ยังไม่สามารถเข้าใช้งานหน้า Checklist บริษัทได้ เนื่องจากยังไม่ผ่านเงื่อนไขการอบรม (Soft >= 12, Hard >= 18 ชม.) หรือ CV ยังไม่ได้รับการอนุมัติ');
+      window.location.href = '/pages/status_all.html';
+      return;
+    }
+
     const [tplRes, compRes] = await Promise.all([
       fetch('/api/student/checklist-template'),
       fetch('/api/student/companies')

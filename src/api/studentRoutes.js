@@ -408,6 +408,24 @@ router.post("/companies", async (req, res) => {
       });
     }
 
+    // 🔒 ตรวจสอบว่าชั่วโมงการอบรมครบ และ CV ผ่านการอนุมัติแล้วหรือยัง
+    const approvedTrainings = (student.trainingRecords || []).filter((t) => t.status === "APPROVED");
+    const approvedSoft = approvedTrainings
+      .filter((t) => t.skillType === "SOFT")
+      .reduce((sum, t) => sum + t.hours, 0);
+    const approvedHard = approvedTrainings
+      .filter((t) => t.skillType === "HARD")
+      .reduce((sum, t) => sum + t.hours, 0);
+    const isTrainingComplete = approvedSoft >= 12 && approvedHard >= 18;
+    const isCvApproved = student.cv && student.cv.status === "APPROVED";
+
+    if (!isTrainingComplete || !isCvApproved) {
+      return res.status(400).json({
+        success: false,
+        message: "ยังไม่สามารถทำ Checklist ได้ เนื่องจากชั่วโมงการอบรมยังไม่ครบ หรือ CV ยังไม่ผ่านการอนุมัติ",
+      });
+    }
+
     const { name, answers } = req.body;
     if (!name || !name.trim()) {
       return res.status(400).json({ success: false, message: "กรุณาระบุชื่อบริษัท" });

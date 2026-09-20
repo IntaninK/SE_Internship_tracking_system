@@ -3,6 +3,7 @@
 @layer legacy, tailwind-theme, tailwind-utilities;
 @layer tailwind-theme {
   :root, :host {
+    --color-red-50: oklch(97.1% 0.013 17.38);
     --color-red-100: oklch(93.6% 0.032 17.717);
     --color-red-200: oklch(88.5% 0.062 18.334);
     --color-red-300: oklch(80.8% 0.114 19.571);
@@ -102,9 +103,6 @@
   .inset-0 {
     inset: 0px;
   }
-  .top-1 {
-    top: var(--spacing);
-  }
   .top-1\/2 {
     top: calc(1 / 2 * 100%);
   }
@@ -149,9 +147,6 @@
   }
   .my-1 {
     margin-block: var(--spacing);
-  }
-  .mt-0 {
-    margin-top: 0px;
   }
   .mt-0\.5 {
     margin-top: calc(var(--spacing) * 0.5);
@@ -243,9 +238,6 @@
   .table {
     display: table;
   }
-  .h-1 {
-    height: var(--spacing);
-  }
   .h-1\.5 {
     height: calc(var(--spacing) * 1.5);
   }
@@ -296,9 +288,6 @@
   }
   .\!w-auto {
     width: auto !important;
-  }
-  .w-1 {
-    width: var(--spacing);
   }
   .w-1\.5 {
     width: calc(var(--spacing) * 1.5);
@@ -417,10 +406,6 @@
   .border-collapse {
     border-collapse: collapse;
   }
-  .-translate-y-1 {
-    --tw-translate-y: calc(var(--spacing) * -1);
-    translate: var(--tw-translate-x) var(--tw-translate-y);
-  }
   .-translate-y-1\/2 {
     --tw-translate-y: calc(calc(1 / 2 * 100%) * -1);
     translate: var(--tw-translate-x) var(--tw-translate-y);
@@ -463,9 +448,6 @@
   }
   .justify-end {
     justify-content: flex-end;
-  }
-  .gap-0 {
-    gap: 0px;
   }
   .gap-0\.5 {
     gap: calc(var(--spacing) * 0.5);
@@ -638,9 +620,6 @@
   .bg-\[\#f0f7ff\] {
     background-color: #f0f7ff;
   }
-  .bg-black {
-    background-color: var(--color-black);
-  }
   .bg-black\/50 {
     background-color: color-mix(in srgb, #000 50%, transparent);
     @supports (color: color-mix(in lab, red, red)) {
@@ -649,9 +628,6 @@
   }
   .bg-blue-600 {
     background-color: var(--color-blue-600);
-  }
-  .bg-gray-50 {
-    background-color: var(--color-gray-50);
   }
   .bg-gray-50\/50 {
     background-color: color-mix(in srgb, oklch(98.5% 0.002 247.839) 50%, transparent);
@@ -766,9 +742,6 @@
   }
   .px-12 {
     padding-inline: calc(var(--spacing) * 12);
-  }
-  .py-0 {
-    padding-block: 0px;
   }
   .py-0\.5 {
     padding-block: calc(var(--spacing) * 0.5);
@@ -976,26 +949,14 @@
   .text-\[\#2C51D4\] {
     color: #2C51D4;
   }
-  .text-\[\#51FF51\] {
-    color: #51FF51;
-  }
-  .text-\[\#53DDFF\] {
-    color: #53DDFF;
-  }
   .text-\[\#1541D2\] {
     color: #1541D2;
   }
   .text-\[\#323639\] {
     color: #323639;
   }
-  .text-\[\#757575\] {
-    color: #757575;
-  }
   .text-\[\#BF4900\] {
     color: #BF4900;
-  }
-  .text-\[\#E7E54D\] {
-    color: #E7E54D;
   }
   .text-amber-600 {
     color: var(--color-amber-600);

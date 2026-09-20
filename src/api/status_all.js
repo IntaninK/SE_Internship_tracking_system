@@ -534,12 +534,17 @@ if (placementForm) {
 }
 
 // =========================================================================
-// 🎯 ฟังก์ชันตรวจสอบ 4 เงื่อนไขเพื่อซ่อน/ปลดล็อกส่วนที่ 6 (ข้อมูลบริษัท ที่เข้าฝึกงาน)
+// 🎯 ฟังก์ชันตรวจสอบเงื่อนไขเพื่อซ่อน/ปลดล็อก
+// 1. ปลดล็อกส่วนที่ 4 & 5 (Checklist และ สถานะการยื่น) เมื่อ ชั่วโมงอบรมครบ & CV ผ่าน
+// 2. ปลดล็อกส่วนที่ 6 (ข้อมูลบริษัท ที่เข้าฝึกงาน) เมื่อครบทั้ง 4 เงื่อนไข
 // =========================================================================
 function checkPlacementUnlock() {
+  const checklistSection = document.getElementById('checklist-section');
+  const submissionSection = document.getElementById('submission-section');
+  const checklistLockedCard = document.getElementById('checklist-locked-card');
+
   const placementSection = document.getElementById('placement-section');
-  const lockedCard = document.getElementById('placement-locked-card');
-  if (!placementSection) return;
+  const placementLockedCard = document.getElementById('placement-locked-card');
 
   // 1. เงื่อนไข CV: ได้รับการตรวจผ่านแล้ว (APPROVED)
   const isCvApproved = currentCvData && currentCvData.status === 'APPROVED';
@@ -555,29 +560,67 @@ function checkPlacementUnlock() {
 
   const isTrainingComplete = approvedSoftHours >= 12 && approvedHardHours >= 18;
 
-  // 3. เงื่อนไข Checklist: มีบริษัทที่อาจารย์รีวิวผ่านแล้ว (APPROVED) อย่างน้อย 1 บริษัท
-  const isChecklistApproved = currentCompaniesData.some(c => c.checklistStatus === 'APPROVED');
+  // -----------------------------------------------------------------------
+  // 🔒 1. ตรวจสอบการปลดล็อก ส่วนที่ 4 (Checklist) และ ส่วนที่ 5 (สถานะการยื่น)
+  // -----------------------------------------------------------------------
+  const isChecklistUnlocked = isCvApproved && isTrainingComplete;
 
-  // 4. เงื่อนไข สถานะการยื่น: มีบริษัทที่นิสิตปรับสถานะเป็น "สัมภาษณ์ผ่านแล้ว" (INTERVIEW_PASSED)
-  const isInterviewPassed = currentSubmissionsData.some(
-    comp => comp.submission && comp.submission.status === 'INTERVIEW_PASSED'
+  // อัปเดต UI ใน Card ปลดล็อกส่วนที่ 4 & 5 (checklist-locked-card)
+  updateRequirementCard(
+    'step-req-training',
+    isTrainingComplete,
+    '1. ชั่วโมงการอบรม',
+    `Soft ${approvedSoftHours}/12 ชม. | Hard ${approvedHardHours}/18 ชม.` + (isTrainingComplete ? ' (ผ่านครบ)' : '')
   );
 
-  // อัปเดต UI ใน Card แสดงเงื่อนไข (Requirements Tracker)
-  updateRequirementCard('req-cv', isCvApproved, '1. กรอกใบ CV', isCvApproved ? '✓ CVตรวจแล้ว / ผ่าน' : 'รออาจารย์ตรวจผ่าน');
-  updateRequirementCard('req-training', isTrainingComplete, '2. ชั่วโมงการอบรม', `Soft ${approvedSoftHours}/12 ชม. | Hard ${approvedHardHours}/18 ชม.` + (isTrainingComplete ? ' (ผ่านครบ)' : ''));
-  updateRequirementCard('req-checklist', isChecklistApproved, '3. Checklist บริษัท', isChecklistApproved ? '✓ มีบริษัทที่อาจารย์รีวิวผ่านแล้ว' : 'ยังไม่มีบริษัทที่ผ่านการอนุมัติ');
-  updateRequirementCard('req-interview', isInterviewPassed, '4. สถานะการยื่น', isInterviewPassed ? '✓ สัมภาษณ์ผ่านแล้ว' : 'ต้องมีบริษัทที่ "สัมภาษณ์ผ่านแล้ว"');
-
-  // ตรวจสอบครบทั้ง 4 เงื่อนไข
-  const isAllComplete = isCvApproved && isTrainingComplete && isChecklistApproved && isInterviewPassed;
-
-  if (isAllComplete) {
-    placementSection.style.display = 'block';
-    if (lockedCard) lockedCard.style.display = 'none';
+  let cvStatusDesc = 'รออาจารย์ตรวจผ่าน';
+  if (!currentCvData || !currentCvData.fileUrl) {
+    cvStatusDesc = 'ยังไม่ได้อัปโหลด CV';
+  } else if (currentCvData.status === 'APPROVED') {
+    cvStatusDesc = '✓ CVตรวจแล้ว / ผ่าน';
+  } else if (currentCvData.status === 'REJECTED') {
+    cvStatusDesc = '✗ CVไม่ผ่าน / ทำใหม่';
   } else {
-    placementSection.style.display = 'none';
-    if (lockedCard) lockedCard.style.display = 'block';
+    cvStatusDesc = '☐ รอผล (รออาจารย์ตรวจ)';
+  }
+  updateRequirementCard('step-req-cv', isCvApproved, '2. กรอกใบ CV', cvStatusDesc);
+
+  if (isChecklistUnlocked) {
+    // ปลดล็อกให้แสดงส่วนที่ 4 & 5
+    if (checklistLockedCard) checklistLockedCard.style.display = 'none';
+    if (checklistSection) checklistSection.style.display = 'block';
+    if (submissionSection) submissionSection.style.display = 'block';
+
+    // -----------------------------------------------------------------------
+    // 🔒 2. ตรวจสอบการปลดล็อก ส่วนที่ 6 (ข้อมูลบริษัท ที่เข้าฝึกงาน)
+    // -----------------------------------------------------------------------
+    const isChecklistApproved = currentCompaniesData.some(c => c.checklistStatus === 'APPROVED');
+    const isInterviewPassed = currentSubmissionsData.some(
+      comp => comp.submission && comp.submission.status === 'INTERVIEW_PASSED'
+    );
+
+    // อัปเดต UI ใน Card แสดงเงื่อนไขส่วนที่ 6 (placement-locked-card)
+    updateRequirementCard('req-cv', isCvApproved, '1. กรอกใบ CV', isCvApproved ? '✓ CVตรวจแล้ว / ผ่าน' : 'รออาจารย์ตรวจผ่าน');
+    updateRequirementCard('req-training', isTrainingComplete, '2. ชั่วโมงการอบรม', `Soft ${approvedSoftHours}/12 ชม. | Hard ${approvedHardHours}/18 ชม.` + (isTrainingComplete ? ' (ผ่านครบ)' : ''));
+    updateRequirementCard('req-checklist', isChecklistApproved, '3. Checklist บริษัท', isChecklistApproved ? '✓ มีบริษัทที่อาจารย์รีวิวผ่านแล้ว' : 'ยังไม่มีบริษัทที่ผ่านการอนุมัติ');
+    updateRequirementCard('req-interview', isInterviewPassed, '4. สถานะการยื่น', isInterviewPassed ? '✓ สัมภาษณ์ผ่านแล้ว' : 'ต้องมีบริษัทที่ "สัมภาษณ์ผ่านแล้ว"');
+
+    const isPlacementComplete = isChecklistApproved && isInterviewPassed;
+    if (isPlacementComplete) {
+      if (placementSection) placementSection.style.display = 'block';
+      if (placementLockedCard) placementLockedCard.style.display = 'none';
+    } else {
+      if (placementSection) placementSection.style.display = 'none';
+      if (placementLockedCard) placementLockedCard.style.display = 'block';
+    }
+  } else {
+    // ถ้ายังไม่ผ่านชั่วโมงการอบรม หรือ CV ยังไม่ผ่าน -> ซ่อนส่วนที่ 4, 5, 6
+    if (checklistLockedCard) checklistLockedCard.style.display = 'block';
+    if (checklistSection) checklistSection.style.display = 'none';
+    if (submissionSection) submissionSection.style.display = 'none';
+
+    if (placementSection) placementSection.style.display = 'none';
+    if (placementLockedCard) placementLockedCard.style.display = 'none';
   }
 }
 
