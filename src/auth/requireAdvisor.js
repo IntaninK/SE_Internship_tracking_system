@@ -1,13 +1,13 @@
 const prisma = require("../db");
 
-// Middleware: ตรวจสอบว่าเป็น ADVISOR, COURSE_INSTRUCTOR หรือ ADMIN
+// Middleware: ตรวจสอบว่าเป็น ADVISOR, STAFF หรือ ADMIN
 async function requireAdvisor(req, res, next) {
   if (!req.session || !req.session.user) {
     return res.redirect("/pages/login.html");
   }
 
   const role = req.session.user.role;
-  if (role !== "ADVISOR" && role !== "COURSE_INSTRUCTOR" && role !== "ADMIN") {
+  if (role !== "ADVISOR" && role !== "STAFF" && role !== "ADMIN") {
     return res.status(403).json({
       success: false,
       message: "ไม่มีสิทธิ์เข้าถึง (สำหรับอาจารย์ที่ปรึกษาเท่านั้น)",

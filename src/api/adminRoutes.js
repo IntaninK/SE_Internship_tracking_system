@@ -178,7 +178,7 @@ router.get("/dashboard-summary", async (req, res) => {
 
     // ตรวจสอบและสร้างข้อมูล Staff ให้อัตโนมัติสำหรับ User ที่มี role ADVISOR (ถ้ายังไม่มีในตาราง Staff)
     const advisorUsers = await prisma.user.findMany({
-      where: { role: { in: ["ADVISOR", "COURSE_INSTRUCTOR"] } },
+      where: { role: { in: ["ADVISOR", "STAFF"] } },
       include: { staff: true },
     });
 
@@ -406,6 +406,10 @@ router.get("/students", async (req, res) => {
 // 3. ดูข้อมูลนิสิตรายบุคคล
 // ==========================================
 router.get("/students/:studentId", async (req, res) => {
+  // STAFF ไม่มีสิทธิ์ดูรายละเอียดนิสิต
+  if (req.session.user.role === "STAFF") {
+    return res.status(403).json({ success: false, message: "เจ้าหน้าที่ไม่มีสิทธิ์ดูรายละเอียดนิสิต" });
+  }
   try {
     const studentId = parseInt(req.params.studentId);
     const student = await prisma.student.findUnique({
@@ -550,6 +554,10 @@ router.put("/students/:studentId/placement-status", async (req, res) => {
 // 7. Batch ตั้งสถานะนิสิตหลายคนพร้อมกัน
 // ==========================================
 router.put("/students/batch-status", async (req, res) => {
+  // STAFF ไม่มีสิทธิ์ตั้งสถานะนิสิต
+  if (req.session.user.role === "STAFF") {
+    return res.status(403).json({ success: false, message: "เจ้าหน้าที่ไม่มีสิทธิ์ตั้งสถานะนิสิต" });
+  }
   try {
     const { studentIds, statusType, statusValue, note } = req.body;
     // statusType: "cv" | "training" | "placement"
@@ -605,6 +613,10 @@ router.put("/students/batch-status", async (req, res) => {
 // 8. Batch ตั้งอาจารย์ที่ปรึกษาให้นิสิตหลายคน
 // ==========================================
 router.put("/students/batch-advisor", async (req, res) => {
+  // STAFF ไม่มีสิทธิ์ตั้งอาจารย์ที่ปรึกษา
+  if (req.session.user.role === "STAFF") {
+    return res.status(403).json({ success: false, message: "เจ้าหน้าที่ไม่มีสิทธิ์ตั้งอาจารย์ที่ปรึกษา" });
+  }
   try {
     const { studentIds, advisorId } = req.body;
 
@@ -636,7 +648,7 @@ router.put("/students/batch-advisor", async (req, res) => {
 router.get("/advisors", async (req, res) => {
   try {
     const advisorUsers = await prisma.user.findMany({
-      where: { role: { in: ["ADVISOR", "COURSE_INSTRUCTOR"] } },
+      where: { role: { in: ["ADVISOR", "STAFF"] } },
       include: { staff: true },
     });
 

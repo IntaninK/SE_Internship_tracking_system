@@ -6,14 +6,44 @@ let currentFilter = null;
 let currentPage = 1;
 const pageLimit = 12;
 let selectedStudentIds = new Set();
+let currentUserRole = null; // เก็บ role ของ user ที่ login อยู่
 
 // ==========================================
 // โหลดข้อมูลสรุปและรายชื่อนิสิต
 // ==========================================
 async function initAdminDashboard() {
+  // ดึง role ของ user ที่ login อยู่
+  try {
+    const meRes = await fetch('/auth/me');
+    const meData = await meRes.json();
+    if (meData.authenticated) {
+      currentUserRole = meData.user.role;
+    }
+  } catch (err) {
+    console.error('Failed to fetch user role:', err);
+  }
+
+  // ถ้าเป็น STAFF ให้ซ่อนปุ่มที่ไม่มีสิทธิ์
+  applyStaffRestrictions();
+
   await loadDashboardSummary();
   await loadStudents();
   await populateYearFilter('/api/admin/students');
+}
+
+// ==========================================
+// ซ่อน UI ที่ STAFF ไม่มีสิทธิ์ใช้
+// ==========================================
+function applyStaffRestrictions() {
+  if (currentUserRole !== 'STAFF') return;
+
+  // ซ่อนปุ่ม "ตั้งสถานะนิสิต"
+  const btnSetStatus = document.getElementById('btn-set-status');
+  if (btnSetStatus) btnSetStatus.style.display = 'none';
+
+  // ซ่อนปุ่ม "ตั้งอาจารย์ที่ปรึกษา"
+  const btnSetAdvisor = document.getElementById('btn-set-advisor');
+  if (btnSetAdvisor) btnSetAdvisor.style.display = 'none';
 }
 
 // ==========================================
@@ -227,9 +257,9 @@ function renderStudentTable(students, total, page, totalPages) {
       </td>
       <td class="text-center" style="width: 40px;">
         <div style="display: flex; align-items: center; gap: 8px; justify-content: center;">
-          <button class="btn-detail-dots" title="ดูรายละเอียด" onclick="window.location.href='/pages/admin_student_detail.html?id=${s.id}'" style="background:none;border:none;cursor:pointer;padding:4px;">
+          ${currentUserRole !== 'STAFF' ? `<button class="btn-detail-dots" title="ดูรายละเอียด" onclick="window.location.href='/pages/admin_student_detail.html?id=${s.id}'" style="background:none;border:none;cursor:pointer;padding:4px;">
             <span class="material-icons text-gray-500 hover:text-blue-600" style="font-size:18px;">more_vert</span>
-          </button>
+          </button>` : ''}
           <input type="checkbox" class="student-checkbox" data-id="${s.id}" ${isChecked ? 'checked' : ''} style="width:16px;height:16px;cursor:pointer;" />
         </div>
       </td>

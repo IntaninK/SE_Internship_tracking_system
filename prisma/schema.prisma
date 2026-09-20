@@ -16,7 +16,7 @@ datasource db {
 enum Role {
   STUDENT
   ADVISOR            // อาจารย์ที่ปรึกษา
-  COURSE_INSTRUCTOR  // อาจารย์รายวิชา
+  STAFF              // เจ้าหน้าที่
   ADMIN
 }
 

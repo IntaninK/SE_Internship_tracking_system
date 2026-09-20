@@ -47,7 +47,7 @@ router.get("/redirect", async (req, res) => {
 
     // upsert User: ถ้ามีอีเมลนี้อยู่แล้วก็ login เข้าบัญชีเดิม ไม่มีก็สร้างใหม่
     // role ตั้งเป็น STUDENT เป็นค่าเริ่มต้นไปก่อน — ยังไม่มี logic แยก
-    // ADVISOR/COURSE_INSTRUCTOR อัตโนมัติ ต้องคุยกับทีมว่าจะกำหนดยังไง
+    // ADVISOR/STAFF อัตโนมัติ ต้องคุยกับทีมว่าจะกำหนดยังไง
     // (เช่น whitelist อีเมลอาจารย์ไว้ล่วงหน้า แล้วเช็คตรงนี้)
     const user = await prisma.user.upsert({
       where: { email },
@@ -69,7 +69,7 @@ router.get("/redirect", async (req, res) => {
 
     // Role-based redirect: แต่ละ role ไป dashboard ที่ต่างกัน
     let redirectUrl = "/pages/dashboard.html"; // default สำหรับ STUDENT
-    if (user.role === "COURSE_INSTRUCTOR" || user.role === "ADMIN") {
+    if (user.role === "STAFF" || user.role === "ADMIN") {
       redirectUrl = "/pages/dashboard_รายวิชา.html";
     } else if (user.role === "ADVISOR") {
       redirectUrl = "/pages/dashboard_ที่ปรึกษา.html";

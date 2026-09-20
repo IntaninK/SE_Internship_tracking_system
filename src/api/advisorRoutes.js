@@ -280,7 +280,7 @@ router.get("/students/:studentId/checklist", async (req, res) => {
       return res.status(404).json({ success: false, message: "ไม่พบข้อมูลนิสิต" });
     }
 
-    // ตรวจสอบสิทธิ์ (ถ้าไม่ใช่ ADMIN / COURSE_INSTRUCTOR ต้องเป็นอาจารย์ที่ปรึกษาของนิสิต)
+    // ตรวจสอบสิทธิ์ (ถ้าไม่ใช่ ADMIN / STAFF ต้องเป็นอาจารย์ที่ปรึกษาของนิสิต)
     if (
       req.session.user.role === "ADVISOR" &&
       student.advisorId !== advisorStaffId

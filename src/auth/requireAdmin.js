@@ -1,4 +1,4 @@
-// Middleware: ตรวจสิทธิ์ว่าเป็น COURSE_INSTRUCTOR หรือ ADMIN
+// Middleware: ตรวจสิทธิ์ว่าเป็น STAFF หรือ ADMIN
 function requireAdmin(req, res, next) {
   if (!req.session || !req.session.user) {
     return res.redirect("/pages/login.html");
@@ -11,10 +11,10 @@ function requireAdmin(req, res, next) {
     return next();
   }
 
-  if (role !== "COURSE_INSTRUCTOR" && role !== "ADMIN") {
+  if (role !== "STAFF" && role !== "ADMIN") {
     return res.status(403).json({
       success: false,
-      message: "ไม่มีสิทธิ์เข้าถึง (ต้องเป็นอาจารย์รายวิชาหรือ Admin เท่านั้น)",
+      message: "ไม่มีสิทธิ์เข้าถึง (ต้องเป็นเจ้าหน้าที่หรือ Admin เท่านั้น)",
     });
   }
 

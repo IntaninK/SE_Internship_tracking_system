@@ -22,7 +22,7 @@ fetch('../components/header_prof.html')
                 const role = data.user.role;
                 const navDashboard = headerNav ? headerNav.querySelector('a[href*="dashboard"]') : null;
 
-                if (role === 'COURSE_INSTRUCTOR' || role === 'ADMIN') {
+                if (role === 'STAFF' || role === 'ADMIN') {
                     if (navDashboard) {
                         navDashboard.href = '../pages/dashboard_รายวิชา.html';
                         navDashboard.textContent = 'Dashboard (Admin)';

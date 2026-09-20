@@ -66,7 +66,7 @@ app.use("/uploads", express.static(path.join(__dirname, "public", "uploads")));
 app.get("/", (req, res) => {
   if (req.session && req.session.user) {
     const role = req.session.user.role;
-    if (role === "COURSE_INSTRUCTOR" || role === "ADMIN") {
+    if (role === "STAFF" || role === "ADMIN") {
       return res.redirect("/pages/dashboard_รายวิชา.html");
     } else if (role === "ADVISOR") {
       return res.redirect("/pages/dashboard_ที่ปรึกษา.html");
@@ -80,7 +80,7 @@ app.get("/", (req, res) => {
 app.get("/pages/login.html", (req, res) => {
   if (req.session && req.session.user) {
     const role = req.session.user.role;
-    if (role === "COURSE_INSTRUCTOR" || role === "ADMIN") {
+    if (role === "STAFF" || role === "ADMIN") {
       return res.redirect("/pages/dashboard_รายวิชา.html");
     } else if (role === "ADVISOR") {
       return res.redirect("/pages/dashboard_ที่ปรึกษา.html");
