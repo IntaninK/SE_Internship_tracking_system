@@ -35,53 +35,130 @@ function loadDashboardData() {
       document.getElementById('profile-icon').style.display = 'none';
     }
 
-// Stage Indicators — เวอร์ชันแก้ให้ตรงกับดีไซน์การ์ดปัจจุบัน (step-card / step-num)
-const stage = s.stage;
+// Stage Indicators — 3 ขั้นตอนใหม่: เตรียมเอกสาร → รออนุมัติที่ฝึกงาน → อนุมัติแล้ว
+const stageCards = [
+  { cardId: 'stage-prepare',          tagLabel: 'เตรียมเอกสาร',         nextLabel: 'รออนุมัติที่ฝึกงาน' },
+  { cardId: 'stage-waiting-approve',  tagLabel: 'รออนุมัติที่ฝึกงาน',   nextLabel: 'อนุมัติแล้ว' },
+  { cardId: 'stage-approved',         tagLabel: 'อนุมัติแล้ว',          nextLabel: null },
+];
 
-const stageConfig = {
-  PENDING_DOCUMENTS: {
-    cardId: 'stage-pending-docs',
-    tagLabel: 'รอยื่นเอกสาร',
-  },
-  PENDING_APPROVAL: {
-    cardId: 'stage-pending-appr',
-    tagLabel: 'รอการอนุมัติ',
-  },
-  READY: {
-    cardId: 'stage-ready',
-    tagLabel: 'พร้อมฝึกงาน',
-  },
-};
-
-function updateStageIndicator(stage) {
-  // 1. รีเซ็ตทุกการ์ดกลับเป็นสถานะปกติก่อนเสมอ (กัน state ค้างจากรอบก่อน)
-  Object.values(stageConfig).forEach(cfg => {
-    const card = document.getElementById(cfg.cardId);
-    if (!card) return; // null-safe ตามที่โปรเจกต์นี้ยึดไว้เสมอ
-    card.classList.remove('step-card--active');
-    card.querySelector('.step-num')?.classList.remove('step-num--active');
-    card.querySelector('.step-card-title')?.classList.remove('step-card-title--active');
-    card.querySelector('.step-card-sub')?.classList.remove('step-card-sub--active');
-  });
-
-  // 2. เปิด active ให้เฉพาะการ์ดที่ตรงกับ stage ปัจจุบัน
-  const active = stageConfig[stage];
-  if (!active) return;
-
-  const activeCard = document.getElementById(active.cardId);
-  if (activeCard) {
-    activeCard.classList.add('step-card--active');
-    activeCard.querySelector('.step-num')?.classList.add('step-num--active');
-    activeCard.querySelector('.step-card-title')?.classList.add('step-card-title--active');
-    activeCard.querySelector('.step-card-sub')?.classList.add('step-card-sub--active');
+function computeCurrentStep(cvData, trainingsData, placementData, companiesData) {
+  // ขั้น 3 สำเร็จ: placement ถูกอนุมัติแล้ว → ทุกการ์ดเขียวหมด
+  if (placementData && placementData.status === 'APPROVED') {
+    return 3; // เลย index สุดท้าย → ทุกขั้นเสร็จสมบูรณ์
   }
 
-  // 3. อัปเดต tag ข้อความ "ขั้นตอนปัจจุบัน: ..." ด้านบน
-  const label = document.getElementById('current-step-label');
-  if (label) label.textContent = `ขั้นตอนปัจจุบัน: ${active.tagLabel}`;
+  // ขั้น 2: มี placement แล้ว (PENDING/REJECTED) หรือมีบริษัทที่มีสถานะการยื่น
+  if (placementData && placementData.companyNameTh) {
+    return 1; // มีข้อมูลบริษัทที่เข้าฝึกงานแล้ว แต่ยังไม่ได้อนุมัติ
+  }
+  // เช็คว่ามีบริษัทที่มี submission (สถานะการยื่น) หรือไม่
+  const hasSubmission = companiesData && companiesData.some(c => c.submission && c.submission.status);
+  if (hasSubmission) {
+    return 1; // มีสถานะการยื่นแล้ว
+  }
+
+  // ขั้น 1: ยังอยู่ในขั้นเตรียมเอกสาร
+  return 0;
 }
 
-updateStageIndicator(stage);
+function updateStageIndicator(currentIdx) {
+  // 1. รีเซ็ตทุกการ์ดก่อน
+  stageCards.forEach(cfg => {
+    const card = document.getElementById(cfg.cardId);
+    if (!card) return;
+    card.classList.remove('step-card--active', 'step-card--done');
+    card.querySelector('.step-num')?.classList.remove('step-num--active', 'step-num--done');
+    card.querySelector('.step-card-title')?.classList.remove('step-card-title--active', 'step-card-title--done');
+    card.querySelector('.step-card-sub')?.classList.remove('step-card-sub--active', 'step-card-sub--done');
+  });
+
+  // ถ้าครบทุกขั้นตอนแล้ว (currentIdx >= จำนวนขั้น) → ทุกการ์ดเขียวหมด
+  const allDone = currentIdx >= stageCards.length;
+
+  // 2. ขั้นที่ผ่านไปแล้ว → done (สีเขียว)
+  const doneUpTo = allDone ? stageCards.length : currentIdx;
+  for (let i = 0; i < doneUpTo; i++) {
+    const card = document.getElementById(stageCards[i].cardId);
+    if (!card) continue;
+    card.classList.add('step-card--done');
+    card.querySelector('.step-num')?.classList.add('step-num--done');
+    card.querySelector('.step-card-title')?.classList.add('step-card-title--done');
+    card.querySelector('.step-card-sub')?.classList.add('step-card-sub--done');
+    // เปลี่ยน icon เป็น check
+    const icon = card.querySelector('.material-icons');
+    if (icon) { icon.textContent = 'check_circle'; icon.className = 'material-icons text-green-500'; icon.style.fontSize = '16px'; }
+  }
+
+  // 3. ขั้นปัจจุบัน → active (สีเหลือง) — เฉพาะกรณียังไม่ครบ
+  if (!allDone) {
+    const activeCfg = stageCards[currentIdx];
+    const activeCard = document.getElementById(activeCfg.cardId);
+    if (activeCard) {
+      activeCard.classList.add('step-card--active');
+      activeCard.querySelector('.step-num')?.classList.add('step-num--active');
+      activeCard.querySelector('.step-card-title')?.classList.add('step-card-title--active');
+      activeCard.querySelector('.step-card-sub')?.classList.add('step-card-sub--active');
+    }
+  }
+
+  // 4-5 อัปเดตด้านนอก (ใน updateStageWithDetails)
+}
+
+// คำนวณ sub-task ย่อยที่ต้องทำ/เสร็จแล้ว ในขั้นที่ 1 (เตรียมเอกสาร)
+function computeSubTasks(cvData, trainingsData, companiesData) {
+  const tasks = [
+    { name: 'ชม.อบรม', done: trainingsData && trainingsData.status === 'APPROVED' },
+    { name: 'CV', done: cvData && cvData.status === 'APPROVED' },
+    { name: 'Checklist', done: companiesData && companiesData.some(c => c.checklistStatus === 'APPROVED') },
+  ];
+  return tasks;
+}
+
+function getSubTaskLabels(subTasks, currentIdx, allDone, placementData) {
+  if (allDone) {
+    return { current: 'อนุมัติแล้ว ✓', next: '✓ ครบทุกขั้นตอน' };
+  }
+
+  if (currentIdx === 0) {
+    // ขั้น 1: หา sub-task ที่ยังไม่เสร็จ
+    const pending = subTasks.filter(t => !t.done);
+    const done = subTasks.filter(t => t.done);
+    if (pending.length > 0) {
+      const currentTask = pending[0].name;
+      const nextTask = pending.length > 1 ? pending[1].name : 'รออนุมัติที่ฝึกงาน';
+      return { current: currentTask, next: nextTask };
+    }
+    return { current: 'เตรียมเอกสาร', next: 'รออนุมัติที่ฝึกงาน' };
+  }
+
+  if (currentIdx === 1) {
+    return { current: 'รออนุมัติที่ฝึกงาน', next: 'อนุมัติแล้ว' };
+  }
+
+  return { current: 'อนุมัติแล้ว', next: '✓ ครบทุกขั้นตอน' };
+}
+
+function updateStageWithDetails(currentIdx, cvData, trainingsData, companiesData, placementData) {
+  updateStageIndicator(currentIdx);
+
+  const allDone = currentIdx >= stageCards.length;
+  const subTasks = computeSubTasks(cvData, trainingsData, companiesData);
+  const labels = getSubTaskLabels(subTasks, currentIdx, allDone, placementData);
+
+  const currentLabel = document.getElementById('current-step-label');
+  if (currentLabel) currentLabel.textContent = `ขั้นตอนปัจจุบัน: ${labels.current}`;
+
+  const nextTag = document.getElementById('next-step-tag');
+  const nextLabelEl = document.getElementById('next-step-label');
+  if (nextTag && nextLabelEl) {
+    nextLabelEl.textContent = labels.next.startsWith('✓') ? labels.next : `ถัดไป: ${labels.next}`;
+    nextTag.style.display = '';
+  }
+}
+
+const currentStepIdx = computeCurrentStep(data.cv, data.trainings, data.placement, data.companies);
+updateStageWithDetails(currentStepIdx, data.cv, data.trainings, data.companies, data.placement);
 
     // CV
     if (data.cv && data.cv.fileUrl) {
@@ -201,7 +278,16 @@ updateStageIndicator(stage);
     // Placement / Passed Company
     if (data.placement && data.placement.companyNameTh) {
       document.getElementById('display-position').textContent = `${data.placement.position || '-'}`;
-      document.getElementById('company-placeholder-text').style.display = 'none';
+      // ซ่อน empty state ทั้งหมด (icon + placeholder + hint)
+      const emptyIcon = document.getElementById('company-empty-icon');
+      const placeholderText = document.getElementById('company-placeholder-text');
+      const hintText = document.getElementById('company-hint-text');
+      if (emptyIcon) emptyIcon.style.display = 'none';
+      if (placeholderText) placeholderText.style.display = 'none';
+      if (hintText) hintText.style.display = 'none';
+      // เปลี่ยน company-box ให้ไม่เป็น empty state style
+      const companyBox = document.getElementById('company-box');
+      if (companyBox) { companyBox.style.borderStyle = 'solid'; companyBox.style.background = '#fff'; companyBox.style.cursor = 'default'; }
       document.getElementById('company-details').style.display = 'flex';
       document.getElementById('comp-name').textContent = data.placement.companyNameTh || '-';
       document.getElementById('comp-addr').textContent = data.placement.companyAddress || '-';

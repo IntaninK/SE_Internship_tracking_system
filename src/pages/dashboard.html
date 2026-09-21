@@ -172,6 +172,28 @@
   align-items: center;
   gap: 6px;
 }
+.next-step-tag {
+  font-size: 11px;
+  font-weight: 500;
+  color: #1E40AF;
+  background: #EFF6FF;
+  border: 1px solid #BFDBFE;
+  padding: 2px 10px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* ---- step-card done (สำเร็จแล้ว) ---- */
+.step-card--done {
+  background: linear-gradient(135deg, #F0FDF4, #DCFCE7);
+  border: 2px solid #4ADE80;
+  opacity: 1;
+}
+.step-num--done { background: #22C55E; color: #fff; }
+.step-card-title--done { color: #166534; }
+.step-card-sub--done { color: #15803D; }
 
 
 .position-bar {
@@ -361,38 +383,44 @@
 
         <!-- ขวา: สถานะการฝึกงาน (stepper) -->
         <div style="flex: 1.4; min-width: 340px;">
-          <div class="flex items-center justify-between mb-3">
+          <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
             <span class="text-xs font-semibold text-gray-500">สถานะการเข้าฝึกงานของนิสิต</span>
-            <span class="current-step-tag">
-              <span class="w-1.5 h-1.5 rounded-full bg-yellow-400 pulse-dot" style="display:inline-block;"></span>
-              <span id="current-step-label">ขั้นตอนปัจจุบัน: รอยื่นเอกสาร</span>
-            </span>
+            <div class="flex flex-wrap items-center gap-2">
+              <span class="current-step-tag">
+                <span class="w-1.5 h-1.5 rounded-full bg-yellow-400 pulse-dot" style="display:inline-block;"></span>
+                <span id="current-step-label">ขั้นตอนปัจจุบัน: เตรียมเอกสาร</span>
+              </span>
+              <span class="next-step-tag" id="next-step-tag">
+                <span class="material-icons" style="font-size:12px; color:#3B82F6;">arrow_forward</span>
+                <span id="next-step-label">ถัดไป: รออนุมัติที่ฝึกงาน</span>
+              </span>
+            </div>
           </div>
 
           <div class="stepper-grid mb-3" id="stage-indicators">
-            <div id="stage-pending-docs" class="step-card step-card--active">
+            <div id="stage-prepare" class="step-card step-card--active">
               <div class="flex items-center justify-between mb-1.5">
                 <span class="step-num step-num--active">1</span>
                 <span class="material-icons text-amber-600" style="font-size:16px;">description</span>
               </div>
-              <div class="step-card-title step-card-title--active">รอยื่นเอกสาร</div>
-              <div class="step-card-sub step-card-sub--active">จัดเตรียมและส่งแบบคำร้อง</div>
+              <div class="step-card-title step-card-title--active">เตรียมเอกสาร</div>
+              <div class="step-card-sub step-card-sub--active">ชม.อบรม / CV / Checklist</div>
             </div>
-            <div id="stage-pending-appr" class="step-card">
+            <div id="stage-waiting-approve" class="step-card">
               <div class="flex items-center justify-between mb-1.5">
                 <span class="step-num">2</span>
                 <span class="material-icons text-gray-400" style="font-size:16px;">hourglass_empty</span>
               </div>
-              <div class="step-card-title">รอการอนุมัติ</div>
-              <div class="step-card-sub">คณะ/อาจารย์ตรวจสอบ</div>
+              <div class="step-card-title">รออนุมัติที่ฝึกงาน</div>
+              <div class="step-card-sub">อาจารย์ตรวจข้อมูลบริษัท</div>
             </div>
-            <div id="stage-ready" class="step-card">
+            <div id="stage-approved" class="step-card">
               <div class="flex items-center justify-between mb-1.5">
                 <span class="step-num">3</span>
                 <span class="material-icons text-gray-400" style="font-size:16px;">check_circle</span>
               </div>
-              <div class="step-card-title">พร้อมฝึกงาน</div>
-              <div class="step-card-sub">หนังสือส่งตัวและเริ่มฝึก</div>
+              <div class="step-card-title">อนุมัติแล้ว</div>
+              <div class="step-card-sub">พร้อมฝึกงาน</div>
             </div>
           </div>
 
@@ -569,11 +597,11 @@
               </p>
 
               <div id="company-box" class="empty-box flex-1 min-h-[140px] p-3">
-                <div class="empty-box-icon">
+                <div id="company-empty-icon" class="empty-box-icon">
                   <span class="material-icons text-xl">business</span>
                 </div>
                 <p id="company-placeholder-text" class="text-xs font-semibold text-gray-700">ยังไม่มี ข้อมูลบริษัท</p>
-                <p class="text-[10px] text-gray-400 mt-1" style="max-width: 170px;">เมื่อสถานประกอบการตอบรับข้อมูลจะปรากฏที่นี่</p>
+                <p id="company-hint-text" class="text-[10px] text-gray-400 mt-1" style="max-width: 170px;">เมื่อสถานประกอบการตอบรับข้อมูลจะปรากฏที่นี่</p>
 
                 <div id="company-details" style="display: none; width: 100%; text-align: left; font-size: 12px;" class="flex flex-col gap-1 soft-card p-3 mt-2">
                   <p class="text-gray-700"><strong class="text-gray-900">ชื่อ:</strong> <span id="comp-name">-</span></p>
