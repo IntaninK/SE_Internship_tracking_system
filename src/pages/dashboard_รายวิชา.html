@@ -7,6 +7,48 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Prompt:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" />
   <link rel="stylesheet" href="../css/main-output.css">
+  <style>
+    .filter-select {
+      height: 36px;
+      font-size: 13px;
+      padding: 4px 10px;
+      border-radius: 8px;
+      border: 1px solid #D1D5DB;
+      background: #fff;
+      color: #374151;
+      min-width: 140px;
+      cursor: pointer;
+      transition: border-color 0.2s;
+    }
+    .filter-select:focus {
+      outline: none;
+      border-color: #1541D2;
+      box-shadow: 0 0 0 2px rgba(21,65,210,0.1);
+    }
+    .filter-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      padding: 12px 16px;
+      background: #F8FAFC;
+      border: 1px solid #E5E7EB;
+      border-radius: 12px;
+      margin-bottom: 16px;
+    }
+    .filter-bar label {
+      font-size: 12px;
+      font-weight: 600;
+      color: #6B7280;
+      white-space: nowrap;
+    }
+    .filter-divider {
+      width: 1px;
+      height: 24px;
+      background: #D1D5DB;
+      margin: 0 4px;
+    }
+  </style>
 </head>
 <body>
 
@@ -14,143 +56,195 @@
   <div id="header-placeholder"></div>
 
   <!-- ========== Main Content ========== -->
-  <main class="main-content" style="max-width:2200px;  zoom:0.9;">
+  <main class="main-content" style="max-width:1400px; margin: 0 auto;">
 
-    <!-- Outer 2-column layout: Left = Charts + Bottom table/summary | Right = Student List (full height) -->
-    <div class="flex flex-col xl:flex-row gap-6">
-
-      <!-- ===== Left Column: Charts + Bottom Row ===== -->
-      <div class="flex flex-col gap-0.5 xl:w-[52%]">
-
-        <!-- Card: สถานะของนิสิตในแต่ละขั้นตอน -->
-        <div class="card">
-          <div class="card-header">
-            <span class="material-icons header-icon">how_to_reg</span>
-            <h2 class="card-title">สถานะของนิสิตในแต่ละขั้นตอน</h2>
-          </div>
-          <div class="card-body">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <!-- กราฟวงกลม 4 อัน จะถูก render จาก JS -->
-              <div id="chart-readiness"></div>
-              <div id="chart-training"></div>
-              <div id="chart-cv"></div>
-              <div id="chart-placement"></div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Bottom sub-row: ตารางอาจารย์ + สรุปจำนวนนิสิต -->
-        <div class="flex flex-col md:flex-row gap-6">
-
-          <!-- ตารางอาจารย์ที่ปรึกษา -->
-          <div class="card flex-1">
-            <div class="card-body !pt-6">
-              <div class="overflow-x-auto">
-                <table class="data-table text-[13px]">
-                  <thead>
-                    <tr>
-                      <th>อาจารย์ที่ปรึกษา</th>
-                      <th>จำนวนนิสิตที่ดูแล</th>
-                      <th>checklist ที่ตรวจแล้ว</th>
-                      <th>checklist ที่ยังไม่ได้ตรวจ</th>
-                    </tr>
-                  </thead>
-                  <tbody id="advisor-tbody">
-                    <tr><td colspan="4" class="text-center py-4 text-gray-400">กำลังโหลด...</td></tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-
-          <!-- สรุปจำนวนนิสิต -->
-          <div class="card md:w-[220px] flex-shrink-0">
-            <div class="card-body flex flex-col items-center justify-center gap-6 py-8">
-              <div class="text-center">
-                <p class="text-base text-gray-700 font-medium">จำนวนนิสิตปีนี้</p>
-                <p class="text-3xl font-bold text-[#1541D2] mt-1" id="summary-total">-</p>
-              </div>
-              <div class="text-center">
-                <p class="text-base text-gray-700 font-medium">จำนวนนิสิตที่มีอาจารย์</p>
-                <p class="text-3xl font-bold text-[#1541D2] mt-1" id="summary-with-advisor">-</p>
-              </div>
-              <div class="text-center">
-                <p class="text-base text-gray-700 font-medium">จำนวนนิสิตที่ไม่มีอาจารย์</p>
-                <p class="text-3xl font-bold text-[#1541D2] mt-1" id="summary-without-advisor">-</p>
-              </div>
-            </div>
-          </div>
-
-        </div>
-
+    <!-- ===== Section 1: รายชื่อนิสิต (ด้านบน) ===== -->
+    <div class="card">
+      <div class="card-header">
+        <span class="material-icons header-icon">how_to_reg</span>
+        <h2 class="card-title">รายชื่อนิสิต</h2>
       </div>
+      <div class="card-body">
 
-      <!-- ===== Right Column: รายชื่อนิสิต (full height) ===== -->
-      <div class="card xl:w-[48%]">
+        <!-- Filter Bar -->
+        <div class="filter-bar" id="filter-bar">
+          <!-- ค้นหา -->
+          <div class="relative min-w-[150px] max-w-[200px]">
+            <span class="material-icons absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">search</span>
+            <input type="text" placeholder="ค้นหา..." id="student-search" class="filter-select !pl-10 w-full" />
+          </div>
+
+          <div class="filter-divider hidden sm:block"></div>
+
+          <!-- ปี -->
+          <div class="flex items-center gap-1">
+            <label>ชั้นปี</label>
+            <select id="year-filter" class="filter-select !min-w-[100px]">
+              <option value="">ทุกชั้นปี</option>
+            </select>
+          </div>
+
+          <!-- อาจารย์ที่ปรึกษา -->
+          <div class="flex items-center gap-1">
+            <label>อาจารย์</label>
+            <select id="advisor-filter" class="filter-select">
+              <option value="">ทุกอาจารย์</option>
+            </select>
+          </div>
+
+          <div class="filter-divider hidden sm:block"></div>
+
+          <!-- สถานะ -->
+          <div class="flex items-center gap-1">
+            <label>สถานะ</label>
+            <select id="status-filter" class="filter-select !min-w-[160px]">
+              <option value="">ทุกสถานะ</option>
+              <optgroup label="ชั่วโมงอบรม">
+                <option value="training_passed">✓ ชม.อบรมครบ (ผ่าน)</option>
+                <option value="training_failed">✗ ชม.อบรมไม่ครบ</option>
+              </optgroup>
+              <optgroup label="CV">
+                <option value="cv_passed">✓ CV ผ่าน</option>
+                <option value="cv_failed">✗ CV ไม่ผ่าน/ยังไม่ทำ</option>
+              </optgroup>
+              <optgroup label="Checklist">
+                <option value="checklist_passed">✓ Checklist ผ่าน</option>
+                <option value="checklist_failed">✗ Checklist ยังไม่ผ่าน</option>
+              </optgroup>
+              <optgroup label="ฝึกงาน">
+                <option value="placement_approved">✓ อนุมัติฝึกงานแล้ว</option>
+                <option value="placement_pending">✗ ยังไม่อนุมัติฝึกงาน</option>
+              </optgroup>
+            </select>
+          </div>
+
+          <!-- Soft/Hard Skill -->
+          <div class="flex items-center gap-1">
+            <label>Skill</label>
+            <select id="skill-filter" class="filter-select !min-w-[140px]">
+              <option value="">ทุกประเภท</option>
+              <option value="lack_soft">ขาด Soft skill</option>
+              <option value="lack_hard">ขาด Hard skill</option>
+              <option value="lack_both">ขาดทั้ง Soft + Hard</option>
+            </select>
+          </div>
+
+          <div class="filter-divider hidden sm:block"></div>
+
+          <!-- ป้ายกรอง + ล้างตัวกรอง -->
+          <div class="flex items-center gap-2">
+            <span id="active-filter-badge" class="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full" style="display:none;"></span>
+            <button onclick="clearAllFilters()" id="btn-clear-filter" class="text-xs text-gray-600 bg-red-100 hover:bg-red-200 px-2 py-0.5 rounded-full inline-flex items-center gap-1 transition-colors" style="display:none; box-shadow:none; border:none; cursor:pointer;">
+              <span class="material-icons" style="font-size:12px;">close</span>
+              ล้างทั้งหมด
+            </button>
+          </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="flex items-center gap-2 flex-wrap mb-4">
+          <button id="btn-set-status" class="btn btn-primary btn-sm" onclick="openSetStatusModal()">
+            <span class="material-icons text-sm">settings</span> ตั้งสถานะนิสิต
+          </button>
+          <button id="btn-set-advisor" class="btn btn-primary btn-sm" onclick="openSetAdvisorModal()">
+            <span class="material-icons text-sm">person_add</span> ตั้งอาจารย์ที่ปรึกษา
+          </button>
+        </div>
+
+        <!-- Table -->
+        <div class="overflow-x-auto">
+          <table class="data-table text-[13px]">
+            <thead>
+              <tr>
+                <th>Student ID</th>
+                <th>ชื่อ-นามสกุล</th>
+                <th>อาจารย์ที่ปรึกษา</th>
+                <th>สถานะ</th>
+                <th style="width:80px;"></th>
+              </tr>
+            </thead>
+            <tbody id="students-tbody">
+              <tr><td colspan="5" class="text-center py-8 text-gray-400">กำลังโหลดข้อมูล...</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Pagination -->
+        <div class="flex flex-col sm:flex-row items-center justify-between mt-4 gap-3">
+          <span class="text-sm text-gray-500" id="pagination-info">-</span>
+          <div class="flex items-center gap-1" id="pagination-controls"></div>
+          <button class="btn btn-tonal btn-sm" onclick="exportStudents()">
+            <span class="material-icons text-sm">download</span> export
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== Section 2: รายงานสรุป (ด้านล่าง) ===== -->
+    <div class="card !mt-6">
+      <div class="card-header">
+        <span class="material-icons header-icon">bar_chart</span>
+        <h2 class="card-title">รายงานสรุปสถานะ</h2>
+      </div>
+      <div class="card-body">
+        <!-- กราฟวงกลม 4 อัน -->
+        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+          <div id="chart-readiness"></div>
+          <div id="chart-training"></div>
+          <div id="chart-cv"></div>
+          <div id="chart-placement"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== Section 3: ตารางอาจารย์ + สรุปจำนวน ===== -->
+    <div class="flex flex-col md:flex-row gap-6 !mt-6">
+
+      <!-- ตารางอาจารย์ที่ปรึกษา -->
+      <div class="card flex-1 !mt-0">
         <div class="card-header">
-          <span class="material-icons header-icon">how_to_reg</span>
-          <h2 class="card-title">รายชื่อนิสิต</h2>
+          <span class="material-icons header-icon">people</span>
+          <h2 class="card-title">สรุปอาจารย์ที่ปรึกษา</h2>
         </div>
         <div class="card-body">
-          <!-- Controls -->
-          <div class="flex flex-col gap-3 mb-4">
-  <!-- แถวบน: หัวข้อ + ป้ายกรอง -->
-  <div class="flex items-center flex-wrap gap-2">
-    <h3 class="text-base font-semibold text-gray-800">รายชื่อนิสิต</h3>
-    <span id="active-filter-badge" class="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full" style="display:none;"></span>
-    <button onclick="clearFilter()" id="btn-clear-filter" class="text-xs text-gray-600 bg-red-100 hover:bg-red-200 px-2 py-0.5 rounded-full inline-flex items-center gap-1 transition-colors" style="display:none; box-shadow:none; border:none;">
-      <span class="material-icons" style="font-size:12px;">close</span>
-      ล้างตัวกรอง
-    </button>
-  </div>
-
-  <!-- แถวล่าง: ช่องค้นหา + ปุ่ม -->
-  <div class="flex items-center gap-2 flex-wrap justify-end sm:justify-between">
-    <div class="flex items-center gap-2 flex-1">
-      <div class="relative min-w-[150px] max-w-[220px]">
-        <span class="material-icons absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">search</span>
-        <input type="text" placeholder="Search item..." id="student-search" class="input-field !pl-10 w-full" />
-      </div>
-      <select id="year-filter" onchange="onYearFilterChange()" class="input-field !w-auto !min-w-[100px]" style="height:36px; font-size:13px; padding:4px 10px; border-radius:8px;">
-        <option value="">ทุกชั้นปี</option>
-      </select>
-    </div>
-    <div class="flex items-center gap-2 flex-wrap">
-      <button id="btn-set-status" class="btn btn-primary btn-sm" onclick="openSetStatusModal()">
-        <span class="material-icons text-sm">settings</span> ตั้งสถานะนิสิต
-      </button>
-      <button id="btn-set-advisor" class="btn btn-primary btn-sm" onclick="openSetAdvisorModal()">
-        <span class="material-icons text-sm">person_add</span> ตั้งอาจารย์ที่ปรึกษา
-      </button>
-    </div>
-  </div>
-</div>
-
-          <!-- Table -->
           <div class="overflow-x-auto">
             <table class="data-table text-[13px]">
               <thead>
                 <tr>
-                  <th>Student ID</th>
-                  <th>ชื่อ-นามสกุล</th>
                   <th>อาจารย์ที่ปรึกษา</th>
-                  <th>สถานะ</th>
-                  <th style="width:80px;"></th>
+                  <th>จำนวนนิสิตที่ดูแล</th>
+                  <th>checklist ที่ตรวจแล้ว</th>
+                  <th>checklist ที่ยังไม่ได้ตรวจ</th>
                 </tr>
               </thead>
-              <tbody id="students-tbody">
-                <tr><td colspan="5" class="text-center py-8 text-gray-400">กำลังโหลดข้อมูล...</td></tr>
+              <tbody id="advisor-tbody">
+                <tr><td colspan="4" class="text-center py-4 text-gray-400">กำลังโหลด...</td></tr>
               </tbody>
             </table>
           </div>
+        </div>
+      </div>
 
-          <!-- Pagination -->
-          <div class="flex flex-col sm:flex-row items-center justify-between mt-4 gap-3">
-            <span class="text-sm text-gray-500" id="pagination-info">-</span>
-            <div class="flex items-center gap-1" id="pagination-controls"></div>
-            <button class="btn btn-tonal btn-sm" onclick="exportStudents()">
-              <span class="material-icons text-sm">download</span> export
-            </button>
+      <!-- สรุปจำนวนนิสิต -->
+      <div class="card md:w-[280px] flex-shrink-0 !mt-0 flex flex-col">
+        <div class="card-header">
+          <span class="material-icons header-icon">assessment</span>
+          <h2 class="card-title">สรุปจำนวนนิสิต</h2>
+        </div>
+        <div class="card-body flex-1 flex flex-col items-center justify-around py-6 gap-4">
+          <div class="text-center">
+            <p class="text-sm text-gray-600 font-medium">จำนวนนิสิตปีนี้</p>
+            <p class="text-3xl font-bold text-[#1541D2] mt-1" id="summary-total">-</p>
+          </div>
+          <div class="w-full h-px bg-gray-200"></div>
+          <div class="text-center">
+            <p class="text-sm text-gray-600 font-medium">มีอาจารย์ที่ปรึกษา</p>
+            <p class="text-3xl font-bold text-[#1541D2] mt-1" id="summary-with-advisor">-</p>
+          </div>
+          <div class="w-full h-px bg-gray-200"></div>
+          <div class="text-center">
+            <p class="text-sm text-gray-600 font-medium">ยังไม่มีอาจารย์</p>
+            <p class="text-3xl font-bold text-[#1541D2] mt-1" id="summary-without-advisor">-</p>
           </div>
         </div>
       </div>

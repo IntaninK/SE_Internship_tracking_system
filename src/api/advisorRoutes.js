@@ -136,6 +136,17 @@ router.get("/students", async (req, res) => {
       const cStatus = getStudentChecklistStatus(s);
       const rStatus = getStudentReadinessStatus(s);
 
+      const approvedTrainings = (s.trainingRecords || []).filter((t) => t.status === "APPROVED");
+      const softHours = approvedTrainings
+        .filter((t) => t.skillType === "SOFT")
+        .reduce((sum, t) => sum + t.hours, 0);
+      const hardHours = approvedTrainings
+        .filter((t) => t.skillType === "HARD")
+        .reduce((sum, t) => sum + t.hours, 0);
+      const isTrainingComplete = softHours >= 12 && hardHours >= 18;
+      const cvStatus = s.cv ? s.cv.status : "NONE";
+      const placementStatus = s.placement ? s.placement.status : "NONE";
+
       return {
         id: s.id,
         studentCode: s.studentCode,
@@ -151,6 +162,11 @@ router.get("/students", async (req, res) => {
         readinessStatusKey: rStatus.key,
         readinessStatusLabel: rStatus.label,
         companiesCount: s.companies.length,
+        isTrainingComplete,
+        trainingApprovedSoft: softHours,
+        trainingApprovedHard: hardHours,
+        cvStatus,
+        placementStatus,
       };
     });
 
@@ -179,6 +195,53 @@ router.get("/students", async (req, res) => {
     const yearPrefix = req.query.yearPrefix;
     if (yearPrefix) {
       mapped = mapped.filter((s) => s.studentCode && s.studentCode.startsWith(yearPrefix));
+    }
+
+    // Filter ตาม dropdown "สถานะ"
+    const statusFilter = req.query.statusFilter;
+    if (statusFilter) {
+      switch (statusFilter) {
+        case "training_passed":
+          mapped = mapped.filter((s) => s.isTrainingComplete);
+          break;
+        case "training_failed":
+          mapped = mapped.filter((s) => !s.isTrainingComplete);
+          break;
+        case "cv_passed":
+          mapped = mapped.filter((s) => s.cvStatus === "APPROVED");
+          break;
+        case "cv_failed":
+          mapped = mapped.filter((s) => s.cvStatus !== "APPROVED");
+          break;
+        case "checklist_passed":
+          mapped = mapped.filter((s) => s.checklistStatusCode === "APPROVED");
+          break;
+        case "checklist_failed":
+          mapped = mapped.filter((s) => s.checklistStatusCode !== "APPROVED");
+          break;
+        case "placement_approved":
+          mapped = mapped.filter((s) => s.placementStatus === "APPROVED");
+          break;
+        case "placement_pending":
+          mapped = mapped.filter((s) => s.placementStatus !== "APPROVED");
+          break;
+      }
+    }
+
+    // Filter ตาม dropdown "Skill" (Soft/Hard skill)
+    const skillFilter = req.query.skillFilter;
+    if (skillFilter) {
+      switch (skillFilter) {
+        case "lack_soft":
+          mapped = mapped.filter((s) => (s.trainingApprovedSoft || 0) < 12);
+          break;
+        case "lack_hard":
+          mapped = mapped.filter((s) => (s.trainingApprovedHard || 0) < 18);
+          break;
+        case "lack_both":
+          mapped = mapped.filter((s) => (s.trainingApprovedSoft || 0) < 12 && (s.trainingApprovedHard || 0) < 18);
+          break;
+      }
     }
 
     const total = mapped.length;

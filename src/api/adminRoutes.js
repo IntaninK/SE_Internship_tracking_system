@@ -385,6 +385,59 @@ router.get("/students", async (req, res) => {
       mapped = mapped.filter((s) => s.studentCode && s.studentCode.startsWith(yearPrefix));
     }
 
+    // Filter ตาม dropdown "สถานะ" (ผ่าน/ไม่ผ่าน แต่ละหมวด)
+    const statusFilter = req.query.statusFilter;
+    if (statusFilter) {
+      switch (statusFilter) {
+        case 'training_passed':
+          mapped = mapped.filter(s => s.isTrainingComplete);
+          break;
+        case 'training_failed':
+          mapped = mapped.filter(s => !s.isTrainingComplete);
+          break;
+        case 'cv_passed':
+          mapped = mapped.filter(s => s.cvStatus === 'APPROVED');
+          break;
+        case 'cv_failed':
+          mapped = mapped.filter(s => s.cvStatus !== 'APPROVED');
+          break;
+        case 'checklist_passed':
+          mapped = mapped.filter(s => s.readinessCategory === 'approvedPlacement' || s.readinessCategory === 'cvApproved' || s.statusCategory === 'ready');
+          break;
+        case 'checklist_failed':
+          mapped = mapped.filter(s => s.readinessCategory !== 'approvedPlacement' && s.readinessCategory !== 'cvApproved');
+          break;
+        case 'placement_approved':
+          mapped = mapped.filter(s => s.placementStatus === 'APPROVED');
+          break;
+        case 'placement_pending':
+          mapped = mapped.filter(s => s.placementStatus !== 'APPROVED');
+          break;
+      }
+    }
+
+    // Filter ตาม dropdown "อาจารย์ที่ปรึกษา"
+    const advisorFilterName = req.query.advisorFilter;
+    if (advisorFilterName) {
+      mapped = mapped.filter(s => s.advisorName === advisorFilterName);
+    }
+
+    // Filter ตาม dropdown "Soft/Hard Skill"
+    const skillFilter = req.query.skillFilter;
+    if (skillFilter) {
+      switch (skillFilter) {
+        case 'lack_soft':
+          mapped = mapped.filter(s => (s.trainingApprovedSoft || 0) < 12);
+          break;
+        case 'lack_hard':
+          mapped = mapped.filter(s => (s.trainingApprovedHard || 0) < 18);
+          break;
+        case 'lack_both':
+          mapped = mapped.filter(s => (s.trainingApprovedSoft || 0) < 12 && (s.trainingApprovedHard || 0) < 18);
+          break;
+      }
+    }
+
     const total = mapped.length;
     const paginated = mapped.slice(skip, skip + parseInt(limit));
 

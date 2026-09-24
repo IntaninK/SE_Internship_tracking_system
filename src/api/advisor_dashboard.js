@@ -116,14 +116,19 @@ function renderPieChart(containerId, chartType, segments, headerLabel, tableId, 
   // Event: คลิกแถวในตารางเพื่อกรองนิสิต
   container.querySelectorAll('.chart-status-row').forEach(row => {
     row.addEventListener('click', () => {
+      const isAlreadyActive = row.classList.contains('bg-purple-100');
       document.querySelectorAll('.chart-status-row').forEach(r => r.classList.remove('bg-purple-100', 'font-bold'));
-      row.classList.add('bg-purple-100', 'font-bold');
 
-      currentFilter = {
-        chartType: row.dataset.chart,
-        chartKey: row.dataset.key,
-        label: row.dataset.label,
-      };
+      if (isAlreadyActive) {
+        currentFilter = null;
+      } else {
+        row.classList.add('bg-purple-100', 'font-bold');
+        currentFilter = {
+          chartType: row.dataset.chart,
+          chartKey: row.dataset.key,
+          label: row.dataset.label,
+        };
+      }
       currentPage = 1;
       updateFilterUI();
       loadStudents();
@@ -148,13 +153,19 @@ async function loadStudents() {
     const selectedYear = yearFilter ? yearFilter.value : '';
     if (selectedYear) url += `&yearPrefix=${encodeURIComponent(selectedYear)}`;
 
+    // Dropdown filters ใหม่
+    const statusFilter = document.getElementById('status-filter');
+    const skillFilter = document.getElementById('skill-filter');
+    if (statusFilter && statusFilter.value) url += `&statusFilter=${encodeURIComponent(statusFilter.value)}`;
+    if (skillFilter && skillFilter.value) url += `&skillFilter=${encodeURIComponent(skillFilter.value)}`;
+
     const res = await fetch(url);
     const data = await res.json();
     if (!data.success) return;
 
     let studentsToRender = data.students || [];
     let totalToRender = data.total;
-    // Fallback: กรองฝั่ง client-side เพิ่มเติม เพื่อให้แสดงผลทันทีแม้ backend ยังไม่ได้ restart
+    // Fallback: กรองฝั่ง client-side
     if (selectedYear) {
       studentsToRender = studentsToRender.filter(s => s.studentCode && s.studentCode.startsWith(selectedYear));
       totalToRender = studentsToRender.length;
@@ -372,18 +383,33 @@ window.exportStudents = async function() {
 function updateFilterUI() {
   const badge = document.getElementById('active-filter-badge');
   const btn = document.getElementById('btn-clear-filter');
-  if (currentFilter) {
+
+  const statusVal = document.getElementById('status-filter')?.value;
+  const skillVal = document.getElementById('skill-filter')?.value;
+  const yearVal = document.getElementById('year-filter')?.value;
+  const searchVal = document.getElementById('student-search')?.value?.trim();
+
+  const hasAnyFilter = currentFilter || statusVal || skillVal || yearVal || searchVal;
+
+  if (currentFilter || statusVal || skillVal) {
+    const parts = [];
+    if (currentFilter) parts.push(`กราฟ: ${currentFilter.label}`);
+    if (statusVal) parts.push(document.getElementById('status-filter').selectedOptions[0]?.text);
+    if (skillVal) parts.push(document.getElementById('skill-filter').selectedOptions[0]?.text);
     if (badge) {
-      badge.textContent = `กรอง: ${currentFilter.label}`;
+      badge.textContent = `กรอง: ${parts.join(', ')}`;
       badge.style.display = 'inline-block';
     }
-    if (btn) btn.style.display = 'inline-block';
   } else {
     if (badge) badge.style.display = 'none';
-    if (btn) btn.style.display = 'none';
+  }
+
+  if (btn) {
+    btn.style.display = hasAnyFilter ? 'inline-flex' : 'none';
   }
 }
 
+// Clear filter (จากกราฟ)
 window.clearFilter = function() {
   currentFilter = null;
   currentPage = 1;
@@ -391,6 +417,38 @@ window.clearFilter = function() {
   updateFilterUI();
   loadStudents();
 };
+
+// Clear ALL filters (ทุก dropdown + กราฟ + ค้นหา)
+window.clearAllFilters = function() {
+  currentFilter = null;
+  currentPage = 1;
+  document.querySelectorAll('.chart-status-row').forEach(r => r.classList.remove('bg-purple-100', 'font-bold'));
+  ['status-filter', 'skill-filter', 'year-filter'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  const searchEl = document.getElementById('student-search');
+  if (searchEl) searchEl.value = '';
+  updateFilterUI();
+  loadStudents();
+};
+
+// Dropdown filter events (สถานะ, Skill)
+['status-filter', 'skill-filter'].forEach(id => {
+  const el = document.getElementById(id);
+  if (el) {
+    el.addEventListener('change', () => {
+      // เมื่อผู้ใช้เลือก dropdown สถานะ ให้ปลดไฮไลต์กราฟออก เพื่อไม่ให้เงื่อนไขขัดแย้งกัน
+      if (currentFilter) {
+        currentFilter = null;
+        document.querySelectorAll('.chart-status-row').forEach(r => r.classList.remove('bg-purple-100', 'font-bold'));
+      }
+      currentPage = 1;
+      updateFilterUI();
+      loadStudents();
+    });
+  }
+});
 
 // Search event
 const searchInput = document.getElementById('student-search');
@@ -400,6 +458,7 @@ if (searchInput) {
     clearTimeout(searchTimeout);
     searchTimeout = setTimeout(() => {
       currentPage = 1;
+      updateFilterUI();
       loadStudents();
     }, 300);
   });
@@ -408,6 +467,7 @@ if (searchInput) {
 // Year filter event
 window.onYearFilterChange = function() {
   currentPage = 1;
+  updateFilterUI();
   loadStudents();
 };
 

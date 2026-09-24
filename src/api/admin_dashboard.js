@@ -29,6 +29,7 @@ async function initAdminDashboard() {
   await loadDashboardSummary();
   await loadStudents();
   await populateYearFilter('/api/admin/students');
+  await populateAdvisorFilter();
 }
 
 // ==========================================
@@ -138,54 +139,59 @@ function renderPieChart(containerId, chartType, segments, headerLabel, tableId, 
   }
 
   container.innerHTML = `
-    <h4 class="text-sm font-bold text-blue-700 mb-2 text-center">${headerLabel}</h4>
-    <div class="flex items-start gap-1">
-      <div class="relative w-[100px] h-[100px] flex-shrink-0">
-        <svg viewBox="0 0 36 36" class="w-full h-full -rotate-90">
-          ${svgCircles}
-        </svg>
-        <div class="absolute inset-0 flex flex-col items-center justify-center">
-          <span class="text-[7px] text-gray-400">Total Value</span>
-          <span class="text-lg font-bold text-gray-800">${total}</span>
+    <div class="bg-slate-50/60 border border-slate-200/80 rounded-xl p-3 flex flex-col h-full">
+      <h4 class="text-xs font-bold text-blue-800 mb-2.5 text-center">${headerLabel}</h4>
+      <div class="flex items-center gap-2 flex-1">
+        <div class="relative w-[90px] h-[90px] flex-shrink-0">
+          <svg viewBox="0 0 36 36" class="w-full h-full -rotate-90">
+            ${svgCircles}
+          </svg>
+          <div class="absolute inset-0 flex flex-col items-center justify-center">
+            <span class="text-[7px] text-gray-400">Total</span>
+            <span class="text-base font-bold text-gray-800">${total}</span>
+          </div>
         </div>
+        <table class="text-[11px] border-collapse flex-1" id="${tableId}">
+          <thead>
+            <tr>
+              <th class="text-left pr-2 pb-1 font-medium text-gray-500">สถานะ</th>
+              <th class="text-right pr-2 pb-1 font-medium text-gray-500">จำนวน</th>
+              <th class="text-right pb-1 font-medium text-gray-500">%</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${segments.map((seg) => {
+              const pct = total > 0 ? ((seg.value / total) * 100).toFixed(1) : '0.0';
+              return `<tr class="chart-status-row cursor-pointer hover:bg-purple-100/70 transition-colors" data-chart="${chartType}" data-key="${seg.key}" data-label="${seg.label}" title="คลิกเพื่อกรองสถานะนี้">
+                <td class="pr-2 py-0.5 truncate max-w-[110px]" title="${seg.label}">
+                  <span class="inline-block w-1.5 h-1.5 rounded-full mr-1" style="background:${seg.color}"></span>${seg.label}
+                </td>
+                <td class="text-right pr-2">${seg.value}</td>
+                <td class="text-right text-gray-500">${pct}%</td>
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table>
       </div>
-      <table class="text-[11px] border-collapse" id="${tableId}">
-        <thead>
-          <tr>
-            <th class="text-left pr-3 pb-1 font-medium text-gray-600">${headerLabel}</th>
-            <th class="text-right pr-3 pb-1 font-medium text-gray-600">จำนวน</th>
-            <th class="text-right pb-1 font-medium text-gray-600">%</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${segments.map((seg) => {
-            const pct = total > 0 ? ((seg.value / total) * 100).toFixed(1) : '0.0';
-            return `<tr class="chart-status-row cursor-pointer hover:bg-purple-50 transition-colors" data-chart="${chartType}" data-key="${seg.key}" data-label="${seg.label}">
-              <td class="pr-3 py-0.5">
-                <span class="inline-block w-1.5 h-1.5 rounded-full mr-1" style="background:${seg.color}"></span>${seg.label}
-              </td>
-              <td class="text-right pr-3">${seg.value}</td>
-              <td class="text-right">${pct}%</td>
-            </tr>`;
-          }).join('')}
-        </tbody>
-      </table>
     </div>
   `;
 
-  // Event: คลิกสถานะในตาราง → กรองรายชื่อนิสิต
+  // Event: คลิกสถานะในตาราง → กรองรายชื่อนิสิต (Toggle)
   container.querySelectorAll('.chart-status-row').forEach(row => {
     row.addEventListener('click', () => {
-      // ลบ highlight ทั้งหมด
+      const isAlreadyActive = row.classList.contains('bg-purple-100');
       document.querySelectorAll('.chart-status-row').forEach(r => r.classList.remove('bg-purple-100', 'font-bold'));
-      // Highlight row ที่คลิก
-      row.classList.add('bg-purple-100', 'font-bold');
 
-      currentFilter = {
-        chartType: row.dataset.chart,
-        chartKey: row.dataset.key,
-        label: row.dataset.label,
-      };
+      if (isAlreadyActive) {
+        currentFilter = null;
+      } else {
+        row.classList.add('bg-purple-100', 'font-bold');
+        currentFilter = {
+          chartType: row.dataset.chart,
+          chartKey: row.dataset.key,
+          label: row.dataset.label,
+        };
+      }
       currentPage = 1;
       updateFilterUI();
       loadStudents();
@@ -210,13 +216,21 @@ async function loadStudents() {
     const selectedYear = yearFilter ? yearFilter.value : '';
     if (selectedYear) url += `&yearPrefix=${encodeURIComponent(selectedYear)}`;
 
+    // Dropdown filters ใหม่
+    const statusFilter = document.getElementById('status-filter');
+    const advisorFilter = document.getElementById('advisor-filter');
+    const skillFilter = document.getElementById('skill-filter');
+    if (statusFilter && statusFilter.value) url += `&statusFilter=${encodeURIComponent(statusFilter.value)}`;
+    if (advisorFilter && advisorFilter.value) url += `&advisorFilter=${encodeURIComponent(advisorFilter.value)}`;
+    if (skillFilter && skillFilter.value) url += `&skillFilter=${encodeURIComponent(skillFilter.value)}`;
+
     const res = await fetch(url);
     const data = await res.json();
     if (!data.success) return;
 
     let studentsToRender = data.students || [];
     let totalToRender = data.total;
-    // Fallback: กรองฝั่ง client-side เพิ่มเติม เพื่อให้แสดงผลทันทีแม้ backend ยังไม่ได้ restart
+    // Fallback: กรองฝั่ง client-side เพิ่มเติม
     if (selectedYear) {
       studentsToRender = studentsToRender.filter(s => s.studentCode && s.studentCode.startsWith(selectedYear));
       totalToRender = studentsToRender.length;
@@ -593,6 +607,22 @@ if (yearFilterEl) {
   yearFilterEl.addEventListener('change', window.onYearFilterChange);
 }
 
+// Dropdown filter events (สถานะ, อาจารย์, Skill)
+['status-filter', 'advisor-filter', 'skill-filter'].forEach(id => {
+  const el = document.getElementById(id);
+  if (el) {
+    el.addEventListener('change', () => {
+      if (currentFilter) {
+        currentFilter = null;
+        document.querySelectorAll('.chart-status-row').forEach(r => r.classList.remove('bg-purple-100', 'font-bold'));
+      }
+      currentPage = 1;
+      updateFilterUI();
+      loadStudents();
+    });
+  }
+});
+
 // ดึงรายปีจากรหัสนิสิตทั้งหมดมาใส่ Dropdown
 async function populateYearFilter(apiUrl) {
   try {
@@ -620,26 +650,73 @@ async function populateYearFilter(apiUrl) {
   }
 }
 
+// ดึงรายชื่ออาจารย์มาใส่ Dropdown ฟิลเตอร์
+async function populateAdvisorFilter() {
+  try {
+    const select = document.getElementById('advisor-filter');
+    if (!select) return;
+    const res = await fetch('/api/admin/advisors');
+    const data = await res.json();
+    if (!data.success) return;
+    select.innerHTML = '<option value="">ทุกอาจารย์</option>';
+    data.advisors.forEach(a => {
+      const opt = document.createElement('option');
+      opt.value = a.name;
+      opt.textContent = `${a.name} (${a.studentCount} คน)`;
+      select.appendChild(opt);
+    });
+  } catch (err) {
+    console.error('Populate advisor filter error:', err);
+  }
+}
+
 function updateFilterUI() {
   const badge = document.getElementById('active-filter-badge');
   const btn = document.getElementById('btn-clear-filter');
-  if (currentFilter) {
+
+  // เช็คว่ามี filter ไหนที่เลือกอยู่บ้าง
+  const statusVal = document.getElementById('status-filter')?.value;
+  const advisorVal = document.getElementById('advisor-filter')?.value;
+  const skillVal = document.getElementById('skill-filter')?.value;
+  const hasDropdownFilter = statusVal || advisorVal || skillVal;
+
+  if (currentFilter || hasDropdownFilter) {
+    const parts = [];
+    if (currentFilter) parts.push(currentFilter.label);
+    if (statusVal) parts.push(document.getElementById('status-filter').selectedOptions[0]?.text);
+    if (advisorVal) parts.push(advisorVal);
+    if (skillVal) parts.push(document.getElementById('skill-filter').selectedOptions[0]?.text);
     if (badge) {
-      badge.textContent = `กรอง: ${currentFilter.label}`;
+      badge.textContent = `กรอง: ${parts.join(', ')}`;
       badge.style.display = 'inline-block';
     }
-    if (btn) btn.style.display = 'inline-block';
+    if (btn) btn.style.display = 'inline-flex';
   } else {
     if (badge) badge.style.display = 'none';
     if (btn) btn.style.display = 'none';
   }
 }
 
-// Clear filter
+// Clear filter (จากกราฟ)
 window.clearFilter = function() {
   currentFilter = null;
   currentPage = 1;
   document.querySelectorAll('.chart-status-row').forEach(r => r.classList.remove('bg-purple-100', 'font-bold'));
+  updateFilterUI();
+  loadStudents();
+};
+
+// Clear ALL filters (ทุก dropdown + กราฟ)
+window.clearAllFilters = function() {
+  currentFilter = null;
+  currentPage = 1;
+  document.querySelectorAll('.chart-status-row').forEach(r => r.classList.remove('bg-purple-100', 'font-bold'));
+  ['status-filter', 'advisor-filter', 'skill-filter', 'year-filter'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  const searchEl = document.getElementById('student-search');
+  if (searchEl) searchEl.value = '';
   updateFilterUI();
   loadStudents();
 };
