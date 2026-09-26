@@ -5,3 +5,9 @@ node_modules
 /generated/prisma
 test01.js
 server_test.js
+
+# IDE / Agent config (local only)
+.agents/
+.claude/
+.windsurf/
+.vscode/
