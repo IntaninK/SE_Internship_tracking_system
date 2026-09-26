@@ -60,9 +60,9 @@ router.get("/dashboard-summary", async (req, res) => {
   try {
     const advisorStaffId = req.staff.id;
 
-    // นิสิตที่อาจารย์คนนี้ดูแล
+    // นิสิตที่อาจารย์คนนี้ดูแล (เฉพาะที่ยังไม่ดรอป)
     const students = await prisma.student.findMany({
-      where: { advisorId: advisorStaffId },
+      where: { advisorId: advisorStaffId, isDropped: false },
       include: {
         user: true,
         cv: true,
@@ -121,7 +121,7 @@ router.get("/students", async (req, res) => {
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
     const allStudents = await prisma.student.findMany({
-      where: { advisorId: advisorStaffId },
+      where: { advisorId: advisorStaffId, isDropped: false },
       include: {
         user: true,
         cv: true,

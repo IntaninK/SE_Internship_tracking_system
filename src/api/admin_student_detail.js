@@ -79,6 +79,16 @@ function renderProfile(s) {
 
   setText('student-header-name', `${s.studentCode} ${s.nameTh}`);
 
+  const dropBadge = document.getElementById('student-dropped-badge');
+  if (dropBadge) {
+    if (s.isDropped) {
+      dropBadge.style.display = 'block';
+      dropBadge.title = `เหตุผล: ${s.dropReason || 'ดรอปจากระบบ'}`;
+    } else {
+      dropBadge.style.display = 'none';
+    }
+  }
+
   if (s.profileImageUrl) {
     const img = document.getElementById('student-photo');
     img.src = s.profileImageUrl;

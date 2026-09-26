@@ -17,6 +17,9 @@ async function initPage() {
   await loadPlacement();
 }
 
+// ตัวแปรสถานะดรอปของนิสิต
+let isStudentDropped = false;
+
 // 1. โหลดข้อมูลส่วนตัว
 async function loadProfile() {
   try {
@@ -26,6 +29,16 @@ async function loadProfile() {
       if (data.user) document.getElementById('prof-email').value = data.user.email || '';
       if (data.student) {
         const s = data.student;
+
+        // ตรวจสอบสถานะการดรอป
+        if (s.isDropped) {
+          applyDroppedReadOnlyMode(s);
+        } else {
+          isStudentDropped = false;
+          const dropBanner = document.getElementById('dropped-student-banner');
+          if (dropBanner) dropBanner.style.display = 'none';
+        }
+
         await loadAdvisorOptions(s.advisorId ?? s.advisor?.id ?? null);
 
         document.getElementById('prof-nameTh').value = s.nameTh || '';
@@ -51,12 +64,110 @@ async function loadProfile() {
   }
 }
 
+// ฟังก์ชันปรับหน้าจอเป็นโหมดอ่านอย่างเดียว (View-only) สำหรับนิสิตที่ถูกดรอป
+function applyDroppedReadOnlyMode(s) {
+  isStudentDropped = true;
+
+  // 1. ตรวจสอบและแสดง Banner แจ้งเตือน
+  const dropBanner = document.getElementById('dropped-student-banner');
+  if (dropBanner) {
+    dropBanner.style.display = 'block';
+    const reasonEl = document.getElementById('dropped-banner-reason');
+    const dateEl = document.getElementById('dropped-banner-date');
+    if (reasonEl) reasonEl.textContent = s.dropReason || 'ดรอปจากระบบ';
+    if (dateEl) {
+      dateEl.textContent = s.droppedAt
+        ? new Date(s.droppedAt).toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+        : '-';
+    }
+
+    if (!document.getElementById('dropped-readonly-notice')) {
+      const noticeDiv = document.createElement('div');
+      noticeDiv.id = 'dropped-readonly-notice';
+      noticeDiv.className = 'mt-3 p-3 bg-red-100/90 rounded-lg text-xs font-semibold text-red-800 flex items-center gap-2 border border-red-300';
+      noticeDiv.innerHTML = '<span class="material-icons text-base">lock</span> โหมดดูข้อมูลเท่านั้น (View-only): บัญชีของคุณถูกระงับ/ดรอปการฝึกงาน ข้อมูลเดิมยังคงแสดงอยู่ครบถ้วน แต่ไม่สามารถเพิ่ม แก้ไข หรือลบข้อมูลใดๆ ได้';
+      dropBanner.querySelector('.ml-3')?.appendChild(noticeDiv);
+    }
+  }
+
+  // 2. ปิดการแก้ไขข้อมูลส่วนตัว
+  const profInputs = [
+    'prof-nameTh', 'prof-nameEn', 'prof-studentCode', 'prof-year',
+    'prof-gpa', 'prof-major', 'prof-phone', 'prof-lineId', 'prof-facebook',
+    'prof-advisor', 'prof-email', 'profile-photo-input'
+  ];
+  profInputs.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.disabled = true;
+      el.style.backgroundColor = '#f1f5f9';
+      el.style.cursor = 'not-allowed';
+    }
+  });
+
+  const photoDrop = document.getElementById('photo-dropzone');
+  if (photoDrop) {
+    photoDrop.style.cursor = 'default';
+    photoDrop.title = 'ไม่สามารถแก้ไขรูปโปรไฟล์ได้ (อยู่ในสถานะดรอป)';
+  }
+
+  const saveProfileBtn = document.getElementById('save-profile-btn');
+  if (saveProfileBtn) {
+    saveProfileBtn.disabled = true;
+    saveProfileBtn.style.opacity = '0.55';
+    saveProfileBtn.style.cursor = 'not-allowed';
+    saveProfileBtn.innerHTML = '<span class="material-icons">lock</span> บัญชีถูกดรอป (ปิดการแก้ไขข้อมูล)';
+  }
+
+  // 3. ซ่อนปุ่มเพิ่มข้อมูลชั่วโมงอบรม
+  const addCertLink = document.querySelector('a[href*="Certificate.html"]');
+  if (addCertLink) {
+    addCertLink.style.display = 'none';
+  }
+
+  // 4. ซ่อนปุ่มเพิ่มข้อมูล Checklist
+  const addCompLink = document.querySelector('#checklist-section .table-footer a');
+  if (addCompLink) {
+    addCompLink.style.display = 'none';
+  }
+
+  // 5. ปิดฟอร์มสถานที่ฝึกงาน
+  const plcFields = [
+    'plc-position', 'plc-companyNameTh', 'plc-contactPersonName',
+    'plc-contactPersonPosition', 'plc-companyAddress', 'plc-companyPhone1',
+    'plc-companyPhone2', 'plc-companyEmail', 'plc-province'
+  ];
+  plcFields.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.disabled = true;
+      el.style.backgroundColor = '#f1f5f9';
+      el.style.cursor = 'not-allowed';
+    }
+  });
+
+  const plcSubmit = document.querySelector('#placement-form button, #placement-form input[type="submit"]');
+  if (plcSubmit) {
+    plcSubmit.disabled = true;
+    plcSubmit.style.opacity = '0.55';
+    plcSubmit.style.cursor = 'not-allowed';
+    plcSubmit.innerHTML = '<span class="material-icons">lock</span> บัญชีถูกดรอป (ปิดการบันทึกข้อมูล)';
+  }
+}
+
 // จัดการอัปโหลดรูปโปรไฟล์
 const photoDropzone = document.getElementById('photo-dropzone');
 const photoInput = document.getElementById('profile-photo-input');
 if (photoDropzone && photoInput) {
-  photoDropzone.addEventListener('click', () => photoInput.click());
+  photoDropzone.addEventListener('click', () => {
+    if (isStudentDropped) return;
+    photoInput.click();
+  });
   photoInput.addEventListener('change', async (e) => {
+    if (isStudentDropped) {
+      alert('บัญชีของคุณอยู่ในสถานะดรอปการฝึกงาน ไม่สามารถเปลี่ยนรูปโปรไฟล์ได้');
+      return;
+    }
     const file = e.target.files[0];
     if (file) {
       const formData = new FormData();
@@ -111,6 +222,10 @@ async function loadAdvisorOptions(selectedAdvisorId) {
 const saveProfileBtn = document.getElementById('save-profile-btn');
 if (saveProfileBtn) {
   saveProfileBtn.addEventListener('click', async () => {
+    if (isStudentDropped) {
+      alert('บัญชีของคุณอยู่ในสถานะดรอปการฝึกงาน ไม่สามารถแก้ไขข้อมูลได้');
+      return;
+    }
     const advisorSelect = document.getElementById('prof-advisor');
     const payload = {
       nameTh: document.getElementById('prof-nameTh').value,
@@ -182,12 +297,22 @@ async function loadTrainings() {
                 : '<span style="color:#94a3b8; font-size:16px;">-</span>'
               }
             </td>
-            <td><button type="button" class="btn btn-tonal btn-xs" onclick="deleteTraining(${t.id})">ลบ</button></td>
+            <td>${
+              isStudentDropped
+                ? '<span style="color:#94a3b8; font-size:13px;" title="ไม่สามารถลบได้ (สถานะดรอป)">-</span>'
+                : `<button type="button" class="btn btn-tonal btn-xs" onclick="deleteTraining(${t.id})">ลบ</button>`
+            }</td>
           `;
           tbody.appendChild(tr);
         });
       } else {
-        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: #888; padding: 20px;">ยังไม่มีข้อมูลการอบรม</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: #888; padding: 20px;">ยังไม่มีข้อมูลการอบรม</td></tr>';
+      }
+
+      // ซ่อนปุ่มเพิ่มข้อมูลการอบรมถ้าถูกดรอป
+      const addCertLink = document.querySelector('a[href*="Certificate.html"]');
+      if (addCertLink) {
+        addCertLink.style.display = isStudentDropped ? 'none' : 'inline-flex';
       }
     }
   } catch (err) {
@@ -198,12 +323,18 @@ async function loadTrainings() {
 }
 
 window.deleteTraining = async function(id) {
+  if (isStudentDropped) {
+    alert('บัญชีของคุณอยู่ในสถานะดรอปการฝึกงาน ไม่สามารถลบข้อมูลได้');
+    return;
+  }
   if (confirm('คุณต้องการลบรายการอบรมนี้หรือไม่?')) {
     try {
       const res = await fetch(`/api/student/trainings/${id}`, { method: 'DELETE' });
       const data = await res.json();
       if (data.success) {
         loadTrainings();
+      } else {
+        alert('เกิดข้อผิดพลาด: ' + (data.message || 'ลบไม่สำเร็จ'));
       }
     } catch (err) {
       console.error(err);
@@ -223,6 +354,12 @@ async function loadCv() {
       }
     } else {
       currentCvData = null;
+      if (isStudentDropped && cvUploadContent) {
+        const browseBtn = cvUploadContent.querySelector('button');
+        if (browseBtn) browseBtn.style.display = 'none';
+        const pDesc = cvUploadContent.querySelector('p');
+        if (pDesc) pDesc.innerHTML = 'ยังไม่มีไฟล์ CV<br><span style="color:#ef4444; font-weight:600;">(ปิดรับการส่งไฟล์เนื่องจากสถานะถูกดรอป)</span>';
+      }
     }
   } catch (err) {
     console.error('Load CV error:', err);
@@ -268,10 +405,24 @@ function renderCvPreview(fileUrl, fileName, status, note) {
     cvPreviewImg.style.display = 'block';
     cvPreviewPdf.style.display = 'none';
   }
+
+  // ถ้านิสิตถูกดรอป ให้ซ่อนปุ่มเปลี่ยนไฟล์ CV
+  const changeCvBtn = cvPreviewContainer.querySelector('button');
+  if (changeCvBtn) {
+    changeCvBtn.style.display = isStudentDropped ? 'none' : 'inline-block';
+  }
+  const cvZone = document.getElementById('cv-upload-zone');
+  if (cvZone && isStudentDropped) {
+    cvZone.style.cursor = 'default';
+  }
 }
 
 if (cvInput) {
   cvInput.addEventListener('change', async (e) => {
+    if (isStudentDropped) {
+      alert('บัญชีของคุณอยู่ในสถานะดรอปการฝึกงาน ไม่สามารถอัปโหลดไฟล์ CV ได้');
+      return;
+    }
     const file = e.target.files[0];
     if (file) {
       const formData = new FormData();
@@ -361,13 +512,19 @@ async function loadCompanies() {
             <td class="${statusClass}">${statusBadge}</td>
             <td>${c.checklistNote || '-'}</td>
             <td>
-              <a href="/pages/checklist.html" class="btn btn-tonal btn-xs" style="text-decoration: none;">แก้ไข</a>
+              <a href="/pages/checklist.html" class="btn btn-tonal btn-xs" style="text-decoration: none;">${isStudentDropped ? 'ดูข้อมูล' : 'แก้ไข'}</a>
             </td>
           `;
           tbody.appendChild(tr);
         });
       } else {
         tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #888; padding: 20px;">ยังไม่มีข้อมูลบริษัท (กดปุ่ม "เพิ่มข้อมูล" ด้านล่าง)</td></tr>';
+      }
+
+      // ซ่อนปุ่มเพิ่มข้อมูล Checklist ถ้าถูกดรอป
+      const addCompBtn = document.querySelector('#checklist-section .table-footer a');
+      if (addCompBtn) {
+        addCompBtn.style.display = isStudentDropped ? 'none' : 'inline-flex';
       }
     }
   } catch (err) {
@@ -392,18 +549,12 @@ async function loadSubmissions() {
         data.approvedCompanies.forEach((comp, idx) => {
           const currentStatus = (comp.submission && comp.submission.status) ? comp.submission.status : 'NOT_SUBMITTED';
 
-          // ตัวเลือกสถานะการยื่น:
-          // 1. ยังไม่ได้ยื่น (NOT_SUBMITTED)
-          // 2. ยื่นแล้ว รอสัมภาษณ์ (SUBMITTED_WAITING)
-          // 3. สัมภาษณ์แล้ว รอผล (INTERVIEWED_PENDING)
-          // 4. สัมภาษณ์ผ่านแล้ว (INTERVIEW_PASSED)
-          // 5. สัมภาษณ์ไม่ผ่าน ยื่นเพิ่มแล้ว (INTERVIEW_FAILED_REAPPLIED)
           const tr = document.createElement('tr');
           tr.innerHTML = `
             <td>${idx + 1}</td>
             <td>${comp.name}</td>
             <td>
-              <select class="input-field" onchange="updateSubmissionStatus(${comp.id}, this.value)">
+              <select class="input-field" ${isStudentDropped ? 'disabled style="background-color: #f1f5f9; cursor: not-allowed;" title="ไม่สามารถแก้ไขได้ (สถานะดรอป)"' : ''} onchange="updateSubmissionStatus(${comp.id}, this.value)">
                 <option value="NOT_SUBMITTED" ${currentStatus === 'NOT_SUBMITTED' ? 'selected' : ''}>ยังไม่ได้ยื่น</option>
                 <option value="SUBMITTED_WAITING" ${currentStatus === 'SUBMITTED_WAITING' ? 'selected' : ''}>ยื่นแล้ว รอสัมภาษณ์</option>
                 <option value="INTERVIEWED_PENDING" ${currentStatus === 'INTERVIEWED_PENDING' ? 'selected' : ''}>สัมภาษณ์แล้ว รอผล</option>
@@ -427,6 +578,10 @@ async function loadSubmissions() {
 }
 
 window.updateSubmissionStatus = async function(companyId, status) {
+  if (isStudentDropped) {
+    alert('บัญชีของคุณอยู่ในสถานะดรอปการฝึกงาน ไม่สามารถแก้ไขสถานะการยื่นได้');
+    return;
+  }
   try {
     const res = await fetch(`/api/student/submissions/${companyId}`, {
       method: 'PUT',
@@ -442,6 +597,8 @@ window.updateSubmissionStatus = async function(companyId, status) {
         target.submission.status = status;
       }
       checkPlacementUnlock();
+    } else {
+      alert('เกิดข้อผิดพลาด: ' + (data.message || 'อัปเดตไม่สำเร็จ'));
     }
   } catch (err) {
     console.error(err);
@@ -490,6 +647,29 @@ async function loadPlacement() {
     } else {
       currentPlacementData = null;
     }
+
+    if (isStudentDropped) {
+      const plcFields = [
+        'plc-position', 'plc-companyNameTh', 'plc-contactPersonName',
+        'plc-contactPersonPosition', 'plc-companyAddress', 'plc-companyPhone1',
+        'plc-companyPhone2', 'plc-companyEmail', 'plc-province'
+      ];
+      plcFields.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+          el.disabled = true;
+          el.style.backgroundColor = '#f1f5f9';
+          el.style.cursor = 'not-allowed';
+        }
+      });
+      const plcSubmit = document.querySelector('#placement-form button, #placement-form input[type="submit"]');
+      if (plcSubmit) {
+        plcSubmit.disabled = true;
+        plcSubmit.style.opacity = '0.55';
+        plcSubmit.style.cursor = 'not-allowed';
+        plcSubmit.innerHTML = '<span class="material-icons">lock</span> บัญชีถูกดรอป (ปิดการบันทึกข้อมูล)';
+      }
+    }
   } catch (err) {
     console.error('Load placement error:', err);
   } finally {
@@ -501,6 +681,10 @@ const placementForm = document.getElementById('placement-form');
 if (placementForm) {
   placementForm.addEventListener('submit', async (e) => {
     e.preventDefault();
+    if (isStudentDropped) {
+      alert('บัญชีของคุณอยู่ในสถานะดรอปการฝึกงาน ไม่สามารถบันทึกข้อมูลได้');
+      return;
+    }
     const payload = {
       position: document.getElementById('plc-position').value,
       companyNameTh: document.getElementById('plc-companyNameTh').value,
@@ -622,6 +806,18 @@ function checkPlacementUnlock() {
     if (placementSection) placementSection.style.display = 'none';
     if (placementLockedCard) placementLockedCard.style.display = 'none';
   }
+
+  // 🔒 หากนิสิตถูกดรอป แต่เคยมีข้อมูลเดิมที่กรอกไว้ ให้แสดงข้อมูลนั้นขึ้นมาเพื่อให้นิสิตดูข้อมูลเดิมได้
+  if (isStudentDropped) {
+    if (currentCompaniesData && currentCompaniesData.length > 0) {
+      if (checklistSection) checklistSection.style.display = 'block';
+      if (submissionSection) submissionSection.style.display = 'block';
+    }
+    if (currentPlacementData) {
+      if (placementSection) placementSection.style.display = 'block';
+      if (placementLockedCard) placementLockedCard.style.display = 'none';
+    }
+  }
 }
 
 // Helper อัปเดตสถานะและไอคอนในกล่อง Requirements Card
@@ -676,9 +872,9 @@ async function reloadAdvisorOnly() {
 // เริ่มโหลดข้อมูลเมื่อเข้าหน้าเว็บ
 initPage();
 
-// ⚡ เมื่อมีสัญญาณ Real-time จาก Socket.io ให้อัปเดตตาราง, สถานะ และอาจารย์ที่ปรึกษาทันที
+// ⚡ เมื่อมีสัญญาณ Real-time จาก Socket.io ให้อัปเดตตาราง, สถานะ และข้อมูลทั้งหมดทันที
 window.addEventListener('app:data-updated', () => {
-  reloadAdvisorOnly();
+  loadProfile();
   loadTrainings();
   loadCv();
   loadCompanies();

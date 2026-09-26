@@ -8,8 +8,56 @@ const previewPdf = document.getElementById('cert-preview-pdf');
 const pdfName = document.getElementById('cert-pdf-name');
 
 let selectedFile = null;
+let isDroppedStudent = false;
+
+// ตรวจสอบสถานะดรอปของนิสิต
+fetch('/api/student/profile')
+  .then(res => res.json())
+  .then(data => {
+    if (data.success && data.student && data.student.isDropped) {
+      isDroppedStudent = true;
+      if (fileInput) fileInput.disabled = true;
+      const hoursInput = document.getElementById('cert-hours');
+      if (hoursInput) { hoursInput.disabled = true; hoursInput.style.backgroundColor = '#f1f5f9'; hoursInput.style.cursor = 'not-allowed'; }
+      const skillInput = document.getElementById('cert-skill-type');
+      if (skillInput) { skillInput.disabled = true; skillInput.style.backgroundColor = '#f1f5f9'; skillInput.style.cursor = 'not-allowed'; }
+      const titleInput = document.getElementById('cert-title');
+      if (titleInput) { titleInput.disabled = true; titleInput.style.backgroundColor = '#f1f5f9'; titleInput.style.cursor = 'not-allowed'; }
+
+      const addBtn = document.getElementById('add-cert-btn');
+      if (addBtn) addBtn.style.display = 'none';
+
+      const returnBtn = document.getElementById('submit-and-return-btn');
+      if (returnBtn) {
+        returnBtn.textContent = 'กลับหน้าหลัก (โหมดดูข้อมูล)';
+      }
+
+      const dropZoneEl = document.getElementById('dropZone');
+      if (dropZoneEl) {
+        dropZoneEl.style.cursor = 'default';
+        dropZoneEl.style.pointerEvents = 'none';
+      }
+
+      const dropBanner = document.createElement('div');
+      dropBanner.className = 'mb-4 bg-red-50 border-l-4 border-red-500 p-4 rounded-r-xl shadow-sm';
+      dropBanner.innerHTML = `
+        <div class="flex items-center gap-3">
+          <span class="material-icons text-red-500 text-2xl">lock</span>
+          <div>
+            <h4 class="text-sm font-bold text-red-800">บัญชีอยู่ในสถานะดรอปการฝึกงาน</h4>
+            <p class="text-xs text-red-700 mt-0.5">คุณไม่สามารถเพิ่มหรืออัปโหลดชั่วโมงการอบรมใหม่ได้</p>
+          </div>
+        </div>
+      `;
+      const main = document.querySelector('.main-content') || document.body;
+      const firstSection = main.querySelector('section') || main.firstChild;
+      main.insertBefore(dropBanner, firstSection);
+    }
+  })
+  .catch(err => console.error('Check student status error:', err));
 
 fileInput.addEventListener('change', (e) => {
+    if (isDroppedStudent) return;
     const file = e.target.files[0];
     if (file) {
         selectedFile = file;
@@ -51,6 +99,11 @@ dropZone.addEventListener('drop', (e) => {
 });
 
 async function saveTrainingRecord() {
+    if (isDroppedStudent) {
+        alert('บัญชีของคุณอยู่ในสถานะดรอปการฝึกงาน ไม่สามารถเพิ่มข้อมูลการอบรมได้');
+        return false;
+    }
+
     const hours = document.getElementById('cert-hours').value;
     const skillType = document.getElementById('cert-skill-type').value;
     let title = document.getElementById('cert-title').value;
@@ -82,6 +135,10 @@ async function saveTrainingRecord() {
 
 // ปุ่มเพิ่มข้อมูล (บันทึกและเคลียร์ฟอร์มให้เพิ่มใบถัดไป)
 document.getElementById('add-cert-btn').addEventListener('click', async () => {
+    if (isDroppedStudent) {
+        alert('บัญชีของคุณอยู่ในสถานะดรอปการฝึกงาน ไม่สามารถเพิ่มข้อมูลการอบรมได้');
+        return;
+    }
     const btn = document.getElementById('add-cert-btn');
     btn.disabled = true;
     btn.textContent = 'กำลังบันทึก...';
@@ -110,6 +167,10 @@ document.getElementById('add-cert-btn').addEventListener('click', async () => {
 
 // ปุ่มยืนยันและกลับหน้าหลัก (บันทึกข้อมูลที่กรอกอยู่ แล้วกลับ Dashboard ทันที)
 document.getElementById('submit-and-return-btn').addEventListener('click', async () => {
+    if (isDroppedStudent) {
+        window.location.href = '/pages/status_all.html';
+        return;
+    }
     const btn = document.getElementById('submit-and-return-btn');
     btn.disabled = true;
     btn.textContent = 'กำลังบันทึกข้อมูล...';

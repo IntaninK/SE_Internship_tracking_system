@@ -25,9 +25,16 @@
     <!-- ข้อมูลนิสิตหัวบน -->
     <!-- 1. ข้อมูลนิสิต (อ่านอย่างเดียว) -->
     <section class="card">
-      <div class="card-header">
-        <span class="material-icons header-icon">person</span>
-        <h2 class="card-title" id="student-header-name">กำลังโหลด...</h2>
+      <div class="card-header" style="display: flex; align-items: center; justify-content: space-between;">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span class="material-icons header-icon">person</span>
+          <h2 class="card-title" id="student-header-name">กำลังโหลด...</h2>
+        </div>
+        <div id="student-dropped-badge" style="display: none;">
+          <span style="background: #fee2e2; color: #b91c1c; font-size: 13px; font-weight: 700; padding: 4px 12px; border-radius: 999px; display: inline-flex; align-items: center; gap: 4px; border: 1px solid #fca5a5;">
+            <span class="material-icons" style="font-size: 16px;">person_off</span> นิสิตที่ดรอป
+          </span>
+        </div>
       </div>
       <div class="card-body">  
         <div class="flex flex-wrap gap-[32px_50px] mb-10 max-[900px]:flex-col max-[900px]:items-center">

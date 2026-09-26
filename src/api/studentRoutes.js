@@ -10,6 +10,28 @@ const router = express.Router();
 // ต้อง login ทุก route ภายใต้ /api/student
 router.use(requireLogin);
 
+// 🔒 ตรวจสอบว่านิสิตถูกดรอปหรือไม่ หากถูกดรอปจะไม่อนุญาตให้สร้าง แก้ไข หรือลบข้อมูล (POST, PUT, PATCH, DELETE)
+router.use(async (req, res, next) => {
+  if (["POST", "PUT", "PATCH", "DELETE"].includes(req.method)) {
+    try {
+      const student = await prisma.student.findUnique({
+        where: { userId: req.session.user.id },
+        select: { id: true, isDropped: true },
+      });
+      if (student && student.isDropped) {
+        return res.status(403).json({
+          success: false,
+          isDropped: true,
+          message: "บัญชีของคุณอยู่ในสถานะดรอปการฝึกงานแล้ว ไม่สามารถเพิ่ม แก้ไข หรือลบข้อมูลได้ (ข้อมูลเดิมยังคงแสดงอยู่ตามปกติ)",
+        });
+      }
+    } catch (err) {
+      console.error("checkStudentDropped middleware error:", err);
+    }
+  }
+  next();
+});
+
 const { uploadToCloudinary } = require("../utils/cloudinary");
 
 // ==========================================
@@ -756,6 +778,9 @@ router.get("/dashboard-summary", async (req, res) => {
         profileImageUrl: student.profileImageUrl,
         stage: student.stage,
         advisor: student.advisor ? student.advisor.name : null,
+        isDropped: student.isDropped,
+        dropReason: student.dropReason,
+        droppedAt: student.droppedAt,
       },
       cv: student.cv,
       trainings: {

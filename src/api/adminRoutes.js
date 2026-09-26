@@ -206,7 +206,10 @@ router.get("/dashboard-summary", async (req, res) => {
       },
     });
 
-    const totalStudents = students.length;
+    const activeStudents = students.filter((s) => !s.isDropped);
+    const droppedStudents = students.filter((s) => s.isDropped);
+    const totalStudents = activeStudents.length;
+    const totalDropped = droppedStudents.length;
 
     // --- กราฟ 1: สถานะความพร้อม ---
     let readinessStats = {
@@ -240,7 +243,7 @@ router.get("/dashboard-summary", async (req, res) => {
       rejected: 0,
     };
 
-    students.forEach((s) => {
+    activeStudents.forEach((s) => {
       const cats = categorizeStudent(s);
       readinessStats[cats.readinessCategory]++;
       trainingStats[cats.trainingCategory]++;
@@ -252,11 +255,12 @@ router.get("/dashboard-summary", async (req, res) => {
 
     // --- สรุปอาจารย์ที่ปรึกษา ---
     const advisorSummary = advisors.map((adv) => {
-      const totalAdvised = adv.studentsAdvised.length;
+      const activeAdvised = adv.studentsAdvised.filter((stu) => !stu.isDropped);
+      const totalAdvised = activeAdvised.length;
       let checklistReviewed = 0;
       let checklistNotReviewed = 0;
 
-      adv.studentsAdvised.forEach((stu) => {
+      activeAdvised.forEach((stu) => {
         stu.companies.forEach((c) => {
           if (c.checklistStatus === "APPROVED" || c.checklistStatus === "REJECTED") {
             checklistReviewed++;
@@ -275,13 +279,14 @@ router.get("/dashboard-summary", async (req, res) => {
       };
     });
 
-    // จำนวนนิสิตที่มี/ไม่มีอาจารย์ที่ปรึกษา
-    const studentsWithAdvisor = students.filter((s) => s.advisorId !== null).length;
+    // จำนวนนิสิตที่มี/ไม่มีอาจารย์ที่ปรึกษา (คำนวณจากนิสิตปกติที่ยังไม่ดรอป)
+    const studentsWithAdvisor = activeStudents.filter((s) => s.advisorId !== null).length;
     const studentsWithoutAdvisor = totalStudents - studentsWithAdvisor;
 
     res.json({
       success: true,
       totalStudents,
+      totalDropped,
       studentsWithAdvisor,
       studentsWithoutAdvisor,
       readinessStats,
@@ -343,12 +348,23 @@ router.get("/students", async (req, res) => {
         placementCategory: cats.placementCategory,
         readinessCategory: cats.readinessCategory,
         cvStatus: s.cv ? s.cv.status : null,
+        isDropped: s.isDropped,
+        dropReason: s.dropReason,
+        droppedAt: s.droppedAt,
         trainingApprovedSoft: cats.softHours,
         trainingApprovedHard: cats.hardHours,
         isTrainingComplete: cats.isTrainingComplete,
         placementStatus: s.placement ? s.placement.status : null,
       };
     });
+
+    // กรองตาม viewDropped (นิสิตปกติ vs นิสิตที่ดรอป)
+    const isViewDropped = req.query.viewDropped === "true";
+    if (isViewDropped) {
+      mapped = mapped.filter((s) => s.isDropped);
+    } else {
+      mapped = mapped.filter((s) => !s.isDropped);
+    }
 
     // กรองตาม chartType และ chartKey
     if (chartType && chartKey) {
@@ -510,6 +526,9 @@ router.get("/students/:studentId", async (req, res) => {
         stage: student.stage,
         email: student.user.email,
         advisorName: student.advisor ? student.advisor.name : null,
+        isDropped: student.isDropped,
+        dropReason: student.dropReason,
+        droppedAt: student.droppedAt,
       },
       cv: student.cv,
       trainings: student.trainingRecords,
@@ -692,6 +711,82 @@ router.put("/students/batch-advisor", async (req, res) => {
   } catch (err) {
     console.error("PUT /api/admin/students/batch-advisor error:", err);
     res.status(500).json({ success: false, message: "ตั้งอาจารย์ที่ปรึกษาไม่สำเร็จ" });
+  }
+});
+
+// ==========================================
+// 8.1 ดรอปนิสิต (Drop Student)
+// ==========================================
+router.put("/students/drop", async (req, res) => {
+  // STAFF ไม่มีสิทธิ์ดรอปนิสิต (เฉพาะ Admin)
+  if (req.session.user.role === "STAFF") {
+    return res.status(403).json({ success: false, message: "เจ้าหน้าที่ไม่มีสิทธิ์ดรอปนิสิต" });
+  }
+  try {
+    const { studentIds, reason } = req.body;
+    if (!Array.isArray(studentIds) || studentIds.length === 0) {
+      return res.status(400).json({ success: false, message: "กรุณาเลือกนิสิตอย่างน้อย 1 คน" });
+    }
+
+    const dropReason = (reason && reason.trim()) ? reason.trim() : "ถอนรายวิชาฝึกงาน";
+
+    const result = await prisma.student.updateMany({
+      where: { id: { in: studentIds.map(Number) } },
+      data: {
+        isDropped: true,
+        dropReason,
+        droppedAt: new Date(),
+      },
+    });
+
+    const io = req.app.get("io");
+    if (io) io.emit("app:data-updated", { type: "student_dropped", count: result.count });
+
+    res.json({
+      success: true,
+      message: `ดรอปนิสิตสำเร็จ (${result.count} คน)`,
+      updatedCount: result.count,
+    });
+  } catch (err) {
+    console.error("PUT /api/admin/students/drop error:", err);
+    res.status(500).json({ success: false, message: "ดรอปนิสิตไม่สำเร็จ" });
+  }
+});
+
+// ==========================================
+// 8.2 กู้คืนสถานะนิสิตที่ถูกดรอป (Restore Student)
+// ==========================================
+router.put("/students/restore", async (req, res) => {
+  // STAFF ไม่มีสิทธิ์กู้คืนสถานะนิสิต (เฉพาะ Admin)
+  if (req.session.user.role === "STAFF") {
+    return res.status(403).json({ success: false, message: "เจ้าหน้าที่ไม่มีสิทธิ์กู้คืนสถานะนิสิต" });
+  }
+  try {
+    const { studentIds } = req.body;
+    if (!Array.isArray(studentIds) || studentIds.length === 0) {
+      return res.status(400).json({ success: false, message: "กรุณาเลือกนิสิตอย่างน้อย 1 คน" });
+    }
+
+    const result = await prisma.student.updateMany({
+      where: { id: { in: studentIds.map(Number) } },
+      data: {
+        isDropped: false,
+        dropReason: null,
+        droppedAt: null,
+      },
+    });
+
+    const io = req.app.get("io");
+    if (io) io.emit("app:data-updated", { type: "student_restored", count: result.count });
+
+    res.json({
+      success: true,
+      message: `กู้คืนสถานะนิสิตสำเร็จ (${result.count} คน)`,
+      updatedCount: result.count,
+    });
+  } catch (err) {
+    console.error("PUT /api/admin/students/restore error:", err);
+    res.status(500).json({ success: false, message: "กู้คืนสถานะนิสิตไม่สำเร็จ" });
   }
 });
 

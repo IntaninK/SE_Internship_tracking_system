@@ -64,6 +64,9 @@ model Student {
   advisor         Staff?          @relation("AdvisorToStudents", fields: [advisorId], references: [id])
 
   stage           InternshipStage @default(PENDING_DOCUMENTS)
+  isDropped       Boolean         @default(false)
+  dropReason      String?
+  droppedAt       DateTime?
 
   cv              StudentCV?
   trainingRecords TrainingRecord[]

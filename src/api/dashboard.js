@@ -22,6 +22,25 @@ function loadDashboardData() {
     actionBtnText.textContent = 'ดู/แก้ไขข้อมูล';
 
     const s = data.student;
+
+    // ตรวจสอบสถานะการดรอป
+    const dropBanner = document.getElementById('dropped-student-banner');
+    if (dropBanner) {
+      if (s.isDropped) {
+        dropBanner.style.display = 'block';
+        const reasonEl = document.getElementById('dropped-banner-reason');
+        const dateEl = document.getElementById('dropped-banner-date');
+        if (reasonEl) reasonEl.textContent = s.dropReason || 'ดรอปจากระบบ';
+        if (dateEl) {
+          dateEl.textContent = s.droppedAt
+            ? new Date(s.droppedAt).toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+            : '-';
+        }
+      } else {
+        dropBanner.style.display = 'none';
+      }
+    }
+
     document.getElementById('display-name').textContent = `${s.studentCode || ''} ${s.nameTh || data.user.username}`.trim();
     document.getElementById('display-phone').textContent = s.phone || '-';
     document.getElementById('display-email').textContent = data.user.email || '-';

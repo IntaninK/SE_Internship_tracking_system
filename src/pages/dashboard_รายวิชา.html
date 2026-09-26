@@ -141,20 +141,51 @@
           </div>
         </div>
 
-        <!-- Action Buttons -->
-        <div class="flex items-center gap-2 flex-wrap mb-4">
-          <button id="btn-set-status" class="btn btn-primary btn-sm" onclick="openSetStatusModal()">
-            <span class="material-icons text-sm">settings</span> ตั้งสถานะนิสิต
-          </button>
-          <button id="btn-set-advisor" class="btn btn-primary btn-sm" onclick="openSetAdvisorModal()">
-            <span class="material-icons text-sm">person_add</span> ตั้งอาจารย์ที่ปรึกษา
-          </button>
+        <!-- Toolbar: Action Buttons (ซ้าย) + แท็บสลับมุมมอง (ขวา) อยู่ระดับเดียวกัน -->
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+          <!-- ด้านซ้าย: Action Buttons ตามแท็บที่เลือก -->
+          <div class="flex items-center gap-2 flex-wrap">
+            <div id="active-action-buttons" class="flex items-center gap-2 flex-wrap">
+              <button id="btn-set-status" class="btn btn-primary btn-sm flex items-center gap-1.5 shadow-sm" onclick="openSetStatusModal()">
+                <span class="material-icons text-sm">settings</span> ตั้งสถานะนิสิต
+              </button>
+              <button id="btn-set-advisor" class="btn btn-primary btn-sm flex items-center gap-1.5 shadow-sm" onclick="openSetAdvisorModal()">
+                <span class="material-icons text-sm">person_add</span> ตั้งอาจารย์ที่ปรึกษา
+              </button>
+              <button id="btn-drop-student" class="btn btn-sm flex items-center gap-1.5 text-white shadow-sm transition-transform active:scale-95" style="background:#ef4444; border:none;" onclick="openDropStudentModal()">
+                <span class="material-icons text-sm">person_off</span> ดรอปนิสิต
+              </button>
+            </div>
+
+            <div id="dropped-action-buttons" class="flex items-center gap-2 flex-wrap" style="display:none;">
+              <button id="btn-restore-student" class="btn btn-sm flex items-center gap-1.5 text-white shadow-sm transition-transform active:scale-95" style="background:#10b981; border:none;" onclick="openRestoreStudentModal()">
+                <span class="material-icons text-sm">restore</span> กู้คืนสถานะนิสิต (Restore)
+              </button>
+            </div>
+          </div>
+
+          <!-- ด้านขวา: แท็บสลับมุมมอง นิสิตปกติ / นิสิตที่ดรอป (ระดับเดียวกับปุ่ม Action) -->
+          <div class="flex items-center gap-2 self-start sm:self-auto">
+            <span class="text-xs font-semibold text-gray-400">มุมมอง:</span>
+            <div class="inline-flex items-center p-1 bg-slate-100 rounded-xl border border-slate-200">
+              <button id="tab-active" onclick="switchStudentTab('active')" class="tab-pill px-3 py-1.5 text-xs font-semibold rounded-lg transition-all flex items-center gap-1.5 bg-white text-blue-700 shadow-sm cursor-pointer border border-blue-100">
+                <span class="material-icons text-sm">how_to_reg</span>
+                นิสิตปกติ
+                <span id="tab-badge-active" class="px-1.5 py-0.2 text-[11px] bg-blue-100 text-blue-800 rounded-full font-bold">0</span>
+              </button>
+              <button id="tab-dropped" onclick="switchStudentTab('dropped')" class="tab-pill px-3 py-1.5 text-xs font-medium rounded-lg transition-all flex items-center gap-1.5 text-gray-500 hover:text-gray-800 cursor-pointer border border-transparent bg-transparent">
+                <span class="material-icons text-sm">person_off</span>
+                นิสิตที่ดรอป
+                <span id="tab-badge-dropped" class="px-1.5 py-0.2 text-[11px] bg-red-100 text-red-700 rounded-full font-bold">0</span>
+              </button>
+            </div>
+          </div>
         </div>
 
         <!-- Table -->
         <div class="overflow-x-auto">
           <table class="data-table text-[13px]">
-            <thead>
+            <thead id="students-thead">
               <tr>
                 <th>Student ID</th>
                 <th>ชื่อ-นามสกุล</th>
@@ -309,6 +340,70 @@
         </div>
         <button class="btn btn-primary btn-md" style="width:100%; margin-top:8px;" onclick="submitBatchAdvisor()">
           <span class="material-icons text-sm">person_add</span> ยืนยันตั้งอาจารย์ที่ปรึกษา
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== Modal: ดรอปนิสิต ===== -->
+  <div id="drop-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:1000; justify-content:center; align-items:center; backdrop-filter:blur(2px);">
+    <div style="background:white; border-radius:16px; padding:24px 28px; width:440px; max-width:90%; box-shadow:0 10px 30px rgba(0,0,0,0.2);">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+        <h3 style="font-size:18px; font-weight:700; color:#ef4444; display:flex; align-items:center; gap:8px;">
+          <span class="material-icons">person_off</span> ดรอปนิสิตออกจากรอบฝึกงาน
+        </h3>
+        <button onclick="closeDropStudentModal()" style="background:none; border:none; cursor:pointer;">
+          <span class="material-icons" style="color:#94a3b8;">close</span>
+        </button>
+      </div>
+      <div style="display:flex; flex-direction:column; gap:14px;">
+        <p class="text-sm text-gray-600">
+          นิสิตที่เลือก: <strong id="drop-selected-count" class="text-red-600 font-bold">0</strong> คน
+        </p>
+        <div>
+          <label style="font-size:14px; font-weight:600; color:#334155; margin-bottom:4px; display:block;">เหตุผลที่ดรอป</label>
+          <select id="drop-reason-preset" class="input-field" style="width:100%;">
+            <option value="ชั่วโมงอบรมไม่ครบตามเกณฑ์">ชั่วโมงอบรมไม่ครบตามเกณฑ์</option>
+            <option value="ยื่น CV / หาสถานที่ฝึกงานไม่ได้">ยื่น CV / หาสถานที่ฝึกงานไม่ได้</option>
+            <option value="ขอยกเลิก / ถอนรายวิชา (Drop)">ขอยกเลิก / ถอนรายวิชา (Drop)</option>
+            <option value="ติดเงื่อนไขวิชาบังคับก่อน / เกรดไม่ถึงเกณฑ์">ติดเงื่อนไขวิชาบังคับก่อน / เกรดไม่ถึงเกณฑ์</option>
+            <option value="custom">อื่นๆ (ระบุในหมายเหตุ)</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-size:14px; font-weight:600; color:#334155; margin-bottom:4px; display:block;">หมายเหตุ / รายละเอียดเพิ่มเติม</label>
+          <textarea id="drop-reason-note" class="input-field" rows="2" placeholder="ระบุเหตุผลเพิ่มเติม (ถ้ามี)..." style="width:100%;"></textarea>
+        </div>
+        <div style="background:#fef2f2; border:1px solid #fee2e2; border-radius:10px; padding:10px 12px; font-size:12px; color:#b91c1c;">
+          ⚠️ เมื่อดรอปแล้ว นิสิตจะถูกย้ายไปที่แท็บ "นิสิตที่ดรอป" และจะไม่ถูกนำไปคำนวณในรายงานสรุป (สามารถกู้คืนได้ภายหลัง)
+        </div>
+        <button class="btn btn-md" style="width:100%; margin-top:8px; background:#ef4444; color:#fff;" onclick="submitDropStudents()">
+          <span class="material-icons text-sm">person_off</span> ยืนยันการดรอปนิสิต
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== Modal: กู้คืนสถานะนิสิต ===== -->
+  <div id="restore-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:1000; justify-content:center; align-items:center; backdrop-filter:blur(2px);">
+    <div style="background:white; border-radius:16px; padding:24px 28px; width:440px; max-width:90%; box-shadow:0 10px 30px rgba(0,0,0,0.2);">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+        <h3 style="font-size:18px; font-weight:700; color:#10b981; display:flex; align-items:center; gap:8px;">
+          <span class="material-icons">restore</span> กู้คืนสถานะนิสิต
+        </h3>
+        <button onclick="closeRestoreStudentModal()" style="background:none; border:none; cursor:pointer;">
+          <span class="material-icons" style="color:#94a3b8;">close</span>
+        </button>
+      </div>
+      <div style="display:flex; flex-direction:column; gap:14px;">
+        <p class="text-sm text-gray-600">
+          นิสิตที่เลือก: <strong id="restore-selected-count" class="text-green-600 font-bold">0</strong> คน
+        </p>
+        <p class="text-sm text-gray-600">
+          นิสิตที่เลือกจะกลับเข้าสู่ระบบการฝึกงานปกติ และสามารถดำเนินขั้นตอนการยื่นเอกสารต่อไปได้
+        </p>
+        <button class="btn btn-md" style="width:100%; margin-top:8px; background:#10b981; color:#fff;" onclick="submitRestoreStudents()">
+          <span class="material-icons text-sm">check</span> ยืนยันการกู้คืนสถานะ
         </button>
       </div>
     </div>

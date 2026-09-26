@@ -7,6 +7,7 @@ let currentPage = 1;
 const pageLimit = 12;
 let selectedStudentIds = new Set();
 let currentUserRole = null; // เก็บ role ของ user ที่ login อยู่
+let currentTab = 'active'; // 'active' | 'dropped'
 
 // ==========================================
 // โหลดข้อมูลสรุปและรายชื่อนิสิต
@@ -45,6 +46,12 @@ function applyStaffRestrictions() {
   // ซ่อนปุ่ม "ตั้งอาจารย์ที่ปรึกษา"
   const btnSetAdvisor = document.getElementById('btn-set-advisor');
   if (btnSetAdvisor) btnSetAdvisor.style.display = 'none';
+
+  // ซ่อนปุ่ม "ดรอปนิสิต" และ "กู้คืนสถานะ"
+  const btnDrop = document.getElementById('btn-drop-student');
+  if (btnDrop) btnDrop.style.display = 'none';
+  const btnRestore = document.getElementById('btn-restore-student');
+  if (btnRestore) btnRestore.style.display = 'none';
 }
 
 // ==========================================
@@ -103,6 +110,12 @@ async function loadDashboardSummary() {
     if (totalEl) totalEl.textContent = data.totalStudents;
     if (withEl) withEl.textContent = data.studentsWithAdvisor;
     if (withoutEl) withoutEl.textContent = data.studentsWithoutAdvisor;
+
+    // --- Badge บนแท็บ (Active vs Dropped) ---
+    const tabActiveBadge = document.getElementById('tab-badge-active');
+    const tabDroppedBadge = document.getElementById('tab-badge-dropped');
+    if (tabActiveBadge) tabActiveBadge.textContent = data.totalStudents ?? 0;
+    if (tabDroppedBadge) tabDroppedBadge.textContent = data.totalDropped ?? 0;
   } catch (err) {
     console.error('Load dashboard summary error:', err);
   }
@@ -200,6 +213,74 @@ function renderPieChart(containerId, chartType, segments, headerLabel, tableId, 
 }
 
 // ==========================================
+// สลับแท็บ นิสิตปกติ (Active) vs นิสิตที่ดรอป (Dropped)
+// ==========================================
+window.switchStudentTab = function(tab) {
+  if (currentTab === tab) return;
+  currentTab = tab;
+  selectedStudentIds.clear();
+  currentPage = 1;
+
+  const btnActive = document.getElementById('tab-active');
+  const btnDropped = document.getElementById('tab-dropped');
+  const activeActions = document.getElementById('active-action-buttons');
+  const droppedActions = document.getElementById('dropped-action-buttons');
+
+  if (tab === 'active') {
+    if (btnActive) {
+      btnActive.className = 'tab-pill px-3 py-1.5 text-xs font-semibold rounded-lg transition-all flex items-center gap-1.5 bg-white text-blue-700 shadow-sm cursor-pointer border border-blue-100';
+    }
+    if (btnDropped) {
+      btnDropped.className = 'tab-pill px-3 py-1.5 text-xs font-medium rounded-lg transition-all flex items-center gap-1.5 text-gray-500 hover:text-gray-800 cursor-pointer border border-transparent bg-transparent';
+    }
+    if (activeActions) activeActions.style.display = 'flex';
+    if (droppedActions) droppedActions.style.display = 'none';
+  } else {
+    if (btnActive) {
+      btnActive.className = 'tab-pill px-3 py-1.5 text-xs font-medium rounded-lg transition-all flex items-center gap-1.5 text-gray-500 hover:text-gray-800 cursor-pointer border border-transparent bg-transparent';
+    }
+    if (btnDropped) {
+      btnDropped.className = 'tab-pill px-3 py-1.5 text-xs font-semibold rounded-lg transition-all flex items-center gap-1.5 bg-white text-red-700 shadow-sm cursor-pointer border border-red-200';
+    }
+    if (activeActions) activeActions.style.display = 'none';
+    if (droppedActions) droppedActions.style.display = 'flex';
+  }
+
+  // ซ่อนปุ่มที่ STAFF ไม่มีสิทธิ์
+  applyStaffRestrictions();
+  updateTableHeader();
+  loadStudents();
+};
+
+function updateTableHeader() {
+  const thead = document.getElementById('students-thead');
+  if (!thead) return;
+
+  if (currentTab === 'dropped') {
+    thead.innerHTML = `
+      <tr>
+        <th>Student ID</th>
+        <th>ชื่อ-นามสกุล</th>
+        <th>อาจารย์ที่ปรึกษา</th>
+        <th>เหตุผลที่ดรอป</th>
+        <th>วันที่ดรอป</th>
+        <th style="width:80px;"></th>
+      </tr>
+    `;
+  } else {
+    thead.innerHTML = `
+      <tr>
+        <th>Student ID</th>
+        <th>ชื่อ-นามสกุล</th>
+        <th>อาจารย์ที่ปรึกษา</th>
+        <th>สถานะ</th>
+        <th style="width:80px;"></th>
+      </tr>
+    `;
+  }
+}
+
+// ==========================================
 // 2. โหลดรายชื่อนิสิต
 // ==========================================
 async function loadStudents() {
@@ -207,7 +288,7 @@ async function loadStudents() {
     const searchInput = document.getElementById('student-search');
     const searchVal = searchInput ? searchInput.value.trim() : '';
 
-    let url = `/api/admin/students?page=${currentPage}&limit=${pageLimit}`;
+    let url = `/api/admin/students?page=${currentPage}&limit=${pageLimit}&viewDropped=${currentTab === 'dropped'}`;
     if (searchVal) url += `&search=${encodeURIComponent(searchVal)}`;
     if (currentFilter) {
       url += `&chartType=${encodeURIComponent(currentFilter.chartType)}&chartKey=${encodeURIComponent(currentFilter.chartKey)}`;
@@ -250,34 +331,64 @@ function renderStudentTable(students, total, page, totalPages) {
   if (!tbody) return;
   tbody.innerHTML = '';
 
+  const colCount = currentTab === 'dropped' ? 6 : 5;
+  const emptyText = currentTab === 'dropped' ? 'ไม่พบนิสิตที่ดรอป' : 'ไม่พบข้อมูลนิสิต';
+
   if (students.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="5" class="text-center py-8 text-gray-400">ไม่พบข้อมูลนิสิต</td></tr>';
+    tbody.innerHTML = `<tr><td colspan="${colCount}" class="text-center py-8 text-gray-400">${emptyText}</td></tr>`;
     renderPagination(1, 1, 0);
     return;
   }
 
   students.forEach((s) => {
-    const displayStatus = s.activeStatus || s.overallStatus;
-    const statusColor = getStatusBadgeColor(s.statusCategory, displayStatus);
     const isChecked = selectedStudentIds.has(s.id);
-
     const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td>${s.studentCode}</td>
-      <td>${s.nameTh}</td>
-      <td>${s.advisorName || '<span class="text-gray-400">-</span>'}</td>
-      <td>
-        <span class="inline-block px-2 py-0.5 text-xs font-medium rounded-full ${statusColor}">${displayStatus}</span>
-      </td>
-      <td class="text-center" style="width: 40px;">
-        <div style="display: flex; align-items: center; gap: 8px; justify-content: center;">
-          ${currentUserRole !== 'STAFF' ? `<button class="btn-detail-dots" title="ดูรายละเอียด" onclick="window.location.href='/pages/admin_student_detail.html?id=${s.id}'" style="background:none;border:none;cursor:pointer;padding:4px;">
-            <span class="material-icons text-gray-500 hover:text-blue-600" style="font-size:18px;">more_vert</span>
-          </button>` : ''}
-          <input type="checkbox" class="student-checkbox" data-id="${s.id}" ${isChecked ? 'checked' : ''} style="width:16px;height:16px;cursor:pointer;" />
-        </div>
-      </td>
-    `;
+
+    if (currentTab === 'dropped') {
+      const dropDateFormatted = s.droppedAt
+        ? new Date(s.droppedAt).toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+        : '-';
+
+      tr.innerHTML = `
+        <td>${s.studentCode}</td>
+        <td>${s.nameTh}</td>
+        <td>${s.advisorName || '<span class="text-gray-400">-</span>'}</td>
+        <td>
+          <span class="inline-block px-2.5 py-0.5 text-xs font-semibold rounded-full bg-red-100 text-red-700">
+            ${s.dropReason || 'ดรอปจากระบบ'}
+          </span>
+        </td>
+        <td class="text-gray-500 text-xs">${dropDateFormatted}</td>
+        <td class="text-center" style="width: 40px;">
+          <div style="display: flex; align-items: center; gap: 8px; justify-content: center;">
+            ${currentUserRole !== 'STAFF' ? `<button class="btn-detail-dots" title="ดูรายละเอียด" onclick="window.location.href='/pages/admin_student_detail.html?id=${s.id}'" style="background:none;border:none;cursor:pointer;padding:4px;">
+              <span class="material-icons text-gray-500 hover:text-blue-600" style="font-size:18px;">more_vert</span>
+            </button>` : ''}
+            <input type="checkbox" class="student-checkbox" data-id="${s.id}" ${isChecked ? 'checked' : ''} style="width:16px;height:16px;cursor:pointer;" />
+          </div>
+        </td>
+      `;
+    } else {
+      const displayStatus = s.activeStatus || s.overallStatus;
+      const statusColor = getStatusBadgeColor(s.statusCategory, displayStatus);
+
+      tr.innerHTML = `
+        <td>${s.studentCode}</td>
+        <td>${s.nameTh}</td>
+        <td>${s.advisorName || '<span class="text-gray-400">-</span>'}</td>
+        <td>
+          <span class="inline-block px-2 py-0.5 text-xs font-medium rounded-full ${statusColor}">${displayStatus}</span>
+        </td>
+        <td class="text-center" style="width: 40px;">
+          <div style="display: flex; align-items: center; gap: 8px; justify-content: center;">
+            ${currentUserRole !== 'STAFF' ? `<button class="btn-detail-dots" title="ดูรายละเอียด" onclick="window.location.href='/pages/admin_student_detail.html?id=${s.id}'" style="background:none;border:none;cursor:pointer;padding:4px;">
+              <span class="material-icons text-gray-500 hover:text-blue-600" style="font-size:18px;">more_vert</span>
+            </button>` : ''}
+            <input type="checkbox" class="student-checkbox" data-id="${s.id}" ${isChecked ? 'checked' : ''} style="width:16px;height:16px;cursor:pointer;" />
+          </div>
+        </td>
+      `;
+    }
     tbody.appendChild(tr);
   });
 
@@ -489,6 +600,112 @@ window.submitBatchAdvisor = async function() {
     }
   } catch (err) {
     console.error(err);
+    alert('เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์');
+  }
+};
+
+// ==========================================
+// Modal: ดรอปนิสิต (Drop Student)
+// ==========================================
+window.openDropStudentModal = function() {
+  if (selectedStudentIds.size === 0) {
+    alert('กรุณาเลือก checkbox นิสิตอย่างน้อย 1 คน');
+    return;
+  }
+  const countEl = document.getElementById('drop-selected-count');
+  if (countEl) countEl.textContent = selectedStudentIds.size;
+  const presetEl = document.getElementById('drop-reason-preset');
+  if (presetEl) presetEl.value = 'ชั่วโมงอบรมไม่ครบตามเกณฑ์';
+  const noteEl = document.getElementById('drop-reason-note');
+  if (noteEl) noteEl.value = '';
+
+  const modal = document.getElementById('drop-modal');
+  if (modal) modal.style.display = 'flex';
+};
+
+window.closeDropStudentModal = function() {
+  const modal = document.getElementById('drop-modal');
+  if (modal) modal.style.display = 'none';
+};
+
+window.submitDropStudents = async function() {
+  if (selectedStudentIds.size === 0) return;
+  const preset = document.getElementById('drop-reason-preset')?.value || '';
+  const note = document.getElementById('drop-reason-note')?.value.trim() || '';
+  let reason = preset;
+  if (preset === 'custom') {
+    reason = note || 'ถอนรายวิชาฝึกงาน';
+  } else if (note) {
+    reason = `${preset} (${note})`;
+  }
+
+  try {
+    const res = await fetch('/api/admin/students/drop', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        studentIds: Array.from(selectedStudentIds),
+        reason,
+      }),
+    });
+    const data = await res.json();
+    if (data.success) {
+      alert(`✅ ${data.message}`);
+      selectedStudentIds.clear();
+      closeDropStudentModal();
+      await loadDashboardSummary();
+      await loadStudents();
+    } else {
+      alert('เกิดข้อผิดพลาด: ' + data.message);
+    }
+  } catch (err) {
+    console.error('Drop students error:', err);
+    alert('เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์');
+  }
+};
+
+// ==========================================
+// Modal: กู้คืนสถานะนิสิต (Restore Student)
+// ==========================================
+window.openRestoreStudentModal = function() {
+  if (selectedStudentIds.size === 0) {
+    alert('กรุณาเลือก checkbox นิสิตที่ต้องการกู้คืนอย่างน้อย 1 คน');
+    return;
+  }
+  const countEl = document.getElementById('restore-selected-count');
+  if (countEl) countEl.textContent = selectedStudentIds.size;
+
+  const modal = document.getElementById('restore-modal');
+  if (modal) modal.style.display = 'flex';
+};
+
+window.closeRestoreStudentModal = function() {
+  const modal = document.getElementById('restore-modal');
+  if (modal) modal.style.display = 'none';
+};
+
+window.submitRestoreStudents = async function() {
+  if (selectedStudentIds.size === 0) return;
+  try {
+    const res = await fetch('/api/admin/students/restore', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        studentIds: Array.from(selectedStudentIds),
+      }),
+    });
+    const data = await res.json();
+    if (data.success) {
+      alert(`✅ ${data.message}`);
+      selectedStudentIds.clear();
+      closeRestoreStudentModal();
+      await loadDashboardSummary();
+      await loadStudents();
+    } else {
+      alert('เกิดข้อผิดพลาด: ' + data.message);
+    }
+  } catch (err) {
+    console.error('Restore students error:', err);
     alert('เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์');
   }
 };

@@ -346,6 +346,27 @@
   <!-- Main Content -->
   <main class="main-content">
 
+    <!-- แจ้งเตือนกรณีถูกดรอป / ถอนออกจากรอบฝึกงาน -->
+    <div id="dropped-student-banner" style="display:none;" class="mb-5 bg-red-50 border-l-4 border-red-500 p-4 rounded-r-xl shadow-sm">
+      <div class="flex items-start">
+        <div class="flex-shrink-0">
+          <span class="material-icons text-red-500 text-3xl">warning</span>
+        </div>
+        <div class="ml-3 flex-1">
+          <h3 class="text-base font-bold text-red-800">
+            สถานะ: คุณถูกดรอป / ถอนออกจากรอบการฝึกงาน
+          </h3>
+          <div class="mt-1 text-sm text-red-700">
+            <p><strong>เหตุผล:</strong> <span id="dropped-banner-reason">-</span></p>
+            <p class="mt-0.5 text-xs text-gray-500"><strong>วันที่ทำรายการ:</strong> <span id="dropped-banner-date">-</span></p>
+          </div>
+          <p class="mt-2 text-xs text-red-600">
+            * หากมีข้อสงสัยหรือต้องการยื่นคำร้องเพื่อกลับเข้าสู่กระบวนการฝึกงาน กรุณาติดต่ออาจารย์ประจำรายวิชา (Admin)
+          </p>
+        </div>
+      </div>
+    </div>
+
     <!-- ================= Student Info Section ================= -->
     <section class="card mb-4">
       <div class="card-header">
