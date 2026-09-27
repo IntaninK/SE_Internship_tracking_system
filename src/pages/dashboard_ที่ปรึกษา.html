@@ -152,7 +152,12 @@
                 <th>ชื่อ-นามสกุล</th>
                 <th>อาจารย์ที่ปรึกษา</th>
                 <th>สถานะ</th>
-                <th style="width:80px;"></th>
+                <th style="width:80px;" class="text-center">
+                  <label style="display:inline-flex;align-items:center;gap:4px;cursor:pointer;white-space:nowrap;" title="เลือกนักศึกษาทั้งหมดในหน้านี้">
+                    <span style="font-size:12px;">เลือกทั้งหมด</span>
+                    <input type="checkbox" id="select-all-students" style="width:16px;height:16px;cursor:pointer;" />
+                  </label>
+                </th>
               </tr>
             </thead>
             <tbody id="students-tbody">

@@ -26,6 +26,7 @@ async function initAdminDashboard() {
 
   // ถ้าเป็น STAFF ให้ซ่อนปุ่มที่ไม่มีสิทธิ์
   applyStaffRestrictions();
+  updateTableHeader();
 
   await loadDashboardSummary();
   await loadStudents();
@@ -264,7 +265,12 @@ function updateTableHeader() {
         <th>อาจารย์ที่ปรึกษา</th>
         <th>เหตุผลที่ดรอป</th>
         <th>วันที่ดรอป</th>
-        <th style="width:80px;"></th>
+        <th style="width:80px;" class="text-center">
+          <label style="display:inline-flex;align-items:center;gap:4px;cursor:pointer;white-space:nowrap;" title="เลือกนักศึกษาทั้งหมดในหน้านี้">
+            <span style="font-size:12px;">เลือกทั้งหมด</span>
+            <input type="checkbox" id="select-all-students" style="width:16px;height:16px;cursor:pointer;" />
+          </label>
+        </th>
       </tr>
     `;
   } else {
@@ -274,7 +280,12 @@ function updateTableHeader() {
         <th>ชื่อ-นามสกุล</th>
         <th>อาจารย์ที่ปรึกษา</th>
         <th>สถานะ</th>
-        <th style="width:80px;"></th>
+        <th style="width:80px;" class="text-center">
+          <label style="display:inline-flex;align-items:center;gap:4px;cursor:pointer;white-space:nowrap;" title="เลือกนักศึกษาทั้งหมดในหน้านี้">
+            <span style="font-size:12px;">เลือกทั้งหมด</span>
+            <input type="checkbox" id="select-all-students" style="width:16px;height:16px;cursor:pointer;" />
+          </label>
+        </th>
       </tr>
     `;
   }
@@ -401,11 +412,45 @@ function renderStudentTable(students, total, page, totalPages) {
       } else {
         selectedStudentIds.delete(id);
       }
+      updateSelectAllCheckbox();
     });
   });
 
+  const selectAllCheckbox = document.getElementById('select-all-students');
+  if (selectAllCheckbox) {
+    selectAllCheckbox.addEventListener('change', (e) => {
+      tbody.querySelectorAll('.student-checkbox').forEach(cb => {
+        cb.checked = e.target.checked;
+        const id = parseInt(cb.dataset.id);
+        if (e.target.checked) {
+          selectedStudentIds.add(id);
+        } else {
+          selectedStudentIds.delete(id);
+        }
+      });
+      updateSelectAllCheckbox();
+    });
+    updateSelectAllCheckbox();
+  }
+
   // Pagination
   renderPagination(page, totalPages, total);
+}
+
+function updateSelectAllCheckbox() {
+  const selectAllCheckbox = document.getElementById('select-all-students');
+  const visibleCheckboxes = document.querySelectorAll('#students-tbody .student-checkbox');
+  if (!selectAllCheckbox || visibleCheckboxes.length === 0) {
+    if (selectAllCheckbox) {
+      selectAllCheckbox.checked = false;
+      selectAllCheckbox.indeterminate = false;
+    }
+    return;
+  }
+
+  const selectedCount = [...visibleCheckboxes].filter(cb => cb.checked).length;
+  selectAllCheckbox.checked = selectedCount === visibleCheckboxes.length;
+  selectAllCheckbox.indeterminate = selectedCount > 0 && selectedCount < visibleCheckboxes.length;
 }
 
 function getStatusBadgeColor(category, displayStatus) {

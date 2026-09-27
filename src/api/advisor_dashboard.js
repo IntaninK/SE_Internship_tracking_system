@@ -244,10 +244,44 @@ function renderStudentTable(students, total, page, totalPages) {
       } else {
         selectedStudentIds.delete(id);
       }
+      updateSelectAllCheckbox();
     });
   });
 
+  const selectAllCheckbox = document.getElementById('select-all-students');
+  if (selectAllCheckbox) {
+    selectAllCheckbox.addEventListener('change', (e) => {
+      tbody.querySelectorAll('.student-checkbox').forEach(cb => {
+        cb.checked = e.target.checked;
+        const id = parseInt(cb.dataset.id);
+        if (e.target.checked) {
+          selectedStudentIds.add(id);
+        } else {
+          selectedStudentIds.delete(id);
+        }
+      });
+      updateSelectAllCheckbox();
+    });
+    updateSelectAllCheckbox();
+  }
+
   renderPagination(page, totalPages, total);
+}
+
+function updateSelectAllCheckbox() {
+  const selectAllCheckbox = document.getElementById('select-all-students');
+  const visibleCheckboxes = document.querySelectorAll('#students-tbody .student-checkbox');
+  if (!selectAllCheckbox || visibleCheckboxes.length === 0) {
+    if (selectAllCheckbox) {
+      selectAllCheckbox.checked = false;
+      selectAllCheckbox.indeterminate = false;
+    }
+    return;
+  }
+
+  const selectedCount = [...visibleCheckboxes].filter(cb => cb.checked).length;
+  selectAllCheckbox.checked = selectedCount === visibleCheckboxes.length;
+  selectAllCheckbox.indeterminate = selectedCount > 0 && selectedCount < visibleCheckboxes.length;
 }
 
 // ==========================================
