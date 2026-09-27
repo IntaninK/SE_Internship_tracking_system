@@ -24,8 +24,9 @@ router.get("/login", async (req, res) => {
 
 // 2) Microsoft ส่ง user กลับมาที่นี่พร้อม ?code=... เอา code ไปแลก token
 router.get("/redirect", async (req, res) => {
+  // หากไม่มี code (เช่น Microsoft redirect กลับมาหลัง logout หรือเข้า URL นี้ตรงๆ) ให้กลับหน้า login
   if (!req.query.code) {
-    return res.status(400).send("ไม่พบ authorization code จาก Microsoft");
+    return res.redirect("/pages/login.html");
   }
 
   try {
@@ -84,13 +85,27 @@ router.get("/redirect", async (req, res) => {
 
 // 3) Logout: เคลียร์ session ฝั่งเรา แล้วเด้งไป logout ฝั่ง Microsoft ด้วย
 router.get("/logout", (req, res) => {
+  const userEmail = req.session?.user?.email;
   req.session.destroy(() => {
+    // ถ้าผู้ใช้ต้องการ logout เฉพาะในระบบเรา (?local=true)
+    if (req.query.local === "true") {
+      return res.redirect("/pages/login.html");
+    }
+
+    // ใช้ REDIRECT_URI ที่ลงทะเบียนใน Azure Portal ไว้แล้วเป็นค่าตั้งต้น
+    // เพื่อให้ Microsoft ยอม redirect กลับมา และไม่ค้างที่หน้า logout ของ Microsoft
     const postLogoutRedirect =
-      process.env.MS_POST_LOGOUT_REDIRECT_URI || "http://localhost:3000/pages/login.html";
+      process.env.MS_POST_LOGOUT_REDIRECT_URI || REDIRECT_URI;
     const tenant = process.env.MS_TENANT_ID || "common";
-    const logoutUrl =
+    let logoutUrl =
       `https://login.microsoftonline.com/${tenant}/oauth2/v2.0/logout` +
       `?post_logout_redirect_uri=${encodeURIComponent(postLogoutRedirect)}`;
+
+    // แนบ logout_hint เพื่อให้ Microsoft รู้ว่าต้องการ logout บัญชีไหนทันที โดยไม่ต้องถามซ้ำ
+    if (userEmail) {
+      logoutUrl += `&logout_hint=${encodeURIComponent(userEmail)}`;
+    }
+
     res.redirect(logoutUrl);
   });
 });

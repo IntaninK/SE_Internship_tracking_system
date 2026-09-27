@@ -348,53 +348,45 @@ window.exportStudents = async function() {
     }
 
     const headers = [
-      'STD_ID',
-      'ชื่อ นามสกุล',
-      'ปีการศึกษา',
-      'Email',
-      'Line ID',
-      'Facebook',
-      'Link ประวัติและผลงาน CV',
-      'จำนวนชั่วโมง Hard Skill',
-      'สถานะการตรวจสอบ ชม. Hard Skill',
+      'รหัสนิสิต',
+      'ชื่อ - นามสกุล',
       'เบอร์โทรนิสิต',
-      'อาจารย์รีวิว',
-      'ผลรีวิว (เก็บสถานะครบกำหนดส่ง)',
-      'ผลรีวิว (ช่วงรอผลอ.รีวิว เพิ่มเติม)',
-      'สถานะการยื่น',
+      'อาจารย์ที่ปรึกษา',
+      'ชั่วโมงอบรม (Soft/Hard/รวม)',
+      'สถานะ CV',
+      'สถานะ Checklist',
+      'ผลการสมัคร/สัมภาษณ์',
+      'ชื่อสถานประกอบการ / บริษัท',
       'ตำแหน่งที่ฝึก',
-      'ชื่อแหล่งฝึกงาน (ชื่อเต็มเป็นภาษาไทย)',
-      'ชื่อบุคคลที่ให้ทำหนังสือขอความอนุเคราะห์',
-      'ตำแหน่งบุคคลที่ให้ทำหนังสือขอความอนุเคราะห์',
+      'ชื่อบุคคลที่ให้ทำหนังสือ (เรียน...)',
+      'ตำแหน่งบุคคลที่ให้ทำหนังสือ',
       'ที่อยู่บริษัท',
-      'เบอร์โทรติดต่อสถานประกอบการ / แหล่งฝึก',
-      'Email สถานประกอบการ / แหล่งฝึก',
       'จังหวัด',
+      'เบอร์โทรศัพท์บริษัท',
+      'อีเมลติดต่อบริษัท',
+      'สถานะอนุมัติที่ฝึกงาน',
+      'สถานะในระบบ',
     ];
 
     const rows = data.data.map(s => [
       s.studentCode,
       s.nameTh,
-      s.year,
-      s.email,
-      s.lineId,
-      s.facebook,
-      s.cvLink,
-      s.hardHours,
-      s.hardStatus,
       s.phone,
-      s.checklistReviewStatus,
-      s.resultWaiting,
-      s.resultAdditional,
-      s.submissionStatus,
-      s.position,
+      s.advisorName,
+      s.trainingProgress,
+      s.cvStatus,
+      s.checklistStatus,
+      s.interviewStatus,
       s.companyNameTh,
+      s.position,
       s.contactPersonName,
       s.contactPersonPosition,
       s.companyAddress,
+      s.province,
       s.companyPhone,
       s.companyEmail,
-      s.province,
+      s.placementStatus,
+      s.dropStatus,
     ].map(v => `"${(v ?? '').toString().replace(/"/g, '""')}"`).join(','));
 
     const csvContent = '\uFEFF' + [headers.map(h => `"${h}"`).join(','), ...rows].join('\n');
@@ -402,7 +394,7 @@ window.exportStudents = async function() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `รายชื่อนิสิตที่ปรึกษา_${new Date().toISOString().slice(0,10)}.csv`;
+    a.download = `รายชื่อและข้อมูลการฝึกงานนิสิต_${new Date().toISOString().slice(0,10)}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   } catch (err) {

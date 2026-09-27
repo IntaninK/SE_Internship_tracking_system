@@ -465,82 +465,103 @@ router.get("/export", async (req, res) => {
     });
 
     const exportData = students.map((s) => {
-      // คำนวณชั่วโมง Hard Skill ที่ Approved
-      const approvedHard = (s.trainingRecords || [])
-        .filter((t) => t.skillType === "HARD" && t.status === "APPROVED");
-      const hardHours = approvedHard.reduce((sum, t) => sum + t.hours, 0);
+      // 5. ชั่วโมงอบรม Soft Skill & Hard Skill ที่ Approved
+      const approvedTrainings = (s.trainingRecords || []).filter((t) => t.status === "APPROVED");
+      const softHours = approvedTrainings
+        .filter((t) => t.skillType === "SOFT")
+        .reduce((sum, t) => sum + t.hours, 0);
+      const hardHours = approvedTrainings
+        .filter((t) => t.skillType === "HARD")
+        .reduce((sum, t) => sum + t.hours, 0);
+      const totalHours = softHours + hardHours;
+      const isTrainingComplete = softHours >= 12 && hardHours >= 18;
+      const trainingProgress = isTrainingComplete
+        ? `ผ่านครบ ${totalHours} ชม. (Soft ${softHours}/12, Hard ${hardHours}/18)`
+        : `ยังไม่ครบ (Soft ${softHours}/12, Hard ${hardHours}/18)`;
 
-      // สถานะการตรวจ Hard Skill
-      const totalHard = (s.trainingRecords || []).filter((t) => t.skillType === "HARD");
-      let hardStatus = "ยังไม่มีข้อมูล";
-      if (totalHard.length > 0) {
-        const allApproved = totalHard.every((t) => t.status === "APPROVED");
-        const hasRejected = totalHard.some((t) => t.status === "REJECTED");
-        if (allApproved && hardHours >= 18) hardStatus = "ผ่าน";
-        else if (hasRejected) hardStatus = "ไม่ผ่าน";
-        else hardStatus = "รออนุมัติ";
+      // 6. สถานะ CV
+      let cvStatus = "ยังไม่ส่ง CV";
+      if (s.cv) {
+        if (s.cv.status === "APPROVED") cvStatus = "ผ่าน";
+        else if (s.cv.status === "REJECTED") cvStatus = "ไม่ผ่าน";
+        else cvStatus = "รอตรวจ";
       }
 
-      // สถานะ Checklist รวม
+      // 7. สถานะ Checklist
       const companies = s.companies || [];
-      const hasApproved = companies.some((c) => c.checklistStatus === "APPROVED");
-      const allRejected = companies.length > 0 && companies.every((c) => c.checklistStatus === "REJECTED");
-      let checklistReviewStatus = "รอผล";
-      if (hasApproved) checklistReviewStatus = "อาจารย์รีวิวแล้ว";
-      else if (allRejected) checklistReviewStatus = "ไม่ผ่าน/ทำ checklist เพิ่ม";
+      let checklistStatus = "ยังไม่มีข้อมูล";
+      if (companies.length > 0) {
+        const hasApproved = companies.some((c) => c.checklistStatus === "APPROVED");
+        const allRejected = companies.every((c) => c.checklistStatus === "REJECTED");
+        if (hasApproved) checklistStatus = "ผ่าน";
+        else if (allRejected) checklistStatus = "ไม่ผ่าน";
+        else checklistStatus = "รอผล";
+      }
 
-      // ผลรีวิว + หมายเหตุ แต่ละบริษัท
-      let resultWaiting = "";
-      let resultAdditional = "";
-      companies.forEach((c) => {
-        const label =
-          c.checklistStatus === "APPROVED" ? "ผ่าน" :
-          c.checklistStatus === "REJECTED" ? "ไม่ผ่าน" : "รอผล";
-        resultWaiting += `${c.name}: ${label}; `;
-        if (c.checklistNote) resultAdditional += `${c.name}: ${c.checklistNote}; `;
-      });
+      // 8. ผลการสมัคร/สัมภาษณ์
+      const submissions = companies.map((c) => c.submission).filter(Boolean);
+      let interviewStatus = "ยังไม่ได้ยื่น";
+      if (submissions.some((sub) => sub.status === "INTERVIEW_PASSED")) {
+        interviewStatus = "สัมภาษณ์ผ่านแล้ว";
+      } else if (submissions.some((sub) => sub.status === "INTERVIEWED_PENDING")) {
+        interviewStatus = "สัมภาษณ์แล้ว รอผล";
+      } else if (submissions.some((sub) => sub.status === "SUBMITTED_WAITING")) {
+        interviewStatus = "ยื่นแล้ว รอสัมภาษณ์";
+      } else if (submissions.some((sub) => sub.status === "INTERVIEW_FAILED_REAPPLIED")) {
+        interviewStatus = "สัมภาษณ์ไม่ผ่าน ยื่นเพิ่มแล้ว";
+      } else {
+        interviewStatus = "ยังไม่ได้ยื่น";
+      }
 
-      // สถานะการยื่น
-      let submissionStatus = "";
-      companies.forEach((c) => {
-        if (c.submission) {
-          const label = {
-            NOT_SUBMITTED: "ยังไม่ได้ยื่น",
-            SUBMITTED_WAITING: "ยื่นแล้ว รอสัมภาษณ์",
-            INTERVIEWED_PENDING: "สัมภาษณ์แล้ว รอผล",
-            INTERVIEW_PASSED: "สัมภาษณ์ผ่านแล้ว",
-            INTERVIEW_FAILED_REAPPLIED: "สัมภาษณ์ไม่ผ่าน ยื่นเพิ่มแล้ว",
-          }[c.submission.status] || c.submission.status;
-          submissionStatus += `${c.name}: ${label}; `;
-        }
-      });
-
-      // ข้อมูล Placement
+      // ข้อมูล Placement และบริษัท
       const p = s.placement;
+      const passedCompany = companies.find((c) => c.submission && c.submission.status === "INTERVIEW_PASSED");
+      const companyNameTh = (p && p.companyNameTh) || (passedCompany ? passedCompany.name : "");
+
+      // 17. สถานะอนุมัติที่ฝึกงาน
+      let placementStatus = "ยังไม่ระบุที่ฝึกงาน";
+      if (p) {
+        if (p.status === "APPROVED") placementStatus = "อนุมัติแล้ว";
+        else if (p.status === "REJECTED") placementStatus = "ไม่อนุมัติ";
+        else placementStatus = "รออนุมัติ";
+      }
+
+      // 18. สถานะในระบบ
+      const dropStatus = s.isDropped
+        ? `ดรอป${s.dropReason ? ` (${s.dropReason})` : ""}`
+        : "ปกติ";
 
       return {
+        id: s.id,
         studentCode: s.studentCode,
         nameTh: s.nameTh,
+        phone: s.phone || "",
+        advisorName: s.advisor ? s.advisor.name : (req.staff?.name || ""),
+        trainingProgress,
+        cvStatus,
+        checklistStatus,
+        interviewStatus,
+        companyNameTh,
+        position: p ? (p.position || "") : "",
+        contactPersonName: p ? (p.contactPersonName || "") : "",
+        contactPersonPosition: p ? (p.contactPersonPosition || "") : "",
+        companyAddress: p ? (p.companyAddress || "") : "",
+        province: p ? (p.province || "") : "",
+        companyPhone: p ? ([p.companyPhone1, p.companyPhone2].filter(Boolean).join(", ")) : "",
+        companyEmail: p ? (p.companyEmail || "") : "",
+        placementStatus,
+        dropStatus,
+        // ฟิลด์เพิ่มเติมเผื่อใช้งาน
         year: s.year,
-        email: s.user.email,
+        email: s.user ? s.user.email : "",
         lineId: s.lineId || "",
         facebook: s.facebook || "",
         cvLink: s.cv ? s.cv.fileUrl : "",
-        hardHours: hardHours,
-        hardStatus: hardStatus,
-        phone: s.phone || "",
-        checklistReviewStatus: checklistReviewStatus,
-        resultWaiting: resultWaiting.trim(),
-        resultAdditional: resultAdditional.trim(),
-        submissionStatus: submissionStatus.trim(),
-        position: p ? p.position || "" : "",
-        companyNameTh: p ? p.companyNameTh || "" : "",
-        contactPersonName: p ? p.contactPersonName || "" : "",
-        contactPersonPosition: p ? p.contactPersonPosition || "" : "",
-        companyAddress: p ? p.companyAddress || "" : "",
-        companyPhone: p ? (p.companyPhone1 || "") : "",
-        companyEmail: p ? p.companyEmail || "" : "",
-        province: p ? p.province || "" : "",
+        softHours,
+        hardHours,
+        totalHours,
+        isDropped: s.isDropped,
+        dropReason: s.dropReason || "",
       };
     });
 

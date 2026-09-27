@@ -231,9 +231,6 @@
   .mb-12 {
     margin-bottom: calc(var(--spacing) * 12);
   }
-  .ml-1 {
-    margin-left: var(--spacing);
-  }
   .ml-2 {
     margin-left: calc(var(--spacing) * 2);
   }
@@ -251,9 +248,6 @@
   }
   .hidden {
     display: none;
-  }
-  .inline {
-    display: inline;
   }
   .inline-block {
     display: inline-block;
@@ -284,6 +278,9 @@
   }
   .h-\[60px\] {
     height: 60px;
+  }
+  .h-\[64px\] {
+    height: 64px;
   }
   .h-\[66px\] {
     height: 66px;
@@ -518,6 +515,9 @@
   .gap-\[10px\] {
     gap: 10px;
   }
+  .gap-\[12px\] {
+    gap: 12px;
+  }
   .gap-\[15px\] {
     gap: 15px;
   }
@@ -575,6 +575,9 @@
   }
   .rounded-\[10px\] {
     border-radius: 10px;
+  }
+  .rounded-\[12px\] {
+    border-radius: 12px;
   }
   .rounded-\[15px\] {
     border-radius: 15px;
@@ -638,9 +641,6 @@
   }
   .border-blue-100 {
     border-color: var(--color-blue-100);
-  }
-  .border-blue-200 {
-    border-color: var(--color-blue-200);
   }
   .border-gray-100 {
     border-color: var(--color-gray-100);
@@ -708,14 +708,8 @@
       background-color: color-mix(in oklab, var(--color-black) 50%, transparent);
     }
   }
-  .bg-blue-50 {
-    background-color: var(--color-blue-50);
-  }
   .bg-blue-100 {
     background-color: var(--color-blue-100);
-  }
-  .bg-blue-200 {
-    background-color: var(--color-blue-200);
   }
   .bg-blue-600 {
     background-color: var(--color-blue-600);
@@ -935,9 +929,6 @@
   }
   .pb-1 {
     padding-bottom: var(--spacing);
-  }
-  .pb-2 {
-    padding-bottom: calc(var(--spacing) * 2);
   }
   .pb-3 {
     padding-bottom: calc(var(--spacing) * 3);
@@ -1245,9 +1236,6 @@
     .hover\:bg-blue-700:hover {
       background-color: var(--color-blue-700);
     }
-    .hover\:bg-gray-50:hover {
-      background-color: var(--color-gray-50);
-    }
     .hover\:bg-gray-100:hover {
       background-color: var(--color-gray-100);
     }
@@ -1287,9 +1275,6 @@
     }
     .hover\:text-gray-600:hover {
       color: var(--color-gray-600);
-    }
-    .hover\:text-gray-700:hover {
-      color: var(--color-gray-700);
     }
     .hover\:text-gray-800:hover {
       color: var(--color-gray-800);
