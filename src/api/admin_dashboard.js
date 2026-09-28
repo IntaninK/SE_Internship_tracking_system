@@ -649,6 +649,27 @@ window.submitBatchAdvisor = async function() {
   }
 };
 
+// สลับการเปิด/ปิดช่องกรอกหมายเหตุตามเหตุผลที่เลือก
+window.toggleDropReasonNote = function() {
+  const presetEl = document.getElementById('drop-reason-preset');
+  const noteEl = document.getElementById('drop-reason-note');
+  if (!presetEl || !noteEl) return;
+
+  const isCustom = presetEl.value === 'custom';
+  noteEl.disabled = !isCustom;
+  if (isCustom) {
+    noteEl.style.backgroundColor = '#ffffff';
+    noteEl.style.cursor = 'text';
+    noteEl.placeholder = 'ระบุเหตุผลการดรอป...';
+    noteEl.focus();
+  } else {
+    noteEl.value = '';
+    noteEl.style.backgroundColor = '#f1f5f9';
+    noteEl.style.cursor = 'not-allowed';
+    noteEl.placeholder = "เปิดให้กรอกเมื่อเลือก 'อื่นๆ (ระบุในหมายเหตุ)'";
+  }
+};
+
 // ==========================================
 // Modal: ดรอปนิสิต (Drop Student)
 // ==========================================
@@ -660,9 +681,10 @@ window.openDropStudentModal = function() {
   const countEl = document.getElementById('drop-selected-count');
   if (countEl) countEl.textContent = selectedStudentIds.size;
   const presetEl = document.getElementById('drop-reason-preset');
-  if (presetEl) presetEl.value = 'ชั่วโมงอบรมไม่ครบตามเกณฑ์';
+  if (presetEl) presetEl.selectedIndex = 0;
   const noteEl = document.getElementById('drop-reason-note');
   if (noteEl) noteEl.value = '';
+  toggleDropReasonNote();
 
   const modal = document.getElementById('drop-modal');
   if (modal) modal.style.display = 'flex';
@@ -679,9 +701,12 @@ window.submitDropStudents = async function() {
   const note = document.getElementById('drop-reason-note')?.value.trim() || '';
   let reason = preset;
   if (preset === 'custom') {
-    reason = note || 'ถอนรายวิชาฝึกงาน';
-  } else if (note) {
-    reason = `${preset} (${note})`;
+    if (!note) {
+      alert('กรุณาระบุเหตุผลการดรอปในช่องหมายเหตุ');
+      document.getElementById('drop-reason-note')?.focus();
+      return;
+    }
+    reason = note;
   }
 
   try {

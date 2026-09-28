@@ -362,9 +362,7 @@
         </p>
         <div>
           <label style="font-size:14px; font-weight:600; color:#334155; margin-bottom:4px; display:block;">เหตุผลที่ดรอป</label>
-          <select id="drop-reason-preset" class="input-field" style="width:100%;">
-            <option value="ชั่วโมงอบรมไม่ครบตามเกณฑ์">ชั่วโมงอบรมไม่ครบตามเกณฑ์</option>
-            <option value="ยื่น CV / หาสถานที่ฝึกงานไม่ได้">ยื่น CV / หาสถานที่ฝึกงานไม่ได้</option>
+          <select id="drop-reason-preset" class="input-field" style="width:100%;" onchange="toggleDropReasonNote()">
             <option value="ขอยกเลิก / ถอนรายวิชา (Drop)">ขอยกเลิก / ถอนรายวิชา (Drop)</option>
             <option value="ติดเงื่อนไขวิชาบังคับก่อน / เกรดไม่ถึงเกณฑ์">ติดเงื่อนไขวิชาบังคับก่อน / เกรดไม่ถึงเกณฑ์</option>
             <option value="custom">อื่นๆ (ระบุในหมายเหตุ)</option>
@@ -372,7 +370,7 @@
         </div>
         <div>
           <label style="font-size:14px; font-weight:600; color:#334155; margin-bottom:4px; display:block;">หมายเหตุ / รายละเอียดเพิ่มเติม</label>
-          <textarea id="drop-reason-note" class="input-field" rows="2" placeholder="ระบุเหตุผลเพิ่มเติม (ถ้ามี)..." style="width:100%;"></textarea>
+          <textarea id="drop-reason-note" class="input-field" rows="2" placeholder="เปิดให้กรอกเมื่อเลือก 'อื่นๆ (ระบุในหมายเหตุ)'" style="width:100%; background-color:#f1f5f9; cursor:not-allowed;" disabled></textarea>
         </div>
         <div style="background:#fef2f2; border:1px solid #fee2e2; border-radius:10px; padding:10px 12px; font-size:12px; color:#b91c1c;">
           ⚠️ เมื่อดรอปแล้ว นิสิตจะถูกย้ายไปที่แท็บ "นิสิตที่ดรอป" และจะไม่ถูกนำไปคำนวณในรายงานสรุป (สามารถกู้คืนได้ภายหลัง)
