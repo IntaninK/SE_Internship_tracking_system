@@ -347,39 +347,118 @@
           <div class="form-grid">
             <div class="form-group">
               <label class="form-label">ตำแหน่งที่ฝึก</label>
-              <input type="text" class="input-field" id="plc-position" value="Software Developer">
+              <input type="text" class="input-field" id="plc-position" value="Software Developer" required>
             </div>
             <div class="form-group">
               <label class="form-label">ชื่อแหล่งฝึกงาน (ภาษาไทย)</label>
-              <input type="text" class="input-field" id="plc-companyNameTh" placeholder="...">
+              <input type="text" class="input-field" id="plc-companyNameTh" placeholder="..." required>
             </div>
             <div class="form-group">
               <label class="form-label">ชื่อบุคคลที่ให้ทำหนังสือขอความอนุเคราะห์</label>
-              <input type="text" class="input-field" id="plc-contactPersonName" placeholder="...">
+              <input type="text" class="input-field" id="plc-contactPersonName" placeholder="..." required>
             </div>
             <div class="form-group">
               <label class="form-label">ตำแหน่งบุคคลที่ให้ทำหนังสือขอความอนุเคราะห์</label>
-              <input type="text" class="input-field" id="plc-contactPersonPosition" placeholder="...">
+              <input type="text" class="input-field" id="plc-contactPersonPosition" placeholder="..." required>
             </div>
             <div class="form-group">
               <label class="form-label">ที่อยู่บริษัท</label>
-              <input type="text" class="input-field" id="plc-companyAddress" placeholder="...">
+              <input type="text" class="input-field" id="plc-companyAddress" placeholder="..." required>
             </div>
             <div class="form-group">
               <label class="form-label">เบอร์โทรติดต่อสถานประกอบการ / แหล่งฝึก</label>
-              <input type="text" class="input-field" id="plc-companyPhone1" value="098-xxx-xxxx">
+              <input type="text" class="input-field" id="plc-companyPhone1" value="" required>
             </div>
             <div class="form-group">
               <label class="form-label">เบอร์โทรติดต่อสถานประกอบการ / แหล่งฝึก (สำรอง)</label>
-              <input type="text" class="input-field" id="plc-companyPhone2" placeholder="044-xxx-xxx">
+              <input type="text" class="input-field" id="plc-companyPhone2" placeholder="" required>
             </div>
             <div class="form-group">
               <label class="form-label">Email สถานประกอบการ / แหล่งฝึก</label>
-              <input type="email" class="input-field" id="plc-companyEmail" value="...@gmail.com">
+              <input type="email" class="input-field" id="plc-companyEmail" value="...@gmail.com" required>
             </div>
             <div class="form-group">
               <label class="form-label">จังหวัด</label>
-              <input type="text" class="input-field" id="plc-province" placeholder="...">
+              <select class="input-field" id="plc-province" required>
+                <option value="" disabled selected>-- เลือกจังหวัด --</option>
+                <option value="กรุงเทพมหานคร">กรุงเทพมหานคร</option>
+                <option value="กระบี่">กระบี่</option>
+                <option value="กาญจนบุรี">กาญจนบุรี</option>
+                <option value="กาฬสินธุ์">กาฬสินธุ์</option>
+                <option value="กำแพงเพชร">กำแพงเพชร</option>
+                <option value="ขอนแก่น">ขอนแก่น</option>
+                <option value="จันทบุรี">จันทบุรี</option>
+                <option value="ฉะเชิงเทรา">ฉะเชิงเทรา</option>
+                <option value="ชลบุรี">ชลบุรี</option>
+                <option value="ชัยนาท">ชัยนาท</option>
+                <option value="ชัยภูมิ">ชัยภูมิ</option>
+                <option value="ชุมพร">ชุมพร</option>
+                <option value="เชียงราย">เชียงราย</option>
+                <option value="เชียงใหม่">เชียงใหม่</option>
+                <option value="ตรัง">ตรัง</option>
+                <option value="ตราด">ตราด</option>
+                <option value="ตาก">ตาก</option>
+                <option value="นครนายก">นครนายก</option>
+                <option value="นครปฐม">นครปฐม</option>
+                <option value="นครพนม">นครพนม</option>
+                <option value="นครราชสีมา">นครราชสีมา</option>
+                <option value="นครศรีธรรมราช">นครศรีธรรมราช</option>
+                <option value="นครสวรรค์">นครสวรรค์</option>
+                <option value="นนทบุรี">นนทบุรี</option>
+                <option value="นราธิวาส">นราธิวาส</option>
+                <option value="น่าน">น่าน</option>
+                <option value="บึงกาฬ">บึงกาฬ</option>
+                <option value="บุรีรัมย์">บุรีรัมย์</option>
+                <option value="ปทุมธานี">ปทุมธานี</option>
+                <option value="ประจวบคีรีขันธ์">ประจวบคีรีขันธ์</option>
+                <option value="ปราจีนบุรี">ปราจีนบุรี</option>
+                <option value="ปัตตานี">ปัตตานี</option>
+                <option value="พะเยา">พะเยา</option>
+                <option value="พระนครศรีอยุธยา">พระนครศรีอยุธยา</option>
+                <option value="พังงา">พังงา</option>
+                <option value="พัทลุง">พัทลุง</option>
+                <option value="พิจิตร">พิจิตร</option>
+                <option value="พิษณุโลก">พิษณุโลก</option>
+                <option value="เพชรบุรี">เพชรบุรี</option>
+                <option value="เพชรบูรณ์">เพชรบูรณ์</option>
+                <option value="แพร่">แพร่</option>
+                <option value="ภูเก็ต">ภูเก็ต</option>
+                <option value="มหาสารคาม">มหาสารคาม</option>
+                <option value="มุกดาหาร">มุกดาหาร</option>
+                <option value="แม่ฮ่องสอน">แม่ฮ่องสอน</option>
+                <option value="ยโสธร">ยโสธร</option>
+                <option value="ยะลา">ยะลา</option>
+                <option value="ร้อยเอ็ด">ร้อยเอ็ด</option>
+                <option value="ระนอง">ระนอง</option>
+                <option value="ระยอง">ระยอง</option>
+                <option value="ราชบุรี">ราชบุรี</option>
+                <option value="ลพบุรี">ลพบุรี</option>
+                <option value="ลำปาง">ลำปาง</option>
+                <option value="ลำพูน">ลำพูน</option>
+                <option value="เลย">เลย</option>
+                <option value="ศรีสะเกษ">ศรีสะเกษ</option>
+                <option value="สกลนคร">สกลนคร</option>
+                <option value="สงขลา">สงขลา</option>
+                <option value="สตูล">สตูล</option>
+                <option value="สมุทรปราการ">สมุทรปราการ</option>
+                <option value="สมุทรสงคราม">สมุทรสงคราม</option>
+                <option value="สมุทรสาคร">สมุทรสาคร</option>
+                <option value="สระแก้ว">สระแก้ว</option>
+                <option value="สระบุรี">สระบุรี</option>
+                <option value="สิงห์บุรี">สิงห์บุรี</option>
+                <option value="สุโขทัย">สุโขทัย</option>
+                <option value="สุพรรณบุรี">สุพรรณบุรี</option>
+                <option value="สุราษฎร์ธานี">สุราษฎร์ธานี</option>
+                <option value="สุรินทร์">สุรินทร์</option>
+                <option value="หนองคาย">หนองคาย</option>
+                <option value="หนองบัวลำภู">หนองบัวลำภู</option>
+                <option value="อ่างทอง">อ่างทอง</option>
+                <option value="อำนาจเจริญ">อำนาจเจริญ</option>
+                <option value="อุดรธานี">อุดรธานี</option>
+                <option value="อุตรดิตถ์">อุตรดิตถ์</option>
+                <option value="อุทัยธานี">อุทัยธานี</option>
+                <option value="อุบลราชธานี">อุบลราชธานี</option>
+              </select>
             </div>
           </div>
 
