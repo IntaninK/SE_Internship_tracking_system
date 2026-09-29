@@ -366,19 +366,6 @@ router.get("/students", async (req, res) => {
       mapped = mapped.filter((s) => !s.isDropped);
     }
 
-    // กรองตาม chartType และ chartKey
-    if (chartType && chartKey) {
-      if (chartType === "readiness") {
-        mapped = mapped.filter((s) => s.readinessCategory === chartKey);
-      } else if (chartType === "training") {
-        mapped = mapped.filter((s) => s.trainingCategory === chartKey);
-      } else if (chartType === "cv") {
-        mapped = mapped.filter((s) => s.cvCategory === chartKey);
-      } else if (chartType === "placement") {
-        mapped = mapped.filter((s) => s.placementCategory === chartKey);
-      }
-    }
-
     // Filter ตาม legacy status
     if (filterStatus) {
       mapped = mapped.filter((s) => s.statusCategory === filterStatus);
@@ -454,6 +441,35 @@ router.get("/students", async (req, res) => {
       }
     }
 
+    // สถิติสำหรับกราฟวงกลมทั้ง 4 อัน: คำนวณจากข้อมูลที่ผ่าน filter (viewDropped/status/search/ปี/สถานะ/อาจารย์/skill) แล้ว
+    // (ไม่รวม chartType/chartKey เพราะนั่นคือ filter ที่คลิกจากกราฟเอง กราฟจึงควรยังแสดงสัดส่วนทุกกลุ่มให้คลิกเลือกต่อได้)
+    const chartStats = {
+      totalStudents: mapped.length,
+      readinessStats: { approvedPlacement: 0, cvApproved: 0, noDataOrHoursLack: 0, trainingComplete: 0, cvNotReviewed: 0 },
+      trainingStats: { passedComplete: 0, completeNotChecked: 0, checkedNotPass: 0, hoursNotComplete: 0 },
+      cvStats: { reviewed: 0, notReviewed: 0, failed: 0, noCv: 0 },
+      placementStats: { pending: 0, approved: 0, rejected: 0 },
+    };
+    mapped.forEach((s) => {
+      chartStats.readinessStats[s.readinessCategory]++;
+      chartStats.trainingStats[s.trainingCategory]++;
+      chartStats.cvStats[s.cvCategory]++;
+      if (s.placementCategory) chartStats.placementStats[s.placementCategory]++;
+    });
+
+    // กรองตาม chartType และ chartKey (ใช้กรองตารางรายชื่อ ไม่กระทบสัดส่วนในกราฟ)
+    if (chartType && chartKey) {
+      if (chartType === "readiness") {
+        mapped = mapped.filter((s) => s.readinessCategory === chartKey);
+      } else if (chartType === "training") {
+        mapped = mapped.filter((s) => s.trainingCategory === chartKey);
+      } else if (chartType === "cv") {
+        mapped = mapped.filter((s) => s.cvCategory === chartKey);
+      } else if (chartType === "placement") {
+        mapped = mapped.filter((s) => s.placementCategory === chartKey);
+      }
+    }
+
     const total = mapped.length;
     const paginated = mapped.slice(skip, skip + parseInt(limit));
 
@@ -464,6 +480,7 @@ router.get("/students", async (req, res) => {
       page: parseInt(page),
       limit: parseInt(limit),
       totalPages: Math.ceil(total / parseInt(limit)),
+      chartStats,
     });
   } catch (err) {
     console.error("GET /api/admin/students error:", err);

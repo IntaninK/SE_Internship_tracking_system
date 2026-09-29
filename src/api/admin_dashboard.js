@@ -1,6 +1,3 @@
-// admin_dashboard.js — Dashboard อาจารย์รายวิชา (Admin)
-// ดึงข้อมูลจาก API แล้วแสดงกราฟวงกลม ตารางนิสิต ตารางอาจารย์ สรุปจำนวน
-
 let allStudents = [];
 let currentFilter = null;
 let currentPage = 1;
@@ -64,42 +61,7 @@ async function loadDashboardSummary() {
     const data = await res.json();
     if (!data.success) return;
 
-    // --- กราฟ 1: สถานะความพร้อม ---
-    const r = data.readinessStats;
-    renderPieChart('chart-readiness', 'readiness', [
-      { key: 'approvedPlacement', label: 'อนุมัติที่ฝึกงานแล้ว', value: r.approvedPlacement, color: '#FF3EA5' },
-      { key: 'cvApproved', label: 'ตรวจCVผ่าน', value: r.cvApproved, color: '#FFD233' },
-      { key: 'noDataOrHoursLack', label: 'ไม่มีข้อมูล/ชม.ไม่ครบ', value: r.noDataOrHoursLack, color: '#8B5CF6' },
-      { key: 'trainingComplete', label: 'ผ่านการตรวจชม.ครบ', value: r.trainingComplete, color: '#00C3D0' },
-      { key: 'cvNotReviewed', label: 'ยังไม่ได้รีวิว CV', value: r.cvNotReviewed, color: '#3B82F6' },
-    ], 'สถานะความพร้อม', 'readiness-table', data.totalStudents);
-
-    // --- กราฟ 2: สถานะการอบรม ---
-    const t = data.trainingStats;
-    renderPieChart('chart-training', 'training', [
-      { key: 'passedComplete', label: 'ผ่านการตรวจชม.ครบ', value: t.passedComplete, color: '#FF3EA5' },
-      { key: 'completeNotChecked', label: 'ชม.ครบ ยังไม่ตรวจ', value: t.completeNotChecked, color: '#FFD233' },
-      { key: 'checkedNotPass', label: 'ตรวจแล้ว ยังไม่ผ่าน', value: t.checkedNotPass, color: '#00C3D0' },
-      { key: 'hoursNotComplete', label: 'ชั่วโมงยังไม่ครบ', value: t.hoursNotComplete, color: '#8B5CF6' },
-    ], 'สถานะการอบรม', 'training-table', data.totalStudents);
-
-    // --- กราฟ 3: สถานะ CV ---
-    const c = data.cvStats;
-    renderPieChart('chart-cv', 'cv', [
-      { key: 'reviewed', label: 'รีวิวCVแล้ว', value: c.reviewed, color: '#FF3EA5' },
-      { key: 'notReviewed', label: 'ยังไม่ได้รีวิว CV', value: c.notReviewed, color: '#FFD233' },
-      { key: 'failed', label: 'ไม่ผ่าน CV', value: c.failed, color: '#00C3D0' },
-      { key: 'noCv', label: 'ยังไม่ทำ CV', value: c.noCv, color: '#8B5CF6' },
-    ], 'สถานะการตรวจCV', 'cv-table', data.totalStudents);
-
-    // --- กราฟ 4: สถานะอนุมัติฝึกงาน ---
-    const p = data.placementStats;
-    const placementTotal = p.pending + p.approved + p.rejected;
-    renderPieChart('chart-placement', 'placement', [
-      { key: 'pending', label: 'รอผล', value: p.pending, color: '#FF3EA5' },
-      { key: 'approved', label: 'อนุมัติที่ฝึกงานแล้ว', value: p.approved, color: '#00C3D0' },
-      { key: 'rejected', label: 'ไม่อนุมัติที่ฝึกงาน', value: p.rejected, color: '#FFD233' },
-    ], 'สถานะอนุมัติฝึกงาน', 'placement-table', placementTotal || 1);
+    renderDashboardCharts(data.readinessStats, data.trainingStats, data.cvStats, data.placementStats, data.totalStudents);
 
     // --- ตารางอาจารย์ที่ปรึกษา ---
     renderAdvisorTable(data.advisorSummary);
@@ -120,6 +82,47 @@ async function loadDashboardSummary() {
   } catch (err) {
     console.error('Load dashboard summary error:', err);
   }
+}
+
+// วาดกราฟวงกลมทั้ง 4 อันจากสถิติที่ได้รับมา
+// ใช้ทั้งตอนโหลดครั้งแรก (loadDashboardSummary, ข้อมูลรวมทั้งหมด) และทุกครั้งที่ loadStudents คืนค่า chartStats ที่ผ่าน filter แล้ว
+function renderDashboardCharts(readinessStats, trainingStats, cvStats, placementStats, totalStudents) {
+  // --- กราฟ 1: สถานะความพร้อม ---
+  const r = readinessStats;
+  renderPieChart('chart-readiness', 'readiness', [
+    { key: 'approvedPlacement', label: 'อนุมัติที่ฝึกงานแล้ว', value: r.approvedPlacement, color: '#FF3EA5' },
+    { key: 'cvApproved', label: 'ตรวจCVผ่าน', value: r.cvApproved, color: '#FFD233' },
+    { key: 'noDataOrHoursLack', label: 'ไม่มีข้อมูล/ชม.ไม่ครบ', value: r.noDataOrHoursLack, color: '#8B5CF6' },
+    { key: 'trainingComplete', label: 'ผ่านการตรวจชม.ครบ', value: r.trainingComplete, color: '#00C3D0' },
+    { key: 'cvNotReviewed', label: 'ยังไม่ได้รีวิว CV', value: r.cvNotReviewed, color: '#3B82F6' },
+  ], 'สถานะความพร้อม', 'readiness-table', totalStudents);
+
+  // --- กราฟ 2: สถานะการอบรม ---
+  const t = trainingStats;
+  renderPieChart('chart-training', 'training', [
+    { key: 'passedComplete', label: 'ผ่านการตรวจชม.ครบ', value: t.passedComplete, color: '#FF3EA5' },
+    { key: 'completeNotChecked', label: 'ชม.ครบ ยังไม่ตรวจ', value: t.completeNotChecked, color: '#FFD233' },
+    { key: 'checkedNotPass', label: 'ตรวจแล้ว ยังไม่ผ่าน', value: t.checkedNotPass, color: '#00C3D0' },
+    { key: 'hoursNotComplete', label: 'ชั่วโมงยังไม่ครบ', value: t.hoursNotComplete, color: '#8B5CF6' },
+  ], 'สถานะการอบรม', 'training-table', totalStudents);
+
+  // --- กราฟ 3: สถานะ CV ---
+  const c = cvStats;
+  renderPieChart('chart-cv', 'cv', [
+    { key: 'reviewed', label: 'รีวิวCVแล้ว', value: c.reviewed, color: '#FF3EA5' },
+    { key: 'notReviewed', label: 'ยังไม่ได้รีวิว CV', value: c.notReviewed, color: '#FFD233' },
+    { key: 'failed', label: 'ไม่ผ่าน CV', value: c.failed, color: '#00C3D0' },
+    { key: 'noCv', label: 'ยังไม่ทำ CV', value: c.noCv, color: '#8B5CF6' },
+  ], 'สถานะการตรวจCV', 'cv-table', totalStudents);
+
+  // --- กราฟ 4: สถานะอนุมัติฝึกงาน ---
+  const p = placementStats;
+  const placementTotal = p.pending + p.approved + p.rejected;
+  renderPieChart('chart-placement', 'placement', [
+    { key: 'pending', label: 'รอผล', value: p.pending, color: '#FF3EA5' },
+    { key: 'approved', label: 'อนุมัติที่ฝึกงานแล้ว', value: p.approved, color: '#00C3D0' },
+    { key: 'rejected', label: 'ไม่อนุมัติที่ฝึกงาน', value: p.rejected, color: '#FFD233' },
+  ], 'สถานะอนุมัติฝึกงาน', 'placement-table', placementTotal || 1);
 }
 
 // ==========================================
@@ -190,6 +193,12 @@ function renderPieChart(containerId, chartType, segments, headerLabel, tableId, 
     </div>
   `;
 
+  // คงไฮไลต์แถวที่กำลังกรองอยู่ (ถ้ามี) แม้กราฟจะถูก re-render ใหม่ทุกครั้งที่ filter เปลี่ยน
+  if (currentFilter && currentFilter.chartType === chartType) {
+    const activeRow = container.querySelector(`.chart-status-row[data-key="${currentFilter.chartKey}"]`);
+    if (activeRow) activeRow.classList.add('bg-purple-100', 'font-bold');
+  }
+
   // Event: คลิกสถานะในตาราง → กรองรายชื่อนิสิต (Toggle)
   container.querySelectorAll('.chart-status-row').forEach(row => {
     row.addEventListener('click', () => {
@@ -205,6 +214,7 @@ function renderPieChart(containerId, chartType, segments, headerLabel, tableId, 
           chartKey: row.dataset.key,
           label: row.dataset.label,
         };
+        clearSearchBox();
       }
       currentPage = 1;
       updateFilterUI();
@@ -319,6 +329,16 @@ async function loadStudents() {
     const res = await fetch(url);
     const data = await res.json();
     if (!data.success) return;
+
+    if (data.chartStats) {
+      renderDashboardCharts(
+        data.chartStats.readinessStats,
+        data.chartStats.trainingStats,
+        data.chartStats.cvStats,
+        data.chartStats.placementStats,
+        data.chartStats.totalStudents
+      );
+    }
 
     let studentsToRender = data.students || [];
     let totalToRender = data.total;
@@ -872,6 +892,7 @@ if (searchInput) {
 
 // Year filter event
 window.onYearFilterChange = function() {
+  clearSearchBox();
   currentPage = 1;
   loadStudents();
 };
@@ -890,6 +911,7 @@ if (yearFilterEl) {
         currentFilter = null;
         document.querySelectorAll('.chart-status-row').forEach(r => r.classList.remove('bg-purple-100', 'font-bold'));
       }
+      clearSearchBox();
       currentPage = 1;
       updateFilterUI();
       loadStudents();
@@ -942,6 +964,12 @@ async function populateAdvisorFilter() {
   } catch (err) {
     console.error('Populate advisor filter error:', err);
   }
+}
+
+// ล้างช่องค้นหาทุกครั้งที่มีการใช้ filter อื่น (dropdown/กราฟ) เพื่อไม่ให้เงื่อนไขค้นหา+filter ขัดแย้งกัน
+function clearSearchBox() {
+  const searchEl = document.getElementById('student-search');
+  if (searchEl) searchEl.value = '';
 }
 
 function updateFilterUI() {

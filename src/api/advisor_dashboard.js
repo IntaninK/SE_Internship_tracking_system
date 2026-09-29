@@ -1,6 +1,3 @@
-// advisor_dashboard.js — Dashboard อาจารย์ที่ปรึกษา
-// กราฟ 2 วง (Checklist, ความพร้อม) + รายชื่อนิสิตในความดูแล + Action Dropdown
-
 let currentFilter = null;
 let currentPage = 1;
 const pageLimit = 12;
@@ -11,42 +8,42 @@ let openDropdownStudentId = null;
 // เริ่มต้นโหลดข้อมูล
 // ==========================================
 async function initAdvisorDashboard() {
-  await loadDashboardSummary();
   await loadStudents();
   await populateYearFilter('/api/advisor/students');
 }
 
 // ==========================================
-// 1. โหลดข้อมูลสรุป (กราฟ 2 วง)
+// 1. โหลดข้อมูลสรุป (กราฟ 2 วง) — เรียกครั้งแรกตอนโหลดหน้า (ยังไม่มี filter)
 // ==========================================
 async function loadDashboardSummary() {
   try {
     const res = await fetch('/api/advisor/dashboard-summary');
     const data = await res.json();
     if (!data.success) return;
-
-    // --- กราฟ 1: สถานะ Checklist ของนิสิต ---
-    const c = data.checklistStats;
-    const checklistTotal = c.reviewed + c.pending + c.failed;
-    renderPieChart('chart-checklist', 'checklist', [
-      { key: 'reviewed', label: 'อาจารย์รีวิวแล้ว', value: c.reviewed, color: '#FF3EA5' },
-      { key: 'pending', label: 'รอผล', value: c.pending, color: '#FFD233' },
-      { key: 'failed', label: 'ไม่ผ่าน /ทำchecklist เพิ่ม', value: c.failed, color: '#EF4444' },
-    ], 'สถานะ Checklist', 'checklist-legend-table', checklistTotal || data.totalStudents);
-
-    // --- กราฟ 2: สถานะความพร้อม ---
-    const r = data.readinessStats;
-    renderPieChart('chart-readiness', 'readiness', [
-      { key: 'registered', label: 'ยื่นสมัครสำเร็จ', value: r.registered, color: '#00C3D0' },
-      { key: 'cvApproved', label: 'ตรวจCVผ่าน', value: r.cvApproved, color: '#8B5CF6' },
-      { key: 'noData', label: 'ยังไม่มีข้อมูล', value: r.noData, color: '#FF3EA5' },
-      { key: 'hoursIncomplete', label: 'ชั่วโมงอบรมยังไม่ครบ', value: r.hoursIncomplete, color: '#FFD233' },
-      { key: 'trainingComplete', label: 'ตรวจชม.อบรมครบ', value: r.trainingComplete, color: '#10B981' },
-    ], 'สถานะความพร้อม', 'readiness-legend-table', data.totalStudents);
-
+    renderDashboardCharts(data.checklistStats, data.readinessStats, data.totalStudents);
   } catch (err) {
     console.error('Load advisor dashboard summary error:', err);
   }
+}
+
+// วาดกราฟ 2 วงจากสถิติที่ได้รับมา (ใช้ทั้งตอนโหลดครั้งแรก และทุกครั้งที่ loadStudents คืนค่า chartStats ที่ผ่าน filter แล้ว)
+function renderDashboardCharts(checklistStats, readinessStats, totalStudents) {
+  const c = checklistStats;
+  const checklistTotal = c.reviewed + c.pending + c.failed;
+  renderPieChart('chart-checklist', 'checklist', [
+    { key: 'reviewed', label: 'อาจารย์รีวิวแล้ว', value: c.reviewed, color: '#FF3EA5' },
+    { key: 'pending', label: 'รอผล', value: c.pending, color: '#FFD233' },
+    { key: 'failed', label: 'ไม่ผ่าน /ทำchecklist เพิ่ม', value: c.failed, color: '#EF4444' },
+  ], 'สถานะ Checklist', 'checklist-legend-table', checklistTotal || totalStudents);
+
+  const r = readinessStats;
+  renderPieChart('chart-readiness', 'readiness', [
+    { key: 'registered', label: 'ยื่นสมัครสำเร็จ', value: r.registered, color: '#00C3D0' },
+    { key: 'cvApproved', label: 'ตรวจCVผ่าน', value: r.cvApproved, color: '#8B5CF6' },
+    { key: 'noData', label: 'ยังไม่มีข้อมูล', value: r.noData, color: '#FF3EA5' },
+    { key: 'hoursIncomplete', label: 'ชั่วโมงอบรมยังไม่ครบ', value: r.hoursIncomplete, color: '#FFD233' },
+    { key: 'trainingComplete', label: 'ตรวจชม.อบรมครบ', value: r.trainingComplete, color: '#10B981' },
+  ], 'สถานะความพร้อม', 'readiness-legend-table', totalStudents);
 }
 
 // ==========================================
@@ -113,6 +110,12 @@ function renderPieChart(containerId, chartType, segments, headerLabel, tableId, 
     </div>
   `;
 
+  // คงไฮไลต์แถวที่กำลังกรองอยู่ (ถ้ามี) แม้กราฟจะถูก re-render ใหม่ทุกครั้งที่ filter เปลี่ยน
+  if (currentFilter && currentFilter.chartType === chartType) {
+    const activeRow = container.querySelector(`.chart-status-row[data-key="${currentFilter.chartKey}"]`);
+    if (activeRow) activeRow.classList.add('bg-purple-100', 'font-bold');
+  }
+
   // Event: คลิกแถวในตารางเพื่อกรองนิสิต
   container.querySelectorAll('.chart-status-row').forEach(row => {
     row.addEventListener('click', () => {
@@ -128,6 +131,7 @@ function renderPieChart(containerId, chartType, segments, headerLabel, tableId, 
           chartKey: row.dataset.key,
           label: row.dataset.label,
         };
+        clearSearchBox();
       }
       currentPage = 1;
       updateFilterUI();
@@ -162,6 +166,10 @@ async function loadStudents() {
     const res = await fetch(url);
     const data = await res.json();
     if (!data.success) return;
+
+    if (data.chartStats) {
+      renderDashboardCharts(data.chartStats.checklistStats, data.chartStats.readinessStats, data.chartStats.totalStudents);
+    }
 
     let studentsToRender = data.students || [];
     let totalToRender = data.total;
@@ -406,6 +414,12 @@ window.exportStudents = async function() {
 // ==========================================
 // Filter UI & Clear Filter
 // ==========================================
+// ล้างช่องค้นหาทุกครั้งที่มีการใช้ filter อื่น (dropdown/กราฟ) เพื่อไม่ให้เงื่อนไขค้นหา+filter ขัดแย้งกัน
+function clearSearchBox() {
+  const searchEl = document.getElementById('student-search');
+  if (searchEl) searchEl.value = '';
+}
+
 function updateFilterUI() {
   const badge = document.getElementById('active-filter-badge');
   const btn = document.getElementById('btn-clear-filter');
@@ -469,6 +483,7 @@ window.clearAllFilters = function() {
         currentFilter = null;
         document.querySelectorAll('.chart-status-row').forEach(r => r.classList.remove('bg-purple-100', 'font-bold'));
       }
+      clearSearchBox();
       currentPage = 1;
       updateFilterUI();
       loadStudents();
@@ -492,6 +507,7 @@ if (searchInput) {
 
 // Year filter event
 window.onYearFilterChange = function() {
+  clearSearchBox();
   currentPage = 1;
   updateFilterUI();
   loadStudents();
@@ -564,7 +580,6 @@ window.submitBatchStatus = async function() {
       alert(data.message);
       closeSetStatusModal();
       selectedStudentIds.clear();
-      await loadDashboardSummary();
       await loadStudents();
     } else {
       alert('เกิดข้อผิดพลาด: ' + data.message);

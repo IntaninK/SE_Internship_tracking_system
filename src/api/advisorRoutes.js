@@ -170,15 +170,6 @@ router.get("/students", async (req, res) => {
       };
     });
 
-    // กรองตาม Chart ที่คลิกถ้ามี
-    if (chartType && chartKey) {
-      if (chartType === "checklist") {
-        mapped = mapped.filter((s) => s.checklistStatusKey === chartKey);
-      } else if (chartType === "readiness") {
-        mapped = mapped.filter((s) => s.readinessStatusKey === chartKey);
-      }
-    }
-
     // กรองตาม Search query
     if (search) {
       const q = search.toLowerCase();
@@ -244,6 +235,27 @@ router.get("/students", async (req, res) => {
       }
     }
 
+    // สถิติสำหรับกราฟวงกลม: คำนวณจากข้อมูลที่ผ่าน filter ค้นหา/ปี/สถานะ/skill แล้ว
+    // (ไม่รวม chartType/chartKey เพราะนั่นคือ filter ที่คลิกจากกราฟเอง กราฟจึงควรยังแสดงสัดส่วนทุกกลุ่มให้คลิกเลือกต่อได้)
+    const chartStats = {
+      totalStudents: mapped.length,
+      checklistStats: { reviewed: 0, pending: 0, failed: 0 },
+      readinessStats: { registered: 0, cvApproved: 0, noData: 0, hoursIncomplete: 0, trainingComplete: 0 },
+    };
+    mapped.forEach((s) => {
+      chartStats.checklistStats[s.checklistStatusKey]++;
+      chartStats.readinessStats[s.readinessStatusKey]++;
+    });
+
+    // กรองตาม Chart ที่คลิกถ้ามี (ใช้กรองตารางรายชื่อ ไม่กระทบสัดส่วนในกราฟ)
+    if (chartType && chartKey) {
+      if (chartType === "checklist") {
+        mapped = mapped.filter((s) => s.checklistStatusKey === chartKey);
+      } else if (chartType === "readiness") {
+        mapped = mapped.filter((s) => s.readinessStatusKey === chartKey);
+      }
+    }
+
     const total = mapped.length;
     const paginated = mapped.slice(skip, skip + parseInt(limit));
 
@@ -254,6 +266,7 @@ router.get("/students", async (req, res) => {
       page: parseInt(page),
       limit: parseInt(limit),
       totalPages: Math.ceil(total / parseInt(limit)) || 1,
+      chartStats,
     });
   } catch (err) {
     console.error("GET /api/advisor/students error:", err);
