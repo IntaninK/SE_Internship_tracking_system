@@ -355,6 +355,7 @@ router.get("/students", async (req, res) => {
         trainingApprovedHard: cats.hardHours,
         isTrainingComplete: cats.isTrainingComplete,
         placementStatus: s.placement ? s.placement.status : null,
+        hasChecklistApproved: (s.companies || []).some(c => c.checklistStatus === 'APPROVED'),
       };
     });
 
@@ -405,10 +406,10 @@ router.get("/students", async (req, res) => {
           mapped = mapped.filter(s => s.cvStatus !== 'APPROVED');
           break;
         case 'checklist_passed':
-          mapped = mapped.filter(s => s.readinessCategory === 'approvedPlacement' || s.readinessCategory === 'cvApproved' || s.statusCategory === 'ready');
+          mapped = mapped.filter(s => s.hasChecklistApproved);
           break;
         case 'checklist_failed':
-          mapped = mapped.filter(s => s.readinessCategory !== 'approvedPlacement' && s.readinessCategory !== 'cvApproved');
+          mapped = mapped.filter(s => !s.hasChecklistApproved);
           break;
         case 'placement_approved':
           mapped = mapped.filter(s => s.placementStatus === 'APPROVED');

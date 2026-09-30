@@ -210,17 +210,56 @@ function renderStudentTable(students, total, page, totalPages) {
       badgeColor = 'bg-red-100 text-red-600';
     }
 
+    // สร้างป้ายเตือนเฉพาะจุด (Alert / Context tag) เมื่อมีประเด็นเรื่องชั่วโมงหรือเมื่อใช้ฟิลเตอร์
+    const alertTags = [];
+    const softHours = s.trainingApprovedSoft || 0;
+    const hardHours = s.trainingApprovedHard || 0;
+    const softLack = softHours < 12;
+    const hardLack = hardHours < 18;
+
+    const currentSkillFilter = document.getElementById('skill-filter')?.value;
+    if (currentSkillFilter === 'lack_soft' && softLack) {
+      alertTags.push(`<span class="inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium rounded-md bg-amber-50 text-amber-800 border border-amber-200">
+        <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span> ขาด Soft (${softHours}/12 ชม.)
+      </span>`);
+    } else if (currentSkillFilter === 'lack_hard' && hardLack) {
+      alertTags.push(`<span class="inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium rounded-md bg-amber-50 text-amber-800 border border-amber-200">
+        <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span> ขาด Hard (${hardHours}/18 ชม.)
+      </span>`);
+    } else if (currentSkillFilter === 'lack_both' && (softLack || hardLack)) {
+      alertTags.push(`<span class="inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium rounded-md bg-amber-50 text-amber-800 border border-amber-200">
+        <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span> ขาด Soft (${softHours}/12) + Hard (${hardHours}/18)
+      </span>`);
+    } else if (!s.isTrainingComplete && (s.checklistStatusCode === 'APPROVED' || s.cvStatus === 'APPROVED' || s.placementStatus === 'APPROVED')) {
+      if (softLack && hardLack) {
+        alertTags.push(`<span class="inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium rounded-md bg-rose-50 text-rose-700 border border-rose-200" title="Soft: ${softHours}/12, Hard: ${hardHours}/18 ชม.">
+          ⚠️ ตกเกณฑ์อบรม (Soft ${softHours}/12, Hard ${hardHours}/18)
+        </span>`);
+      } else if (softLack) {
+        alertTags.push(`<span class="inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium rounded-md bg-amber-50 text-amber-800 border border-amber-200" title="Soft: ${softHours}/12 ชม.">
+          ⚠️ ขาด Soft (${softHours}/12 ชม.)
+        </span>`);
+      } else if (hardLack) {
+        alertTags.push(`<span class="inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium rounded-md bg-amber-50 text-amber-800 border border-amber-200" title="Hard: ${hardHours}/18 ชม.">
+          ⚠️ ขาด Hard (${hardHours}/18 ชม.)
+        </span>`);
+      }
+    }
+
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td>${s.studentCode}</td>
       <td>${s.nameTh}</td>
       <td>${s.advisorName || '<span class="text-gray-400">-</span>'}</td>
       <td>
-        <span class="inline-block px-2 py-0.5 text-xs font-medium rounded-full ${badgeColor}">
-          ${badgeText}
-        </span>
+        <div class="flex flex-col items-start gap-1 py-0.5">
+          <span class="inline-block px-2.5 py-0.5 text-xs font-semibold rounded-full ${badgeColor}">
+            ${badgeText}
+          </span>
+          ${alertTags.join('')}
+        </div>
       </td>
-      <td class="text-center" style="width: 80px;">
+      <td class="text-center">
         <div style="display: flex; align-items: center; gap: 8px; justify-content: center; position: relative;">
           <button class="btn-detail-dots" title="เมนูจัดการ" onclick="toggleActionMenu(event, ${s.id})" style="background:none;border:none;cursor:pointer;padding:4px;">
             <span class="material-icons text-gray-500 hover:text-blue-600" style="font-size:18px;">more_vert</span>
@@ -431,9 +470,10 @@ function updateFilterUI() {
 
   const hasAnyFilter = currentFilter || statusVal || skillVal || yearVal || searchVal;
 
-  if (currentFilter || statusVal || skillVal) {
+  if (currentFilter || statusVal || skillVal || yearVal) {
     const parts = [];
     if (currentFilter) parts.push(`กราฟ: ${currentFilter.label}`);
+    if (yearVal) parts.push(`ปี ${yearVal}`);
     if (statusVal) parts.push(document.getElementById('status-filter').selectedOptions[0]?.text);
     if (skillVal) parts.push(document.getElementById('skill-filter').selectedOptions[0]?.text);
     if (badge) {
