@@ -129,7 +129,7 @@ router.get("/students", async (req, res) => {
         companies: { include: { submission: true } },
         placement: true,
       },
-      orderBy: { studentCode: "asc" },
+      orderBy: { studentCode: "desc" },
     });
 
     let mapped = allStudents.map((s) => {
@@ -168,6 +168,12 @@ router.get("/students", async (req, res) => {
         cvStatus,
         placementStatus,
       };
+    });
+
+    mapped.sort((a, b) => {
+      const codeA = BigInt(a.studentCode);
+      const codeB = BigInt(b.studentCode);
+      return codeA === codeB ? 0 : codeA > codeB ? -1 : 1;
     });
 
     // กรองตาม Search query

@@ -972,8 +972,13 @@ async function populateYearFilter(apiUrl) {
       data.students
         .filter(s => s.studentCode && s.studentCode.length >= 2)
         .map(s => s.studentCode.substring(0, 2))
-    )].sort();
-    select.innerHTML = '<option value="">ทุกชั้นปี</option>';
+    )].sort((a, b) => Number(b) - Number(a));
+    select.innerHTML = '';
+    const allYearsOption = document.createElement('option');
+    allYearsOption.value = '';
+    allYearsOption.textContent = 'ทุกชั้นปี';
+    allYearsOption.selected = !years.includes(currentVal);
+    select.appendChild(allYearsOption);
     years.forEach(y => {
       const opt = document.createElement('option');
       opt.value = y;
