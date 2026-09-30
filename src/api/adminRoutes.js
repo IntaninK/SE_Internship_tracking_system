@@ -319,7 +319,7 @@ router.get("/students", async (req, res) => {
         placement: true,
         advisor: { include: { user: true } },
       },
-      orderBy: { studentCode: "asc" },
+      orderBy: { studentCode: "desc" },
     });
 
     // Map สถานะแต่ละคนด้วยฟังก์ชัน categorizeStudent เดียวกัน
@@ -356,6 +356,12 @@ router.get("/students", async (req, res) => {
         isTrainingComplete: cats.isTrainingComplete,
         placementStatus: s.placement ? s.placement.status : null,
       };
+    });
+
+    mapped.sort((a, b) => {
+      const codeA = BigInt(a.studentCode);
+      const codeB = BigInt(b.studentCode);
+      return codeA === codeB ? 0 : codeA > codeB ? -1 : 1;
     });
 
     // กรองตาม viewDropped (นิสิตปกติ vs นิสิตที่ดรอป)
