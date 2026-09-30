@@ -16,8 +16,8 @@
       border: 1px solid #D1D5DB;
       background: #fff;
       color: #374151;
-      min-width: 140px;
       cursor: pointer;
+      box-sizing: border-box;
       transition: border-color 0.2s;
     }
     .filter-select:focus {
@@ -48,6 +48,10 @@
       background: #D1D5DB;
       margin: 0 4px;
     }
+    .data-table {
+      table-layout: fixed;
+      width: 100%;
+    }
   </style>
 </head>
 <body>
@@ -69,7 +73,7 @@
         <!-- Filter Bar -->
         <div class="filter-bar" id="filter-bar">
           <!-- ค้นหา -->
-          <div class="relative min-w-[150px] max-w-[200px]">
+          <div class="relative w-[180px] shrink-0">
             <span class="material-icons absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">search</span>
             <input type="text" placeholder="ค้นหา..." id="student-search" class="filter-select !pl-10 w-full" />
           </div>
@@ -77,17 +81,17 @@
           <div class="filter-divider hidden sm:block"></div>
 
           <!-- ปี -->
-          <div class="flex items-center gap-1">
+          <div class="flex items-center gap-1 shrink-0">
             <label>ชั้นปี</label>
-            <select id="year-filter" class="filter-select !min-w-[100px]">
+            <select id="year-filter" class="filter-select" style="width: 115px;">
               <option value="">ทุกชั้นปี</option>
             </select>
           </div>
 
           <!-- อาจารย์ที่ปรึกษา -->
-          <div class="flex items-center gap-1">
+          <div class="flex items-center gap-1 shrink-0">
             <label>อาจารย์</label>
-            <select id="advisor-filter" class="filter-select">
+            <select id="advisor-filter" class="filter-select" style="width: 175px;">
               <option value="">ทุกอาจารย์</option>
             </select>
           </div>
@@ -95,9 +99,9 @@
           <div class="filter-divider hidden sm:block"></div>
 
           <!-- สถานะ -->
-          <div class="flex items-center gap-1">
+          <div class="flex items-center gap-1 shrink-0">
             <label>สถานะ</label>
-            <select id="status-filter" class="filter-select !min-w-[160px]">
+            <select id="status-filter" class="filter-select" style="width: 215px;">
               <option value="">ทุกสถานะ</option>
               <optgroup label="ชั่วโมงอบรม">
                 <option value="training_passed">✓ ชม.อบรมครบ (ผ่าน)</option>
@@ -119,9 +123,9 @@
           </div>
 
           <!-- Soft/Hard Skill -->
-          <div class="flex items-center gap-1">
+          <div class="flex items-center gap-1 shrink-0">
             <label>Skill</label>
-            <select id="skill-filter" class="filter-select !min-w-[140px]">
+            <select id="skill-filter" class="filter-select" style="width: 165px;">
               <option value="">ทุกประเภท</option>
               <option value="lack_soft">ขาด Soft skill</option>
               <option value="lack_hard">ขาด Hard skill</option>
@@ -132,9 +136,9 @@
           <div class="filter-divider hidden sm:block"></div>
 
           <!-- ป้ายกรอง + ล้างตัวกรอง -->
-          <div class="flex items-center gap-2">
-            <span id="active-filter-badge" class="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full" style="display:none;"></span>
-            <button onclick="clearAllFilters()" id="btn-clear-filter" class="text-xs text-gray-600 bg-red-100 hover:bg-red-200 px-2 py-0.5 rounded-full inline-flex items-center gap-1 transition-colors" style="display:none; box-shadow:none; border:none; cursor:pointer;">
+          <div class="flex items-center gap-2 flex-wrap">
+            <span id="active-filter-badge" class="text-xs bg-purple-100 text-purple-700 px-2.5 py-1 rounded-full font-medium" style="display:none;"></span>
+            <button onclick="clearAllFilters()" id="btn-clear-filter" class="text-xs text-gray-600 bg-red-100 hover:bg-red-200 px-2.5 py-1 rounded-full inline-flex items-center gap-1 transition-colors" style="display:none; box-shadow:none; border:none; cursor:pointer;">
               <span class="material-icons" style="font-size:12px;">close</span>
               ล้างทั้งหมด
             </button>
@@ -184,14 +188,19 @@
 
         <!-- Table -->
         <div class="overflow-x-auto">
-          <table class="data-table text-[13px]">
+          <table class="data-table text-[13px]" style="table-layout: fixed; width: 100%; min-width: 950px;">
             <thead id="students-thead">
               <tr>
-                <th>Student ID</th>
-                <th>ชื่อ-นามสกุล</th>
-                <th>อาจารย์ที่ปรึกษา</th>
-                <th>สถานะ</th>
-                <th style="width:80px;"></th>
+                <th style="width: 14%;">Student ID</th>
+                <th style="width: 22%;">ชื่อ-นามสกุล</th>
+                <th style="width: 20%;">อาจารย์ที่ปรึกษา</th>
+                <th style="width: 34%;">สถานะ</th>
+                <th style="width: 10%; min-width: 90px;" class="text-center">
+                  <label style="display:inline-flex;align-items:center;gap:4px;cursor:pointer;white-space:nowrap;" title="เลือกนักศึกษาทั้งหมดในหน้านี้">
+                    <span style="font-size:12px;">เลือกทั้งหมด</span>
+                    <input type="checkbox" id="select-all-students" style="width:16px;height:16px;cursor:pointer;" />
+                  </label>
+                </th>
               </tr>
             </thead>
             <tbody id="students-tbody">
