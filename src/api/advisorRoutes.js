@@ -550,6 +550,9 @@ router.get("/export", async (req, res) => {
         ? `ดรอป${s.dropReason ? ` (${s.dropReason})` : ""}`
         : "ปกติ";
 
+      const cStatus = getStudentChecklistStatus(s);
+      const rStatus = getStudentReadinessStatus(s);
+
       return {
         id: s.id,
         studentCode: s.studentCode,
@@ -581,8 +584,92 @@ router.get("/export", async (req, res) => {
         totalHours,
         isDropped: s.isDropped,
         dropReason: s.dropReason || "",
+        isTrainingComplete,
+        checklistStatusKey: cStatus.key,
+        checklistStatusCode: cStatus.status,
+        readinessStatusKey: rStatus.key,
       };
     });
+
+    // 1. กรองตาม IDs (เฉพาะรายการที่เลือกผ่าน checkbox)
+    if (req.query.ids) {
+      const idList = req.query.ids.split(",").map((id) => parseInt(id.trim())).filter(Boolean);
+      if (idList.length > 0) {
+        const idSet = new Set(idList);
+        exportData = exportData.filter((s) => idSet.has(s.id));
+      }
+    } else if (req.query.all !== "true") {
+      // 2. กรองตามเงื่อนไข (Filtered)
+      // กรองตาม search
+      if (req.query.search) {
+        const q = req.query.search.toLowerCase();
+        exportData = exportData.filter(
+          (s) =>
+            (s.studentCode && s.studentCode.toLowerCase().includes(q)) ||
+            (s.nameTh && s.nameTh.toLowerCase().includes(q)) ||
+            (s.nameEn && s.nameEn.toLowerCase().includes(q)) ||
+            (s.email && s.email.toLowerCase().includes(q))
+        );
+      }
+
+      // กรองตาม yearPrefix
+      if (req.query.yearPrefix) {
+        exportData = exportData.filter((s) => s.studentCode && s.studentCode.startsWith(req.query.yearPrefix));
+      }
+
+      // กรองตาม statusFilter
+      if (req.query.statusFilter) {
+        switch (req.query.statusFilter) {
+          case "training_passed":
+            exportData = exportData.filter((s) => s.isTrainingComplete);
+            break;
+          case "training_failed":
+            exportData = exportData.filter((s) => !s.isTrainingComplete);
+            break;
+          case "cv_passed":
+            exportData = exportData.filter((s) => s.cvStatus === "ผ่าน");
+            break;
+          case "cv_failed":
+            exportData = exportData.filter((s) => s.cvStatus !== "ผ่าน");
+            break;
+          case "checklist_passed":
+            exportData = exportData.filter((s) => s.checklistStatusCode === "APPROVED");
+            break;
+          case "checklist_failed":
+            exportData = exportData.filter((s) => s.checklistStatusCode !== "APPROVED");
+            break;
+          case "placement_approved":
+            exportData = exportData.filter((s) => s.placementStatus === "อนุมัติแล้ว");
+            break;
+          case "placement_pending":
+            exportData = exportData.filter((s) => s.placementStatus !== "อนุมัติแล้ว");
+            break;
+        }
+      }
+
+      // กรองตาม skillFilter
+      if (req.query.skillFilter) {
+        switch (req.query.skillFilter) {
+          case "lack_soft":
+            exportData = exportData.filter((s) => (s.softHours || 0) < 12);
+            break;
+          case "lack_hard":
+            exportData = exportData.filter((s) => (s.hardHours || 0) < 18);
+            break;
+          case "lack_both":
+            exportData = exportData.filter((s) => (s.softHours || 0) < 12 && (s.hardHours || 0) < 18);
+            break;
+        }
+      }
+
+      // กรองตาม chartType และ chartKey
+      if (req.query.chartType && req.query.chartKey) {
+        const ct = req.query.chartType;
+        const ck = req.query.chartKey;
+        if (ct === "checklist") exportData = exportData.filter((s) => s.checklistStatusKey === ck);
+        else if (ct === "readiness") exportData = exportData.filter((s) => s.readinessStatusKey === ck);
+      }
+    }
 
     res.json({ success: true, data: exportData });
   } catch (err) {

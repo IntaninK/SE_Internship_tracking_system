@@ -5,6 +5,9 @@ const pageLimit = 12;
 let selectedStudentIds = new Set();
 let currentUserRole = null; // เก็บ role ของ user ที่ login อยู่
 let currentTab = 'active'; // 'active' | 'dropped'
+let totalActiveStudents = 0;
+let totalDroppedStudents = 0;
+let currentFilteredCount = 0;
 
 // ==========================================
 // โหลดข้อมูลสรุปและรายชื่อนิสิต
@@ -75,10 +78,12 @@ async function loadDashboardSummary() {
     if (withoutEl) withoutEl.textContent = data.studentsWithoutAdvisor;
 
     // --- Badge บนแท็บ (Active vs Dropped) ---
+    totalActiveStudents = data.totalStudents ?? 0;
+    totalDroppedStudents = data.totalDropped ?? 0;
     const tabActiveBadge = document.getElementById('tab-badge-active');
     const tabDroppedBadge = document.getElementById('tab-badge-dropped');
-    if (tabActiveBadge) tabActiveBadge.textContent = data.totalStudents ?? 0;
-    if (tabDroppedBadge) tabDroppedBadge.textContent = data.totalDropped ?? 0;
+    if (tabActiveBadge) tabActiveBadge.textContent = totalActiveStudents;
+    if (tabDroppedBadge) tabDroppedBadge.textContent = totalDroppedStudents;
   } catch (err) {
     console.error('Load dashboard summary error:', err);
   }
@@ -347,6 +352,7 @@ async function loadStudents() {
       studentsToRender = studentsToRender.filter(s => s.studentCode && s.studentCode.startsWith(selectedYear));
       totalToRender = studentsToRender.length;
     }
+    currentFilteredCount = totalToRender;
 
     renderStudentTable(studentsToRender, totalToRender, data.page, Math.max(1, Math.ceil(totalToRender / pageLimit)));
   } catch (err) {
@@ -840,24 +846,159 @@ window.submitRestoreStudents = async function() {
   }
 };
 
-// Export Excel / CSV (ดึงจาก API ข้อมูลครบ 18 คอลัมน์)
 // ==========================================
-window.exportStudents = async function() {
+// Export Excel / CSV ด้วย Export Modal Dialog
+// ==========================================
+window.openExportModal = function() {
+  const modal = document.getElementById('export-modal');
+  if (!modal) return;
+
+  const totalSelected = selectedStudentIds.size;
+  const totalFiltered = currentFilteredCount;
+  const totalAll = (currentTab === 'dropped' ? totalDroppedStudents : totalActiveStudents) || totalFiltered;
+
+  // ตั้งค่าตัวเลขจำนวน
+  const countFilteredEl = document.getElementById('export-count-filtered');
+  const countSelectedEl = document.getElementById('export-count-selected');
+  const countAllEl = document.getElementById('export-count-all');
+  if (countFilteredEl) countFilteredEl.textContent = `${totalFiltered} รายการ`;
+  if (countSelectedEl) countSelectedEl.textContent = `${totalSelected} รายการ`;
+  if (countAllEl) countAllEl.textContent = `${totalAll} รายการ`;
+
+  const allTitleEl = document.getElementById('export-all-title');
+  if (allTitleEl) {
+    allTitleEl.textContent = currentTab === 'dropped' ? 'นิสิตที่ดรอปทั้งหมดในระบบ' : 'นิสิตปกติทั้งหมดในระบบ';
+  }
+
+  const radioSelected = document.getElementById('export-scope-selected');
+  const radioFiltered = document.getElementById('export-scope-filtered');
+  const optSelectedLabel = document.getElementById('export-opt-selected-label');
+  const selectedDesc = document.getElementById('export-selected-desc');
+
+  if (totalSelected > 0) {
+    if (radioSelected) {
+      radioSelected.disabled = false;
+      radioSelected.checked = true;
+    }
+    if (optSelectedLabel) {
+      optSelectedLabel.style.opacity = '1';
+      optSelectedLabel.style.cursor = 'pointer';
+    }
+    if (selectedDesc) selectedDesc.textContent = `ส่งออกเฉพาะนิสิต ${totalSelected} คนที่ติ๊กเลือกไว้`;
+  } else {
+    if (radioSelected) {
+      radioSelected.disabled = true;
+      radioSelected.checked = false;
+    }
+    if (optSelectedLabel) {
+      optSelectedLabel.style.opacity = '0.5';
+      optSelectedLabel.style.cursor = 'not-allowed';
+    }
+    if (selectedDesc) selectedDesc.textContent = 'ยังไม่ได้ติ๊กเลือกนิสิตในตาราง';
+    if (radioFiltered) radioFiltered.checked = true;
+  }
+
+  updateExportSummary();
+  modal.style.display = 'flex';
+};
+
+window.closeExportModal = function() {
+  const modal = document.getElementById('export-modal');
+  if (modal) modal.style.display = 'none';
+};
+
+window.updateExportSummary = function() {
+  const selectedRadio = document.querySelector('input[name="export-scope"]:checked');
+  const scope = selectedRadio ? selectedRadio.value : 'filtered';
+  const totalSelected = selectedStudentIds.size;
+  const totalFiltered = currentFilteredCount;
+  const totalAll = (currentTab === 'dropped' ? totalDroppedStudents : totalActiveStudents) || totalFiltered;
+
+  ['filtered', 'selected', 'all'].forEach(s => {
+    const label = document.getElementById(`export-opt-${s}-label`);
+    if (label) {
+      if (s === scope) {
+        label.style.borderColor = '#1541D2';
+        label.style.backgroundColor = '#F0F5FF';
+      } else {
+        label.style.borderColor = '#E2E8F0';
+        label.style.backgroundColor = '#FFFFFF';
+      }
+    }
+  });
+
+  const summaryText = document.getElementById('export-summary-text');
+  if (!summaryText) return;
+
+  if (scope === 'selected') {
+    summaryText.textContent = `เตรียมส่งออกข้อมูลนิสิต ${totalSelected} รายการ (เฉพาะที่ติ๊กเลือก)`;
+  } else if (scope === 'filtered') {
+    summaryText.textContent = `เตรียมส่งออกข้อมูลนิสิต ${totalFiltered} รายการ (ตามตัวกรอง / การค้นหา)`;
+  } else {
+    summaryText.textContent = `เตรียมส่งออกข้อมูลนิสิต ${totalAll} รายการ (ทั้งหมดในระบบ)`;
+  }
+};
+
+window.confirmExport = async function() {
+  const btn = document.getElementById('btn-confirm-export');
+  const originalBtnHtml = btn ? btn.innerHTML : '';
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = `<span class="material-icons text-sm" style="animation: spin 1s linear infinite;">autorenew</span> กำลังสร้างไฟล์...`;
+  }
+
   try {
-    const res = await fetch('/api/admin/export');
+    const selectedRadio = document.querySelector('input[name="export-scope"]:checked');
+    const scope = selectedRadio ? selectedRadio.value : 'filtered';
+
+    let url = '/api/admin/export?';
+    if (scope === 'selected') {
+      if (selectedStudentIds.size === 0) {
+        alert('กรุณาเลือกนิสิตในตารางก่อนทำการส่งออก');
+        return;
+      }
+      url += `ids=${Array.from(selectedStudentIds).join(',')}`;
+    } else if (scope === 'filtered') {
+      const searchInput = document.getElementById('student-search');
+      const searchVal = searchInput ? searchInput.value.trim() : '';
+      const yearFilter = document.getElementById('year-filter');
+      const selectedYear = yearFilter ? yearFilter.value : '';
+      const statusFilter = document.getElementById('status-filter');
+      const advisorFilter = document.getElementById('advisor-filter');
+      const skillFilter = document.getElementById('skill-filter');
+
+      const params = new URLSearchParams();
+      params.set('viewDropped', currentTab === 'dropped');
+      if (searchVal) params.set('search', searchVal);
+      if (selectedYear) params.set('yearPrefix', selectedYear);
+      if (statusFilter && statusFilter.value) params.set('statusFilter', statusFilter.value);
+      if (advisorFilter && advisorFilter.value) params.set('advisorFilter', advisorFilter.value);
+      if (skillFilter && skillFilter.value) params.set('skillFilter', skillFilter.value);
+      if (currentFilter) {
+        params.set('chartType', currentFilter.chartType);
+        params.set('chartKey', currentFilter.chartKey);
+      }
+      url += params.toString();
+    } else {
+      url += `viewDropped=${currentTab === 'dropped'}&all=true`;
+    }
+
+    const res = await fetch(url);
     const data = await res.json();
     if (!data.success) {
-      alert('Export ไม่สำเร็จ: ' + data.message);
+      alert('Export ไม่สำเร็จ: ' + (data.message || ''));
       return;
     }
 
-    // หากมีการเลือก checkbox ให้ export เฉพาะที่เลือก หากไม่ได้เลือกให้ export ทั้งหมด
-    const exportList = selectedStudentIds.size > 0
-      ? data.data.filter(s => selectedStudentIds.has(s.id))
-      : data.data;
+    let exportList = data.data || [];
+
+    // Fallback กรองฝั่ง client-side หากต้องการ
+    if (scope === 'selected' && selectedStudentIds.size > 0 && exportList.length > selectedStudentIds.size) {
+      exportList = exportList.filter(s => selectedStudentIds.has(s.id));
+    }
 
     if (exportList.length === 0) {
-      alert('ไม่พบข้อมูลนิสิตสำหรับ export');
+      alert('ไม่พบข้อมูลนิสิตสำหรับ export ตามเงื่อนไขที่เลือก');
       return;
     }
 
@@ -905,17 +1046,44 @@ window.exportStudents = async function() {
 
     const csvContent = '\uFEFF' + [headers.map(h => `"${h}"`).join(','), ...rows].join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
+    const blobUrl = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.href = url;
-    a.download = `รายชื่อและข้อมูลการฝึกงานนิสิต_${new Date().toISOString().slice(0,10)}.csv`;
+    a.href = blobUrl;
+    const dateStr = new Date().toISOString().slice(0, 10);
+    const tabSuffix = currentTab === 'dropped' ? '_dropped' : '';
+    a.download = `รายชื่อและข้อมูลนิสิตฝึกงาน_${scope}${tabSuffix}_${dateStr}.csv`;
     a.click();
-    URL.revokeObjectURL(url);
+    URL.revokeObjectURL(blobUrl);
+
+    closeExportModal();
   } catch (err) {
     console.error('Export error:', err);
     alert('เกิดข้อผิดพลาดในการ Export');
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = originalBtnHtml;
+    }
   }
 };
+
+window.exportStudents = function() {
+  window.openExportModal();
+};
+
+// ปิด Export Modal เมื่อคลิกพื้นหลัง หรือกดปุ่ม Escape
+window.addEventListener('click', (e) => {
+  const exportModal = document.getElementById('export-modal');
+  if (e.target === exportModal) {
+    closeExportModal();
+  }
+});
+
+window.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    closeExportModal();
+  }
+});
 
 // Search event
 const searchInput = document.getElementById('student-search');

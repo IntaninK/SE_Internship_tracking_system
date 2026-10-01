@@ -3,11 +3,14 @@ let currentPage = 1;
 const pageLimit = 12;
 let selectedStudentIds = new Set();
 let openDropdownStudentId = null;
+let totalAdvisorStudents = 0;
+let currentFilteredCount = 0;
 
 // ==========================================
 // เริ่มต้นโหลดข้อมูล
 // ==========================================
 async function initAdvisorDashboard() {
+  await loadDashboardSummary();
   await loadStudents();
   await populateYearFilter('/api/advisor/students');
 }
@@ -20,6 +23,7 @@ async function loadDashboardSummary() {
     const res = await fetch('/api/advisor/dashboard-summary');
     const data = await res.json();
     if (!data.success) return;
+    totalAdvisorStudents = data.totalStudents ?? 0;
     renderDashboardCharts(data.checklistStats, data.readinessStats, data.totalStudents);
   } catch (err) {
     console.error('Load advisor dashboard summary error:', err);
@@ -177,6 +181,10 @@ async function loadStudents() {
     if (selectedYear) {
       studentsToRender = studentsToRender.filter(s => s.studentCode && s.studentCode.startsWith(selectedYear));
       totalToRender = studentsToRender.length;
+    }
+    currentFilteredCount = totalToRender;
+    if (!totalAdvisorStudents && data.chartStats) {
+      totalAdvisorStudents = data.chartStats.totalStudents;
     }
 
     renderStudentTable(studentsToRender, totalToRender, data.page, Math.max(1, Math.ceil(totalToRender / pageLimit)));
@@ -383,14 +391,150 @@ function renderPagination(page, totalPages, total) {
 }
 
 // ==========================================
-// Export CSV (ดึงจาก API ข้อมูลครบจาก schema)
+// Export Excel / CSV ด้วย Export Modal Dialog
 // ==========================================
-window.exportStudents = async function() {
+window.openExportModal = function() {
+  const modal = document.getElementById('export-modal');
+  if (!modal) return;
+
+  const totalSelected = selectedStudentIds.size;
+  const totalFiltered = currentFilteredCount;
+  const totalAll = totalAdvisorStudents || totalFiltered;
+
+  // ตั้งค่าตัวเลขจำนวน
+  const countFilteredEl = document.getElementById('export-count-filtered');
+  const countSelectedEl = document.getElementById('export-count-selected');
+  const countAllEl = document.getElementById('export-count-all');
+  if (countFilteredEl) countFilteredEl.textContent = `${totalFiltered} รายการ`;
+  if (countSelectedEl) countSelectedEl.textContent = `${totalSelected} รายการ`;
+  if (countAllEl) countAllEl.textContent = `${totalAll} รายการ`;
+
+  const radioSelected = document.getElementById('export-scope-selected');
+  const radioFiltered = document.getElementById('export-scope-filtered');
+  const optSelectedLabel = document.getElementById('export-opt-selected-label');
+  const selectedDesc = document.getElementById('export-selected-desc');
+
+  if (totalSelected > 0) {
+    if (radioSelected) {
+      radioSelected.disabled = false;
+      radioSelected.checked = true;
+    }
+    if (optSelectedLabel) {
+      optSelectedLabel.style.opacity = '1';
+      optSelectedLabel.style.cursor = 'pointer';
+    }
+    if (selectedDesc) selectedDesc.textContent = `ส่งออกเฉพาะนิสิต ${totalSelected} คนที่ติ๊กเลือกไว้`;
+  } else {
+    if (radioSelected) {
+      radioSelected.disabled = true;
+      radioSelected.checked = false;
+    }
+    if (optSelectedLabel) {
+      optSelectedLabel.style.opacity = '0.5';
+      optSelectedLabel.style.cursor = 'not-allowed';
+    }
+    if (selectedDesc) selectedDesc.textContent = 'ยังไม่ได้ติ๊กเลือกนิสิตในตาราง';
+    if (radioFiltered) radioFiltered.checked = true;
+  }
+
+  updateExportSummary();
+  modal.style.display = 'flex';
+};
+
+window.closeExportModal = function() {
+  const modal = document.getElementById('export-modal');
+  if (modal) modal.style.display = 'none';
+};
+
+window.updateExportSummary = function() {
+  const selectedRadio = document.querySelector('input[name="export-scope"]:checked');
+  const scope = selectedRadio ? selectedRadio.value : 'filtered';
+  const totalSelected = selectedStudentIds.size;
+  const totalFiltered = currentFilteredCount;
+  const totalAll = totalAdvisorStudents || totalFiltered;
+
+  ['filtered', 'selected', 'all'].forEach(s => {
+    const label = document.getElementById(`export-opt-${s}-label`);
+    if (label) {
+      if (s === scope) {
+        label.style.borderColor = '#1541D2';
+        label.style.backgroundColor = '#F0F5FF';
+      } else {
+        label.style.borderColor = '#E2E8F0';
+        label.style.backgroundColor = '#FFFFFF';
+      }
+    }
+  });
+
+  const summaryText = document.getElementById('export-summary-text');
+  if (!summaryText) return;
+
+  if (scope === 'selected') {
+    summaryText.textContent = `เตรียมส่งออกข้อมูลนิสิต ${totalSelected} รายการ (เฉพาะที่ติ๊กเลือก)`;
+  } else if (scope === 'filtered') {
+    summaryText.textContent = `เตรียมส่งออกข้อมูลนิสิต ${totalFiltered} รายการ (ตามตัวกรอง / การค้นหา)`;
+  } else {
+    summaryText.textContent = `เตรียมส่งออกข้อมูลนิสิต ${totalAll} รายการ (ทั้งหมดในความดูแล)`;
+  }
+};
+
+window.confirmExport = async function() {
+  const btn = document.getElementById('btn-confirm-export');
+  const originalBtnHtml = btn ? btn.innerHTML : '';
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = `<span class="material-icons text-sm" style="animation: spin 1s linear infinite;">autorenew</span> กำลังสร้างไฟล์...`;
+  }
+
   try {
-    const res = await fetch('/api/advisor/export');
+    const selectedRadio = document.querySelector('input[name="export-scope"]:checked');
+    const scope = selectedRadio ? selectedRadio.value : 'filtered';
+
+    let url = '/api/advisor/export?';
+    if (scope === 'selected') {
+      if (selectedStudentIds.size === 0) {
+        alert('กรุณาเลือกนิสิตในตารางก่อนทำการส่งออก');
+        return;
+      }
+      url += `ids=${Array.from(selectedStudentIds).join(',')}`;
+    } else if (scope === 'filtered') {
+      const searchInput = document.getElementById('student-search');
+      const searchVal = searchInput ? searchInput.value.trim() : '';
+      const yearFilter = document.getElementById('year-filter');
+      const selectedYear = yearFilter ? yearFilter.value : '';
+      const statusFilter = document.getElementById('status-filter');
+      const skillFilter = document.getElementById('skill-filter');
+
+      const params = new URLSearchParams();
+      if (searchVal) params.set('search', searchVal);
+      if (selectedYear) params.set('yearPrefix', selectedYear);
+      if (statusFilter && statusFilter.value) params.set('statusFilter', statusFilter.value);
+      if (skillFilter && skillFilter.value) params.set('skillFilter', skillFilter.value);
+      if (currentFilter) {
+        params.set('chartType', currentFilter.chartType);
+        params.set('chartKey', currentFilter.chartKey);
+      }
+      url += params.toString();
+    } else {
+      url += `all=true`;
+    }
+
+    const res = await fetch(url);
     const data = await res.json();
     if (!data.success) {
-      alert('Export ไม่สำเร็จ: ' + data.message);
+      alert('Export ไม่สำเร็จ: ' + (data.message || ''));
+      return;
+    }
+
+    let exportList = data.data || [];
+
+    // Fallback กรองฝั่ง client-side หากต้องการ
+    if (scope === 'selected' && selectedStudentIds.size > 0 && exportList.length > selectedStudentIds.size) {
+      exportList = exportList.filter(s => selectedStudentIds.has(s.id));
+    }
+
+    if (exportList.length === 0) {
+      alert('ไม่พบข้อมูลนิสิตสำหรับ export ตามเงื่อนไขที่เลือก');
       return;
     }
 
@@ -415,7 +559,7 @@ window.exportStudents = async function() {
       'สถานะในระบบ',
     ];
 
-    const rows = data.data.map(s => [
+    const rows = exportList.map(s => [
       s.studentCode,
       s.nameTh,
       s.phone,
@@ -438,17 +582,43 @@ window.exportStudents = async function() {
 
     const csvContent = '\uFEFF' + [headers.map(h => `"${h}"`).join(','), ...rows].join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
+    const blobUrl = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.href = url;
-    a.download = `รายชื่อและข้อมูลการฝึกงานนิสิต_${new Date().toISOString().slice(0,10)}.csv`;
+    a.href = blobUrl;
+    const dateStr = new Date().toISOString().slice(0, 10);
+    a.download = `รายชื่อและข้อมูลนิสิตฝึกงาน_${scope}_${dateStr}.csv`;
     a.click();
-    URL.revokeObjectURL(url);
+    URL.revokeObjectURL(blobUrl);
+
+    closeExportModal();
   } catch (err) {
     console.error('Export error:', err);
     alert('เกิดข้อผิดพลาดในการ Export');
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = originalBtnHtml;
+    }
   }
 };
+
+window.exportStudents = function() {
+  window.openExportModal();
+};
+
+// ปิด Export Modal เมื่อคลิกพื้นหลัง หรือกดปุ่ม Escape
+window.addEventListener('click', (e) => {
+  const exportModal = document.getElementById('export-modal');
+  if (e.target === exportModal) {
+    closeExportModal();
+  }
+});
+
+window.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    closeExportModal();
+  }
+});
 
 // ==========================================
 // Filter UI & Clear Filter

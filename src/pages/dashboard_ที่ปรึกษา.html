@@ -174,7 +174,7 @@
         <div class="flex flex-col sm:flex-row items-center justify-between mt-4 gap-3">
           <span class="text-sm text-gray-500" id="pagination-info">-</span>
           <div class="flex items-center gap-1" id="pagination-controls"></div>
-          <button class="btn btn-tonal btn-sm" onclick="exportStudents()">
+          <button class="btn btn-tonal btn-sm" onclick="openExportModal()" title="ส่งออกข้อมูลนิสิต (CSV / Excel)">
             <span class="material-icons text-sm">download</span> export
           </button>
         </div>
@@ -248,6 +248,104 @@
           บันทึกสถานะ
         </button>
       </div>
+    </div>
+  </div>
+
+  <!-- ===== Modal: ส่งออกข้อมูลนิสิต (Export) ===== -->
+  <div id="export-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:1000; justify-content:center; align-items:center; backdrop-filter:blur(2px);">
+    <div style="background:white; border-radius:16px; padding:24px 28px; width:480px; max-width:92%; box-shadow:0 10px 30px rgba(0,0,0,0.2);">
+      
+      <!-- Header -->
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px;">
+        <h3 style="font-size:18px; font-weight:700; color:#1e293b; display:flex; align-items:center; gap:8px; margin:0;">
+          <span class="material-icons" style="color:#1541D2;">file_download</span>
+          ส่งออกข้อมูลนิสิต (Export Data)
+        </h3>
+        <button type="button" onclick="closeExportModal()" style="background:none; border:none; cursor:pointer; padding:4px; display:flex; align-items:center; border-radius:6px;">
+          <span class="material-icons" style="color:#94a3b8;">close</span>
+        </button>
+      </div>
+
+      <!-- Scope Selection -->
+      <div style="margin-bottom:16px;">
+        <label style="font-size:13px; font-weight:600; color:#475569; display:block; margin-bottom:10px;">
+          เลือกขอบเขตข้อมูลที่ต้องการส่งออก
+        </label>
+
+        <div style="display:flex; flex-direction:column; gap:10px;">
+          <!-- Option 1: Filtered / Search results -->
+          <label id="export-opt-filtered-label" style="display:flex; align-items:flex-start; gap:10px; padding:12px 14px; border:1.5px solid #1541D2; background:#F0F5FF; border-radius:12px; cursor:pointer; transition:all 0.15s;">
+            <input type="radio" name="export-scope" id="export-scope-filtered" value="filtered" style="margin-top:3px; cursor:pointer; accent-color:#1541D2;" checked onchange="updateExportSummary()">
+            <div style="flex:1;">
+              <div style="font-size:14px; font-weight:600; color:#1e293b; display:flex; align-items:center; justify-content:space-between;">
+                <span>ตามตัวกรอง / ผลการค้นหา</span>
+                <span id="export-count-filtered" style="font-size:11px; background:#eff6ff; color:#1d4ed8; padding:2px 8px; border-radius:9999px; font-weight:700;">0 รายการ</span>
+              </div>
+              <div style="font-size:12px; color:#64748b; margin-top:2px;" id="export-filtered-desc">
+                ส่งออกเฉพาะนิสิตที่ตรงกับเงื่อนไขที่กำลังแสดงในตาราง
+              </div>
+            </div>
+          </label>
+
+          <!-- Option 2: Selected only -->
+          <label id="export-opt-selected-label" style="display:flex; align-items:flex-start; gap:10px; padding:12px 14px; border:1.5px solid #E2E8F0; background:#fff; border-radius:12px; cursor:pointer; transition:all 0.15s;">
+            <input type="radio" name="export-scope" id="export-scope-selected" value="selected" style="margin-top:3px; cursor:pointer; accent-color:#1541D2;" onchange="updateExportSummary()">
+            <div style="flex:1;">
+              <div style="font-size:14px; font-weight:600; color:#1e293b; display:flex; align-items:center; justify-content:space-between;">
+                <span>เฉพาะนิสิตที่เลือก (Checkbox)</span>
+                <span id="export-count-selected" style="font-size:11px; background:#f5f3ff; color:#6d28d9; padding:2px 8px; border-radius:9999px; font-weight:700;">0 รายการ</span>
+              </div>
+              <div style="font-size:12px; color:#64748b; margin-top:2px;" id="export-selected-desc">
+                ส่งออกเฉพาะนิสิตที่มีการติ๊กเลือกในตาราง
+              </div>
+            </div>
+          </label>
+
+          <!-- Option 3: All data -->
+          <label id="export-opt-all-label" style="display:flex; align-items:flex-start; gap:10px; padding:12px 14px; border:1.5px solid #E2E8F0; background:#fff; border-radius:12px; cursor:pointer; transition:all 0.15s;">
+            <input type="radio" name="export-scope" id="export-scope-all" value="all" style="margin-top:3px; cursor:pointer; accent-color:#1541D2;" onchange="updateExportSummary()">
+            <div style="flex:1;">
+              <div style="font-size:14px; font-weight:600; color:#1e293b; display:flex; align-items:center; justify-content:space-between;">
+                <span id="export-all-title">นิสิตในความดูแลทั้งหมด</span>
+                <span id="export-count-all" style="font-size:11px; background:#f1f5f9; color:#334155; padding:2px 8px; border-radius:9999px; font-weight:700;">0 รายการ</span>
+              </div>
+              <div style="font-size:12px; color:#64748b; margin-top:2px;">
+                ส่งออกข้อมูลนิสิตทั้งหมดที่อาจารย์ดูแลโดยไม่สนใจตัวกรอง
+              </div>
+            </div>
+          </label>
+        </div>
+      </div>
+
+      <!-- File format info -->
+      <div style="background:#F8FAFC; border:1px solid #E2E8F0; border-radius:10px; padding:10px 14px; margin-bottom:14px; display:flex; align-items:center; justify-content:space-between;">
+        <div style="display:flex; align-items:center; gap:8px;">
+          <span class="material-icons" style="color:#059669; font-size:20px;">table_view</span>
+          <div>
+            <div style="font-size:13px; font-weight:600; color:#334155;">รูปแบบไฟล์: CSV (Excel Compatible)</div>
+            <div style="font-size:11px; color:#64748b;">UTF-8 with BOM รองรับภาษาไทยใน Microsoft Excel สมบูรณ์</div>
+          </div>
+        </div>
+        <span style="font-size:11px; font-weight:700; background:#d1fae5; color:#065f46; padding:2px 8px; border-radius:6px;">.CSV</span>
+      </div>
+
+      <!-- Summary banner -->
+      <div id="export-summary-box" style="background:#EFF6FF; border:1px solid #DBEAFE; border-radius:10px; padding:10px 14px; margin-bottom:20px; font-size:13px; color:#1E40AF; display:flex; align-items:center; gap:8px;">
+        <span class="material-icons" style="font-size:18px; color:#3B82F6;">info</span>
+        <span id="export-summary-text">เตรียมส่งออกข้อมูลนิสิต 0 รายการ (18 คอลัมน์)</span>
+      </div>
+
+      <!-- Footer Buttons -->
+      <div style="display:flex; justify-content:flex-end; gap:10px;">
+        <button type="button" onclick="closeExportModal()" class="btn btn-tonal btn-md" style="cursor:pointer; min-width:90px;">
+          ยกเลิก
+        </button>
+        <button type="button" id="btn-confirm-export" onclick="confirmExport()" class="btn btn-primary btn-md" style="display:inline-flex; align-items:center; gap:6px; cursor:pointer;">
+          <span class="material-icons" style="font-size:18px;">download</span>
+          <span>ดาวน์โหลดไฟล์</span>
+        </button>
+      </div>
+
     </div>
   </div>
 

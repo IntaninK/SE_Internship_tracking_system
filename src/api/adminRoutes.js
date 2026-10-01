@@ -943,6 +943,7 @@ router.get("/export", async (req, res) => {
         ? `ดรอป${s.dropReason ? ` (${s.dropReason})` : ""}`
         : "ปกติ";
 
+      const cats = categorizeStudent(s);
       return {
         id: s.id,
         studentCode: s.studentCode,
@@ -974,8 +975,105 @@ router.get("/export", async (req, res) => {
         totalHours,
         isDropped: s.isDropped,
         dropReason: s.dropReason || "",
+        isTrainingComplete,
+        readinessCategory: cats.readinessCategory,
+        trainingCategory: cats.trainingCategory,
+        cvCategory: cats.cvCategory,
+        placementCategory: cats.placementCategory,
       };
     });
+
+    // 1. กรองตาม IDs (เฉพาะรายการที่เลือกผ่าน checkbox)
+    if (req.query.ids) {
+      const idList = req.query.ids.split(",").map((id) => parseInt(id.trim())).filter(Boolean);
+      if (idList.length > 0) {
+        const idSet = new Set(idList);
+        exportData = exportData.filter((s) => idSet.has(s.id));
+      }
+    } else if (req.query.all !== "true") {
+      // 2. กรองตามเงื่อนไข (Filtered)
+      // กรองตาม viewDropped (นิสิตปกติ vs นิสิตที่ดรอป)
+      if (req.query.viewDropped === "true") {
+        exportData = exportData.filter((s) => s.isDropped);
+      } else if (req.query.viewDropped === "false") {
+        exportData = exportData.filter((s) => !s.isDropped);
+      }
+
+      // กรองตาม search
+      if (req.query.search) {
+        const q = req.query.search.toLowerCase();
+        exportData = exportData.filter(
+          (s) =>
+            (s.studentCode && s.studentCode.toLowerCase().includes(q)) ||
+            (s.nameTh && s.nameTh.toLowerCase().includes(q))
+        );
+      }
+
+      // กรองตาม yearPrefix
+      if (req.query.yearPrefix) {
+        exportData = exportData.filter((s) => s.studentCode && s.studentCode.startsWith(req.query.yearPrefix));
+      }
+
+      // กรองตาม statusFilter
+      if (req.query.statusFilter) {
+        switch (req.query.statusFilter) {
+          case "training_passed":
+            exportData = exportData.filter((s) => s.isTrainingComplete);
+            break;
+          case "training_failed":
+            exportData = exportData.filter((s) => !s.isTrainingComplete);
+            break;
+          case "cv_passed":
+            exportData = exportData.filter((s) => s.cvStatus === "ผ่าน");
+            break;
+          case "cv_failed":
+            exportData = exportData.filter((s) => s.cvStatus !== "ผ่าน");
+            break;
+          case "checklist_passed":
+            exportData = exportData.filter((s) => s.checklistStatus === "ผ่าน");
+            break;
+          case "checklist_failed":
+            exportData = exportData.filter((s) => s.checklistStatus !== "ผ่าน");
+            break;
+          case "placement_approved":
+            exportData = exportData.filter((s) => s.placementStatus === "อนุมัติแล้ว");
+            break;
+          case "placement_pending":
+            exportData = exportData.filter((s) => s.placementStatus !== "อนุมัติแล้ว");
+            break;
+        }
+      }
+
+      // กรองตาม advisorFilter
+      if (req.query.advisorFilter) {
+        exportData = exportData.filter((s) => s.advisorName === req.query.advisorFilter);
+      }
+
+      // กรองตาม skillFilter
+      if (req.query.skillFilter) {
+        switch (req.query.skillFilter) {
+          case "lack_soft":
+            exportData = exportData.filter((s) => (s.softHours || 0) < 12);
+            break;
+          case "lack_hard":
+            exportData = exportData.filter((s) => (s.hardHours || 0) < 18);
+            break;
+          case "lack_both":
+            exportData = exportData.filter((s) => (s.softHours || 0) < 12 && (s.hardHours || 0) < 18);
+            break;
+        }
+      }
+
+      // กรองตาม chartType และ chartKey
+      if (req.query.chartType && req.query.chartKey) {
+        const ct = req.query.chartType;
+        const ck = req.query.chartKey;
+        if (ct === "readiness") exportData = exportData.filter((s) => s.readinessCategory === ck);
+        else if (ct === "training") exportData = exportData.filter((s) => s.trainingCategory === ck);
+        else if (ct === "cv") exportData = exportData.filter((s) => s.cvCategory === ck);
+        else if (ct === "placement") exportData = exportData.filter((s) => s.placementCategory === ck);
+      }
+    }
 
     res.json({ success: true, data: exportData });
   } catch (err) {
