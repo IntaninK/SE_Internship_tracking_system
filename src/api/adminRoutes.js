@@ -625,13 +625,27 @@ router.put("/students/:studentId/training/:trainingId/status", async (req, res) 
 // 6. ตั้งสถานะอนุมัติที่ฝึกงาน
 // ==========================================
 router.put("/students/:studentId/placement-status", async (req, res) => {
+  // อนุญาตเฉพาะอาจารย์ที่ปรึกษา (ADVISOR) เท่านั้น ตาม requirement ใหม่
+  if (req.session.user.role !== "ADVISOR") {
+    return res.status(403).json({
+      success: false,
+      message: "อาจารย์ที่ปรึกษาเท่านั้นที่เป็นผู้ตรวจและให้สถานะข้อมูลบริษัทที่เข้าฝึกงาน",
+    });
+  }
   try {
     const studentId = parseInt(req.params.studentId);
     const { status, note } = req.body;
 
-    const updated = await prisma.internshipPlacement.update({
+    const updated = await prisma.internshipPlacement.upsert({
       where: { studentId },
-      data: {
+      create: {
+        studentId,
+        status,
+        note: note || null,
+        reviewedById: req.session.user.id,
+        reviewedAt: new Date(),
+      },
+      update: {
         status,
         note: note || null,
         reviewedById: req.session.user.id,
@@ -689,6 +703,9 @@ router.put("/students/batch-status", async (req, res) => {
       });
       updatedCount = result.count;
     } else if (statusType === "placement") {
+      if (req.session.user.role !== "ADVISOR") {
+        return res.status(403).json({ success: false, message: "อาจารย์ที่ปรึกษาเท่านั้นที่เป็นผู้ตรวจและให้สถานะข้อมูลบริษัทที่เข้าฝึกงาน" });
+      }
       const result = await prisma.internshipPlacement.updateMany({
         where: { studentId: { in: studentIds.map(Number) } },
         data: reviewData,

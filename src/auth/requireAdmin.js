@@ -24,9 +24,16 @@ async function requireAdmin(req, res, next) {
 
   const role = req.session.user.role;
   
-  // อนุญาตให้อาจารย์ที่ปรึกษา (ADVISOR) เข้าดู Profile นิสิตได้ (GET /students/:studentId)
-  if (role === "ADVISOR" && req.method === "GET" && req.path.startsWith("/students/")) {
-    return next();
+  // อนุญาตให้อาจารย์ที่ปรึกษา (ADVISOR):
+  // 1. เข้าดู Profile นิสิตได้ (GET /students/:studentId)
+  // 2. ตรวจและตั้งสถานะอนุมัติข้อมูลบริษัทที่เข้าฝึกงานของนิสิตได้ (PUT /students/:studentId/placement-status)
+  if (role === "ADVISOR") {
+    if (req.method === "GET" && req.path.startsWith("/students/")) {
+      return next();
+    }
+    if (req.method === "PUT" && req.path.includes("/placement-status")) {
+      return next();
+    }
   }
 
   if (role !== "STAFF" && role !== "ADMIN") {

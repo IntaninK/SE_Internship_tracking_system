@@ -678,4 +678,36 @@ router.get("/export", async (req, res) => {
   }
 });
 
+// ==========================================
+// ตั้งสถานะอนุมัติที่ฝึกงานของนิสิต (อาจารย์ที่ปรึกษา)
+// ==========================================
+router.put("/students/:studentId/placement-status", async (req, res) => {
+  try {
+    const studentId = parseInt(req.params.studentId);
+    const { status, note } = req.body;
+
+    const updated = await prisma.internshipPlacement.upsert({
+      where: { studentId },
+      create: {
+        studentId,
+        status,
+        note: note || null,
+        reviewedById: req.session.user.id,
+        reviewedAt: new Date(),
+      },
+      update: {
+        status,
+        note: note || null,
+        reviewedById: req.session.user.id,
+        reviewedAt: new Date(),
+      },
+    });
+
+    res.json({ success: true, placement: updated });
+  } catch (err) {
+    console.error("PUT /api/advisor/students/:id/placement-status error:", err);
+    res.status(500).json({ success: false, message: "อัพเดตสถานะอนุมัติฝึกงานไม่สำเร็จ" });
+  }
+});
+
 module.exports = router;

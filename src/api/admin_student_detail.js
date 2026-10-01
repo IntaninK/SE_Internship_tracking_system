@@ -42,7 +42,6 @@ async function initStudentDetail() {
     renderPlacement(data.placement);
     renderDocumentSummary(data);
 
-    // ถ้าผู้ใช้เป็นอาจารย์ที่ปรึกษา ให้ซ่อนปุ่มตรวจสถานะของ Admin
     if (currentUserRole === 'ADVISOR') {
       const trainingApproval = document.getElementById('training-approval-area');
       const trainingSave = document.getElementById('training-save-area');
@@ -54,10 +53,11 @@ async function initStudentDetail() {
         cvStatusSelect.parentElement.style.display = 'none';
       }
 
-      const placementStatusSelect = document.getElementById('placement-admin-status');
-      if (placementStatusSelect && placementStatusSelect.parentElement) {
-        placementStatusSelect.parentElement.style.display = 'none';
-      }
+      const placementApproval = document.getElementById('placement-approval-area');
+      if (placementApproval) placementApproval.style.display = 'flex';
+    } else {
+      const placementApproval = document.getElementById('placement-approval-area');
+      if (placementApproval) placementApproval.style.display = 'none';
     }
   } catch (err) {
     console.error('Load student detail error:', err);
@@ -515,8 +515,8 @@ function renderPlacement(placement) {
       <div class="form-group"><label class="form-label" style="font-size:16px; font-weight:600;">Email</label><input class="input-field" value="${placement.companyEmail || '-'}" readonly /></div>
       <div class="form-group"><label class="form-label" style="font-size:16px; font-weight:600;">จังหวัด</label><input class="input-field" value="${placement.province || '-'}" readonly /></div>
     </div>
-    <div style="margin: 16px auto 0; display:flex; flex-direction:column; gap:10px; max-width:350px;">
-      <label style="font-size:13px; font-weight:600; color:#334155;">ตั้งสถานะอนุมัติที่ฝึกงาน</label>
+    <div id="placement-approval-area" style="margin: 16px auto 0; display:${currentUserRole === 'ADVISOR' ? 'flex' : 'none'}; flex-direction:column; gap:10px; max-width:350px;">
+      <label style="font-size:13px; font-weight:600; color:#334155;">ตั้งสถานะอนุมัติที่ฝึกงาน (อาจารย์ที่ปรึกษา)</label>
       <select class="input-field" id="placement-admin-status" style="font-size:13px; padding:8px 10px;">
         <option value="PENDING" ${placement.status === 'PENDING' ? 'selected' : ''}>☐ รอผล</option>
         <option value="APPROVED" ${placement.status === 'APPROVED' ? 'selected' : ''}>✓ อนุมัติที่ฝึกงาน</option>
