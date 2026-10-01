@@ -332,6 +332,88 @@ router.put("/batch-checklist-status", async (req, res) => {
 });
 
 // ==========================================
+// 3.1 Batch ตั้งสถานะนิสิต (Checklist หรือ ข้อมูลบริษัทที่เข้าฝึกงาน)
+// ==========================================
+router.put("/batch-status", async (req, res) => {
+  try {
+    const advisorStaffId = req.staff.id;
+    const { studentIds, statusType, status, note } = req.body;
+
+    if (!Array.isArray(studentIds) || studentIds.length === 0) {
+      return res.status(400).json({ success: false, message: "กรุณาเลือกนิสิตอย่างน้อย 1 คน" });
+    }
+
+    if (!["checklist", "placement"].includes(statusType)) {
+      return res.status(400).json({ success: false, message: "ประเภทสถานะไม่ถูกต้อง (ต้องเป็น checklist หรือ placement)" });
+    }
+
+    if (!["APPROVED", "REJECTED", "PENDING"].includes(status)) {
+      return res.status(400).json({ success: false, message: "สถานะไม่ถูกต้อง" });
+    }
+
+    // ตรวจสอบว่าเป็นนิสิตของอาจารย์ที่ปรึกษาคนนี้จริง
+    const validStudents = await prisma.student.findMany({
+      where: {
+        id: { in: studentIds.map((id) => parseInt(id)) },
+        advisorId: advisorStaffId,
+      },
+      select: { id: true },
+    });
+
+    const validIds = validStudents.map((s) => s.id);
+    if (validIds.length === 0) {
+      return res.status(403).json({ success: false, message: "ไม่มีนิสิตในความดูแลที่ตรงกับที่เลือก" });
+    }
+
+    if (statusType === "checklist") {
+      const updateResult = await prisma.company.updateMany({
+        where: { studentId: { in: validIds } },
+        data: {
+          checklistStatus: status,
+          checklistNote: note || null,
+          reviewedById: req.session.user.id,
+          reviewedAt: new Date(),
+        },
+      });
+
+      return res.json({
+        success: true,
+        message: `อัปเดตสถานะ Checklist ให้กับนิสิต ${validIds.length} คน (${updateResult.count} บริษัท) เรียบร้อยแล้ว`,
+      });
+    } else if (statusType === "placement") {
+      await Promise.all(
+        validIds.map((sid) =>
+          prisma.internshipPlacement.upsert({
+            where: { studentId: sid },
+            create: {
+              studentId: sid,
+              status,
+              note: note || null,
+              reviewedById: req.session.user.id,
+              reviewedAt: new Date(),
+            },
+            update: {
+              status,
+              note: note || null,
+              reviewedById: req.session.user.id,
+              reviewedAt: new Date(),
+            },
+          })
+        )
+      );
+
+      return res.json({
+        success: true,
+        message: `อัปเดตสถานะที่ฝึกงานให้กับนิสิต ${validIds.length} คน เรียบร้อยแล้ว`,
+      });
+    }
+  } catch (err) {
+    console.error("PUT /api/advisor/batch-status error:", err);
+    res.status(500).json({ success: false, message: "บันทึกสถานะไม่สำเร็จ" });
+  }
+});
+
+// ==========================================
 // 4. ดู Checklist ของนิสิตรายบุคคล (สำหรับอาจารย์ที่ปรึกษา)
 // ==========================================
 router.get("/students/:studentId/checklist", async (req, res) => {

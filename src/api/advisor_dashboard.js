@@ -763,12 +763,43 @@ async function populateYearFilter(apiUrl) {
 // ==========================================
 // 4. Modal: ตั้งสถานะนิสิต (Batch Update)
 // ==========================================
+window.onBatchTypeChange = function() {
+  const type = document.getElementById('batch-status-type')?.value;
+  const select = document.getElementById('batch-status-select');
+  if (!select) return;
+
+  if (type === 'checklist') {
+    select.innerHTML = `
+      <option value="APPROVED">✓ อาจารย์รีวิวแล้ว (ผ่าน)</option>
+      <option value="PENDING">☐ รอผล</option>
+      <option value="REJECTED">✗ ไม่ผ่าน / ทำ checklist เพิ่ม</option>
+    `;
+  } else if (type === 'placement') {
+    select.innerHTML = `
+      <option value="APPROVED">✓ อนุมัติที่ฝึกงาน</option>
+      <option value="PENDING">☐ รอผล</option>
+      <option value="REJECTED">✗ ไม่อนุมัติที่ฝึกงาน / เปลี่ยนที่ฝึกงาน</option>
+    `;
+  } else {
+    select.innerHTML = `<option value="">-- กรุณาเลือกประเภทสถานะก่อน --</option>`;
+  }
+};
+
 window.openSetStatusModal = function() {
   if (selectedStudentIds.size === 0) {
     alert('กรุณาเลือกนิสิตอย่างน้อย 1 คนโดยการติ๊กถูกที่ช่องสี่เหลี่ยมด้านหน้า');
     return;
   }
   document.getElementById('modal-selected-count').textContent = selectedStudentIds.size;
+
+  const typeSelect = document.getElementById('batch-status-type');
+  if (typeSelect) {
+    typeSelect.value = 'checklist';
+    onBatchTypeChange();
+  }
+  const noteInput = document.getElementById('batch-status-note');
+  if (noteInput) noteInput.value = '';
+
   document.getElementById('modal-set-status').classList.remove('hidden');
 };
 
@@ -777,15 +808,26 @@ window.closeSetStatusModal = function() {
 };
 
 window.submitBatchStatus = async function() {
-  const status = document.getElementById('batch-status-select').value;
-  const note = document.getElementById('batch-status-note').value;
+  const statusType = document.getElementById('batch-status-type')?.value;
+  const status = document.getElementById('batch-status-select')?.value;
+  const note = document.getElementById('batch-status-note')?.value || '';
+
+  if (!statusType) {
+    alert('กรุณาเลือกประเภทสถานะ (Checklist หรือ ข้อมูลบริษัทที่เข้าฝึกงาน)');
+    return;
+  }
+  if (!status) {
+    alert('กรุณาเลือกสถานะ');
+    return;
+  }
 
   try {
-    const res = await fetch('/api/advisor/batch-checklist-status', {
+    const res = await fetch('/api/advisor/batch-status', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         studentIds: Array.from(selectedStudentIds),
+        statusType,
         status,
         note,
       }),
