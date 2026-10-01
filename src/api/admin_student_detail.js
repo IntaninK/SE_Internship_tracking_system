@@ -535,11 +535,24 @@ window.savePlacementStatus = async function() {
   const note = noteEl ? noteEl.value : '';
 
   try {
-    const res = await fetch(`/api/admin/students/${studentId}/placement-status`, {
+    const url = currentUserRole === 'ADVISOR'
+      ? `/api/advisor/students/${studentId}/placement-status`
+      : `/api/admin/students/${studentId}/placement-status`;
+
+    let res = await fetch(url, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status, note }),
     });
+
+    if (res.status === 404 && currentUserRole === 'ADVISOR') {
+      res = await fetch(`/api/admin/students/${studentId}/placement-status`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status, note }),
+      });
+    }
+
     const data = await res.json();
     if (data.success) {
       alert('✅ อัปเดตสถานะอนุมัติที่ฝึกงานสำเร็จ');
@@ -549,6 +562,7 @@ window.savePlacementStatus = async function() {
     }
   } catch (err) {
     console.error(err);
+    alert('เกิดข้อผิดพลาดในการเชื่อมต่อ');
   }
 };
 

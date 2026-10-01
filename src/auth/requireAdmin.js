@@ -28,10 +28,11 @@ async function requireAdmin(req, res, next) {
   // 1. เข้าดู Profile นิสิตได้ (GET /students/:studentId)
   // 2. ตรวจและตั้งสถานะอนุมัติข้อมูลบริษัทที่เข้าฝึกงานของนิสิตได้ (PUT /students/:studentId/placement-status)
   if (role === "ADVISOR") {
-    if (req.method === "GET" && req.path.startsWith("/students/")) {
+    const targetUrl = (req.originalUrl || "") + " " + (req.path || "");
+    if (req.method === "GET" && (req.path.startsWith("/students/") || targetUrl.includes("/students/"))) {
       return next();
     }
-    if (req.method === "PUT" && req.path.includes("/placement-status")) {
+    if (req.method === "PUT" && targetUrl.includes("/placement-status")) {
       return next();
     }
   }

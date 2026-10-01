@@ -423,6 +423,7 @@ async function loadSubmissions() {
     console.error('Load submissions error:', err);
   } finally {
     checkPlacementUnlock();
+    updatePlacementCompanyOptions();
   }
 }
 
@@ -442,6 +443,7 @@ window.updateSubmissionStatus = async function(companyId, status) {
         target.submission.status = status;
       }
       checkPlacementUnlock();
+      updatePlacementCompanyOptions();
     }
   } catch (err) {
     console.error(err);
@@ -494,13 +496,144 @@ async function loadPlacement() {
     console.error('Load placement error:', err);
   } finally {
     checkPlacementUnlock();
+    updatePlacementCompanyOptions();
   }
+}
+
+// อัปเดตตัวเลือกชื่อแหล่งฝึกงานจากบริษัทที่สถานะ "สัมภาษณ์ผ่านแล้ว"
+function updatePlacementCompanyOptions() {
+  const select = document.getElementById('plc-company-select');
+  const input = document.getElementById('plc-companyNameTh');
+  const customWrap = document.getElementById('plc-custom-company-wrap');
+  if (!select || !input) return;
+
+  const passedCompanies = (currentSubmissionsData || []).filter(
+    comp => comp.submission && comp.submission.status === 'INTERVIEW_PASSED'
+  );
+
+  const prevVal = select.value;
+  select.innerHTML = '<option value="">-- เลือกบริษัทที่สัมภาษณ์ผ่านแล้ว --</option>';
+
+  passedCompanies.forEach(comp => {
+    const opt = document.createElement('option');
+    opt.value = comp.id;
+    opt.dataset.name = comp.name;
+    // แสดงเฉพาะชื่อบริษัท (เอาเครื่องหมายถูกและคำว่าสัมภาษณ์ผ่านแล้วออก)
+    opt.textContent = comp.name;
+    select.appendChild(opt);
+  });
+
+  const otherOpt = document.createElement('option');
+  otherOpt.value = '__other__';
+  otherOpt.textContent = 'อื่นๆ (กรอกระบุเอง)';
+  select.appendChild(otherOpt);
+
+  const currentSavedName = (currentPlacementData && currentPlacementData.companyNameTh)
+    ? currentPlacementData.companyNameTh.trim()
+    : input.value.trim();
+
+  if (currentSavedName) {
+    const matched = passedCompanies.find(
+      c => c.name.trim() === currentSavedName || (currentPlacementData && currentPlacementData.companyId && c.id === currentPlacementData.companyId)
+    );
+    if (matched) {
+      select.value = matched.id;
+      select.style.display = '';
+      if (customWrap) customWrap.style.display = 'none';
+      input.value = matched.name;
+    } else {
+      select.value = '__other__';
+      select.style.display = 'none';
+      if (customWrap) customWrap.style.display = 'block';
+      input.value = currentSavedName;
+    }
+  } else if (prevVal && prevVal !== '__other__') {
+    const matchedPrev = passedCompanies.find(c => String(c.id) === String(prevVal));
+    if (matchedPrev) {
+      select.value = matchedPrev.id;
+      select.style.display = '';
+      if (customWrap) customWrap.style.display = 'none';
+      input.value = matchedPrev.name;
+    }
+  } else if (!select.value && passedCompanies.length === 1 && !currentPlacementData) {
+    select.value = passedCompanies[0].id;
+    select.style.display = '';
+    if (customWrap) customWrap.style.display = 'none';
+    input.value = passedCompanies[0].name;
+  } else {
+    select.style.display = '';
+    if (customWrap) customWrap.style.display = 'none';
+  }
+}
+
+const companySelectEl = document.getElementById('plc-company-select');
+const customCompanyWrap = document.getElementById('plc-custom-company-wrap');
+const btnBackToSelect = document.getElementById('btn-back-to-select');
+
+if (companySelectEl) {
+  companySelectEl.addEventListener('change', (e) => {
+    const input = document.getElementById('plc-companyNameTh');
+    if (!input) return;
+
+    if (e.target.value === '__other__') {
+      companySelectEl.style.display = 'none';
+      if (customCompanyWrap) customCompanyWrap.style.display = 'block';
+      input.value = '';
+      input.placeholder = 'กรอกชื่อแหล่งฝึกงาน...';
+      input.focus();
+    } else if (e.target.value) {
+      const selectedOption = e.target.options[e.target.selectedIndex];
+      companySelectEl.style.display = '';
+      if (customCompanyWrap) customCompanyWrap.style.display = 'none';
+      input.value = selectedOption ? (selectedOption.dataset.name || selectedOption.text) : '';
+    } else {
+      input.value = '';
+    }
+  });
+}
+
+if (btnBackToSelect) {
+  btnBackToSelect.addEventListener('click', () => {
+    if (customCompanyWrap) customCompanyWrap.style.display = 'none';
+    if (companySelectEl) {
+      companySelectEl.style.display = '';
+      companySelectEl.value = '';
+      companySelectEl.focus();
+    }
+    const input = document.getElementById('plc-companyNameTh');
+    if (input) input.value = '';
+  });
 }
 
 const placementForm = document.getElementById('placement-form');
 if (placementForm) {
   placementForm.addEventListener('submit', async (e) => {
     e.preventDefault();
+
+    // ประมวลผลชื่อแหล่งฝึกงานจาก dropdown หรือกล่องกรอกในช่องเดียวกัน
+    const companySelect = document.getElementById('plc-company-select');
+    const companyInput = document.getElementById('plc-companyNameTh');
+    const customWrap = document.getElementById('plc-custom-company-wrap');
+    const isCustomMode = customWrap && customWrap.style.display !== 'none';
+
+    let finalCompanyName = '';
+    let finalCompanyId = null;
+
+    if (!isCustomMode && companySelect && companySelect.value && companySelect.value !== '__other__') {
+      const selectedOption = companySelect.options[companySelect.selectedIndex];
+      finalCompanyName = selectedOption ? (selectedOption.dataset.name || selectedOption.text) : '';
+      finalCompanyId = companySelect.value;
+    } else if (companyInput) {
+      finalCompanyName = companyInput.value.trim();
+    }
+
+    if (!finalCompanyName) {
+      alert('กรุณาเลือกหรือกรอก: ชื่อแหล่งฝึกงาน');
+      if (!isCustomMode && companySelect) companySelect.focus();
+      else if (companyInput) companyInput.focus();
+      return;
+    }
+    if (companyInput) companyInput.value = finalCompanyName;
 
     // ตรวจว่ากรอกครบทุกช่อง (trim กันการพิมพ์แต่ช่องว่าง)
     const requiredFields = [
@@ -525,7 +658,8 @@ if (placementForm) {
 
     const payload = {
       position: document.getElementById('plc-position').value,
-      companyNameTh: document.getElementById('plc-companyNameTh').value,
+      companyNameTh: finalCompanyName,
+      companyId: finalCompanyId,
       contactPersonName: document.getElementById('plc-contactPersonName').value,
       contactPersonPosition: document.getElementById('plc-contactPersonPosition').value,
       companyAddress: document.getElementById('plc-companyAddress').value,

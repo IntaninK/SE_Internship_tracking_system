@@ -350,8 +350,19 @@
               <input type="text" class="input-field" id="plc-position" value="Software Developer" required>
             </div>
             <div class="form-group">
-              <label class="form-label">ชื่อแหล่งฝึกงาน (ภาษาไทย)</label>
-              <input type="text" class="input-field" id="plc-companyNameTh" placeholder="..." required>
+              <label class="form-label">ชื่อแหล่งฝึกงาน</label>
+              <div id="company-field-wrapper" style="position: relative; width: 100%;">
+                <select class="input-field" id="plc-company-select" style="width: 100%;">
+                  <option value="">-- เลือกบริษัทที่สัมภาษณ์ผ่านแล้ว --</option>
+                  <option value="__other__">อื่นๆ (กรอกระบุเอง)</option>
+                </select>
+                <div id="plc-custom-company-wrap" style="display: none; position: relative; width: 100%;">
+                  <input type="text" class="input-field" id="plc-companyNameTh" placeholder="กรอกชื่อแหล่งฝึกงาน..." style="width: 100%; padding-right: 125px;">
+                  <button type="button" id="btn-back-to-select" style="position: absolute; right: 6px; top: 50%; transform: translateY(-50%); background: #ffffff; border: 1px solid #cbd5e1; border-radius: 8px; padding: 4px 10px; font-size: 12px; font-family: inherit; color: #475569; cursor: pointer; display: flex; align-items: center; gap: 4px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); transition: all 0.15s ease;" onmouseover="this.style.background='#f1f5f9';this.style.borderColor='#94a3b8';" onmouseout="this.style.background='#ffffff';this.style.borderColor='#cbd5e1';" title="กลับไปเลือกจากรายการ">
+                    <span class="material-icons" style="font-size: 14px; color: #2563eb;">list</span> เลือกจากรายการ
+                  </button>
+                </div>
+              </div>
             </div>
             <div class="form-group">
               <label class="form-label">ชื่อบุคคลที่ให้ทำหนังสือขอความอนุเคราะห์</label>
