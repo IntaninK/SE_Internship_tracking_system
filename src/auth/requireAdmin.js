@@ -37,10 +37,10 @@ async function requireAdmin(req, res, next) {
     }
   }
 
-  if (role !== "STAFF" && role !== "ADMIN") {
+  if (role !== "STAFF" && role !== "ADMIN" && role !== "COURSE_INSTRUCTOR") {
     return res.status(403).json({
       success: false,
-      message: "ไม่มีสิทธิ์เข้าถึง (ต้องเป็นเจ้าหน้าที่หรือ Admin เท่านั้น)",
+      message: "ไม่มีสิทธิ์เข้าถึง (ต้องเป็นอาจารย์รายวิชา, เจ้าหน้าที่ หรือ Admin เท่านั้น)",
     });
   }
 

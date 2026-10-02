@@ -1,6 +1,13 @@
 const express = require("express");
+const multer = require("multer");
 const prisma = require("../db");
 const requireAdmin = require("../auth/requireAdmin");
+const { parseStudentSpreadsheet, calculateCurrentAcademicYear } = require("../utils/studentImportParser");
+
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 15 * 1024 * 1024 }, // 15MB
+});
 
 const router = express.Router();
 
@@ -1091,11 +1098,108 @@ router.get("/export", async (req, res) => {
         else if (ct === "placement") exportData = exportData.filter((s) => s.placementCategory === ck);
       }
     }
+ 
+     res.json({ success: true, data: exportData });
+   } catch (err) {
+     console.error("GET /api/admin/export error:", err);
+     res.status(500).json({ success: false, message: "ดึงข้อมูล Export ไม่สำเร็จ" });
+   }
+ });
+ 
+// =========================================================================
+// 8. นำเข้ารายชื่อนิสิตจากไฟล์ REG Excel / CSV (Preview & Confirm)
+// =========================================================================
 
-    res.json({ success: true, data: exportData });
+// POST /api/admin/students/import-preview: วิเคราะห์ไฟล์และแสดงผลสรุปก่อนบันทึก
+router.post("/students/import-preview", upload.single("file"), async (req, res) => {
+  try {
+    if (!req.file || !req.file.buffer) {
+      return res.status(400).json({ success: false, message: "กรุณาเลือกไฟล์ Excel (.xlsx) หรือ .csv" });
+    }
+
+    const customAcademicYear = req.body.academicYear ? parseInt(req.body.academicYear, 10) : null;
+    const result = parseStudentSpreadsheet(req.file.buffer, customAcademicYear);
+
+    res.json({
+      success: true,
+      summary: result.summary,
+      matchedStudents: result.matchedStudents,
+      skippedStudents: result.skippedStudents,
+    });
   } catch (err) {
-    console.error("GET /api/admin/export error:", err);
-    res.status(500).json({ success: false, message: "ดึงข้อมูล Export ไม่สำเร็จ" });
+    console.error("POST /api/admin/students/import-preview error:", err);
+    res.status(400).json({
+      success: false,
+      message: err.message || "เกิดข้อผิดพลาดในการอ่านไฟล์",
+    });
+  }
+});
+
+// POST /api/admin/students/import-confirm: ยืนยันบันทึกข้อมูลนิสิตลงฐานข้อมูล (Upsert)
+router.post("/students/import-confirm", async (req, res) => {
+  try {
+    const { students } = req.body;
+    if (!Array.isArray(students) || students.length === 0) {
+      return res.status(400).json({ success: false, message: "ไม่มีรายชื่อนิสิตที่ต้องนำเข้า" });
+    }
+
+    let successCount = 0;
+    const errors = [];
+
+    for (const s of students) {
+      if (!s.studentCode || !s.email) continue;
+
+      try {
+        // 1. Upsert User (อีเมลมหาวิทยาลัยสำหรับ Login ผ่าน MSAL / Microsoft OAuth)
+        const user = await prisma.user.upsert({
+          where: { email: s.email.toLowerCase().trim() },
+          update: {
+            username: s.nameTh || s.studentCode,
+          },
+          create: {
+            email: s.email.toLowerCase().trim(),
+            username: s.nameTh || s.studentCode,
+            role: "STUDENT",
+            password: null,
+          },
+        });
+
+        // 2. Upsert Student Profile
+        await prisma.student.upsert({
+          where: { studentCode: String(s.studentCode).trim() },
+          update: {
+            nameTh: s.nameTh || undefined,
+            year: s.year || undefined,
+            major: s.major || "วิศวกรรมซอฟต์แวร์",
+            gpa: typeof s.gpa === "number" ? s.gpa : undefined,
+          },
+          create: {
+            userId: user.id,
+            studentCode: String(s.studentCode).trim(),
+            nameTh: s.nameTh || `นิสิต ${s.studentCode}`,
+            nameEn: s.nameEn || "-",
+            year: s.year || 1,
+            major: s.major || "วิศวกรรมซอฟต์แวร์",
+            gpa: typeof s.gpa === "number" ? s.gpa : null,
+          },
+        });
+
+        successCount++;
+      } catch (rowErr) {
+        console.error(`Import student error for ${s.studentCode}:`, rowErr);
+        errors.push({ studentCode: s.studentCode, error: rowErr.message });
+      }
+    }
+
+    res.json({
+      success: true,
+      importedCount: successCount,
+      failedCount: errors.length,
+      errors: errors.slice(0, 10),
+    });
+  } catch (err) {
+    console.error("POST /api/admin/students/import-confirm error:", err);
+    res.status(500).json({ success: false, message: "เกิดข้อผิดพลาดในการบันทึกข้อมูลเข้าสู่ระบบ" });
   }
 });
 

@@ -1243,3 +1243,199 @@ initAdminDashboard();
 window.addEventListener('app:data-updated', () => {
   initAdminDashboard();
 });
+
+// =========================================================================
+// นำเข้ารายชื่อนิสิตจากระบบ REG (Excel / CSV)
+// =========================================================================
+let currentImportStudents = [];
+let selectedImportFile = null;
+
+window.openImportModal = function() {
+  const modal = document.getElementById('import-modal');
+  if (modal) {
+    modal.style.display = 'flex';
+    resetImportFile();
+  }
+};
+
+window.closeImportModal = function() {
+  const modal = document.getElementById('import-modal');
+  if (modal) modal.style.display = 'none';
+  resetImportFile();
+};
+
+window.resetImportFile = function() {
+  currentImportStudents = [];
+  selectedImportFile = null;
+  const fileInput = document.getElementById('import-file-input');
+  if (fileInput) fileInput.value = '';
+
+  const uploadZone = document.getElementById('import-upload-zone');
+  const fileWrap = document.getElementById('import-selected-file-wrap');
+  const previewWrap = document.getElementById('import-preview-wrap');
+  const loading = document.getElementById('import-loading');
+  const btnConfirm = document.getElementById('btn-confirm-import');
+
+  if (uploadZone) uploadZone.style.display = 'block';
+  if (fileWrap) fileWrap.style.display = 'none';
+  if (previewWrap) previewWrap.style.display = 'none';
+  if (loading) loading.style.display = 'none';
+  if (btnConfirm) btnConfirm.style.display = 'none';
+};
+
+window.handleImportDrop = function(e) {
+  e.preventDefault();
+  const uploadZone = document.getElementById('import-upload-zone');
+  if (uploadZone) {
+    uploadZone.style.borderColor = '#CBD5E1';
+    uploadZone.style.background = '#FAFAFA';
+  }
+  if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+    processImportFile(e.dataTransfer.files[0]);
+  }
+};
+
+window.handleImportFileSelect = function(e) {
+  if (e.target.files && e.target.files.length > 0) {
+    processImportFile(e.target.files[0]);
+  }
+};
+
+async function processImportFile(file) {
+  if (!file) return;
+
+  const validExts = ['.xlsx', '.xls', '.csv'];
+  const ext = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
+  if (!validExts.includes(ext)) {
+    alert('กรุณาเลือกไฟล์ Excel (.xlsx, .xls) หรือ .csv เท่านั้น');
+    return;
+  }
+
+  selectedImportFile = file;
+
+  const uploadZone = document.getElementById('import-upload-zone');
+  const fileWrap = document.getElementById('import-selected-file-wrap');
+  const fileNameEl = document.getElementById('import-selected-file-name');
+  const loading = document.getElementById('import-loading');
+  const previewWrap = document.getElementById('import-preview-wrap');
+  const btnConfirm = document.getElementById('btn-confirm-import');
+
+  if (uploadZone) uploadZone.style.display = 'none';
+  if (fileWrap) fileWrap.style.display = 'flex';
+  if (fileNameEl) fileNameEl.textContent = `${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
+  if (loading) loading.style.display = 'block';
+  if (previewWrap) previewWrap.style.display = 'none';
+  if (btnConfirm) btnConfirm.style.display = 'none';
+
+  const formData = new FormData();
+  formData.append('file', file);
+
+  try {
+    const res = await fetch('/api/admin/students/import-preview', {
+      method: 'POST',
+      body: formData
+    });
+
+    const data = await res.json();
+    if (loading) loading.style.display = 'none';
+
+    if (!data.success) {
+      alert(data.message || 'ไม่สามารถอ่านไฟล์ได้');
+      resetImportFile();
+      return;
+    }
+
+    currentImportStudents = data.matchedStudents || [];
+    
+    // Render Stats
+    const totalEl = document.getElementById('import-stat-total');
+    const matchedEl = document.getElementById('import-stat-matched');
+    const skippedEl = document.getElementById('import-stat-skipped');
+    const acadYearEl = document.getElementById('import-stat-acad-year');
+    const previewCountEl = document.getElementById('import-preview-count');
+    const tbody = document.getElementById('import-preview-tbody');
+
+    if (totalEl) totalEl.textContent = data.summary.totalRows || 0;
+    if (matchedEl) matchedEl.textContent = data.summary.matchedCount || 0;
+    if (skippedEl) skippedEl.textContent = data.summary.skippedCount || 0;
+    if (acadYearEl) acadYearEl.textContent = data.summary.academicYear || '-';
+    if (previewCountEl) previewCountEl.textContent = currentImportStudents.length;
+
+    // Render Preview Table Rows
+    if (tbody) {
+      if (currentImportStudents.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" style="padding:20px; text-align:center; color:#E11D48;">ไม่พบรายชื่อนิสิตสาขาวิศวกรรมซอฟต์แวร์ในไฟล์นี้ (ข้ามสาขาอื่น ${data.summary.skippedCount} คน)</td></tr>`;
+      } else {
+        const previewList = currentImportStudents.slice(0, 20);
+        tbody.innerHTML = previewList.map(s => `
+          <tr style="border-bottom:1px solid #F1F5F9;">
+            <td style="padding:6px 10px; font-weight:600; color:#1E293B;">${s.studentCode}</td>
+            <td style="padding:6px 10px; color:#334155;">${s.nameTh || '-'}</td>
+            <td style="padding:6px 10px; text-align:center;"><span style="background:#E0E7FF; color:#3730A3; padding:2px 8px; border-radius:9999px; font-size:11px; font-weight:600;">ปี ${s.year}</span></td>
+            <td style="padding:6px 10px; color:#475569;">${typeof s.gpa === 'number' ? s.gpa.toFixed(2) : '-'}</td>
+            <td style="padding:6px 10px; color:#2563EB; font-family:monospace;">${s.email}</td>
+          </tr>
+        `).join('');
+      }
+    }
+
+    if (previewWrap) previewWrap.style.display = 'block';
+
+    if (currentImportStudents.length > 0 && btnConfirm) {
+      const btnText = document.getElementById('btn-confirm-import-text');
+      if (btnText) btnText.textContent = `ยืนยันนำเข้าข้อมูล (${currentImportStudents.length} คน)`;
+      btnConfirm.style.display = 'inline-flex';
+    }
+
+  } catch (err) {
+    console.error('Import preview error:', err);
+    if (loading) loading.style.display = 'none';
+    alert('เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์');
+    resetImportFile();
+  }
+}
+
+window.confirmImport = async function() {
+  if (!currentImportStudents || currentImportStudents.length === 0) {
+    alert('ไม่มีข้อมูลนิสิตที่ต้องนำเข้า');
+    return;
+  }
+
+  const btnConfirm = document.getElementById('btn-confirm-import');
+  if (btnConfirm) {
+    btnConfirm.disabled = true;
+    btnConfirm.style.opacity = '0.7';
+    btnConfirm.innerHTML = '<span class="inline-block animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></span> กำลังบันทึก...';
+  }
+
+  try {
+    const res = await fetch('/api/admin/students/import-confirm', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ students: currentImportStudents })
+    });
+
+    const data = await res.json();
+    if (data.success) {
+      alert(`✅ นำเข้ารายชื่อนิสิตสำเร็จ ${data.importedCount} คน` + (data.failedCount > 0 ? ` (ไม่สำเร็จ ${data.failedCount} คน)` : ''));
+      closeImportModal();
+      loadStudents();
+      initAdminDashboard();
+    } else {
+      alert('เกิดข้อผิดพลาด: ' + (data.message || 'บันทึกไม่สำเร็จ'));
+      if (btnConfirm) {
+        btnConfirm.disabled = false;
+        btnConfirm.style.opacity = '1';
+        btnConfirm.innerHTML = `<span class="material-icons" style="font-size:16px;">check_circle</span> ยืนยันนำเข้าข้อมูล (${currentImportStudents.length} คน)`;
+      }
+    }
+  } catch (err) {
+    console.error('Import confirm error:', err);
+    alert('เกิดข้อผิดพลาดในการบันทึกข้อมูล');
+    if (btnConfirm) {
+      btnConfirm.disabled = false;
+      btnConfirm.style.opacity = '1';
+      btnConfirm.innerHTML = `<span class="material-icons" style="font-size:16px;">check_circle</span> ยืนยันนำเข้าข้อมูล (${currentImportStudents.length} คน)`;
+    }
+  }
+};

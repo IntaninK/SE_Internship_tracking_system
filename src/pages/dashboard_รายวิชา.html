@@ -159,6 +159,9 @@
               <button id="btn-drop-student" class="btn btn-sm flex items-center gap-1.5 text-white shadow-sm transition-transform active:scale-95" style="background:#ef4444; border:none;" onclick="openDropStudentModal()">
                 <span class="material-icons text-sm">person_off</span> ดรอปนิสิต
               </button>
+              <button id="btn-import-excel" class="btn btn-sm flex items-center gap-1.5 text-white shadow-sm transition-transform active:scale-95" style="background:#10b981; border:none;" onclick="openImportModal()">
+                <span class="material-icons text-sm">upload_file</span> นำเข้ารายชื่อ (Excel)
+              </button>
             </div>
 
             <div id="dropped-action-buttons" class="flex items-center gap-2 flex-wrap" style="display:none;">
@@ -507,6 +510,121 @@
         <button type="button" id="btn-confirm-export" onclick="confirmExport()" class="btn btn-primary btn-md" style="display:inline-flex; align-items:center; gap:6px; cursor:pointer;">
           <span class="material-icons" style="font-size:18px;">download</span>
           <span>ดาวน์โหลดไฟล์</span>
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Modal: นำเข้ารายชื่อนิสิต (Excel/CSV จาก REG) -->
+  <div id="import-modal" class="modal-backdrop" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:1050; align-items:center; justify-content:center; padding:16px;">
+    <div class="modal-card" style="background:#fff; border-radius:16px; width:100%; max-width:680px; max-height:90vh; display:flex; flex-direction:column; overflow:hidden; box-shadow:0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04);">
+      
+      <!-- Modal Header -->
+      <div style="padding:18px 24px; border-bottom:1px solid #E2E8F0; display:flex; align-items:center; justify-content:space-between; background:#F8FAFC;">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <div style="width:36px; height:36px; border-radius:10px; background:#ECFDF5; display:flex; align-items:center; justify-content:center;">
+            <span class="material-icons" style="color:#059669; font-size:22px;">upload_file</span>
+          </div>
+          <div>
+            <h3 style="font-size:16px; font-weight:700; color:#1E293B; margin:0;">นำเข้ารายชื่อนิสิตจากระบบ REG</h3>
+            <p style="font-size:12px; color:#64748B; margin:0;">รองรับไฟล์ Excel (.xlsx, .xls) หรือ .csv ที่ Export มาจากระบบทะเบียน</p>
+          </div>
+        </div>
+        <button type="button" onclick="closeImportModal()" style="background:none; border:none; color:#94A3B8; cursor:pointer; padding:4px; display:flex; align-items:center;" onmouseover="this.style.color='#1E293B'" onmouseout="this.style.color='#94A3B8'">
+          <span class="material-icons">close</span>
+        </button>
+      </div>
+
+      <!-- Modal Body (Scrollable) -->
+      <div style="padding:20px 24px; overflow-y:auto; flex:1;">
+        
+        <!-- Step 1: Upload Zone -->
+        <div id="import-upload-zone" style="border:2px dashed #CBD5E1; border-radius:12px; padding:28px 20px; text-align:center; background:#FAFAFA; cursor:pointer; transition:all 0.2s;" onclick="document.getElementById('import-file-input').click()" ondragover="event.preventDefault(); this.style.borderColor='#10B981'; this.style.background='#F0FDF4';" ondragleave="this.style.borderColor='#CBD5E1'; this.style.background='#FAFAFA';" ondrop="handleImportDrop(event)">
+          <input type="file" id="import-file-input" accept=".xlsx, .xls, .csv" style="display:none;" onchange="handleImportFileSelect(event)">
+          <div style="width:48px; height:48px; border-radius:50%; background:#ECFDF5; color:#059669; display:inline-flex; align-items:center; justify-content:center; margin-bottom:12px;">
+            <span class="material-icons" style="font-size:28px;">cloud_upload</span>
+          </div>
+          <div style="font-size:14px; font-weight:600; color:#1E293B; margin-bottom:4px;">คลิกเพื่อเลือกไฟล์ หรือลากไฟล์มาวางที่นี่</div>
+          <div style="font-size:12px; color:#64748B;">รองรับไฟล์ .xlsx, .xls, .csv จากระบบ REG</div>
+        </div>
+
+        <!-- Selected file indicator -->
+        <div id="import-selected-file-wrap" style="display:none; margin-top:12px; padding:10px 14px; background:#F8FAFC; border:1px solid #E2E8F0; border-radius:10px; align-items:center; justify-content:space-between;">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span class="material-icons" style="color:#059669; font-size:20px;">description</span>
+            <span id="import-selected-file-name" style="font-size:13px; font-weight:600; color:#1E293B;"></span>
+          </div>
+          <button type="button" onclick="resetImportFile()" style="background:none; border:none; color:#EF4444; font-size:12px; cursor:pointer; font-weight:600;">เปลี่ยนไฟล์</button>
+        </div>
+
+        <!-- Loading Spinner -->
+        <div id="import-loading" style="display:none; text-align:center; padding:30px 0;">
+          <div class="inline-block animate-spin rounded-full h-8 w-8 border-4 border-emerald-500 border-t-transparent mb-2"></div>
+          <div style="font-size:13px; color:#64748B;">กำลังวิเคราะห์ไฟล์และคัดกรองสาขาวิชา...</div>
+        </div>
+
+        <!-- Step 2: Preview Results -->
+        <div id="import-preview-wrap" style="display:none; margin-top:18px;">
+          
+          <!-- Summary Cards -->
+          <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:10px; margin-bottom:14px;">
+            <div style="background:#F1F5F9; border-radius:10px; padding:12px; text-align:center;">
+              <div style="font-size:11px; color:#64748B; font-weight:600;">ยอดรวมในไฟล์</div>
+              <div id="import-stat-total" style="font-size:20px; font-weight:700; color:#334155;">0</div>
+            </div>
+            <div style="background:#ECFDF5; border:1px solid #A7F3D0; border-radius:10px; padding:12px; text-align:center;">
+              <div style="font-size:11px; color:#047857; font-weight:600;">ผ่านเกณฑ์ (วิศวกรรมซอฟต์แวร์)</div>
+              <div id="import-stat-matched" style="font-size:20px; font-weight:700; color:#059669;">0</div>
+            </div>
+            <div style="background:#FFF1F2; border:1px solid #FECDD3; border-radius:10px; padding:12px; text-align:center;">
+              <div style="font-size:11px; color:#BE123C; font-weight:600;">ข้าม (สาขาอื่น)</div>
+              <div id="import-stat-skipped" style="font-size:20px; font-weight:700; color:#E11D48;">0</div>
+            </div>
+          </div>
+
+          <!-- Academic Year notice -->
+          <div style="background:#EFF6FF; border:1px solid #BFDBFE; border-radius:8px; padding:8px 12px; font-size:12px; color:#1E40AF; margin-bottom:12px; display:flex; align-items:center; justify-content:space-between;">
+            <div style="display:flex; align-items:center; gap:6px;">
+              <span class="material-icons" style="font-size:16px;">info</span>
+              <span>คำนวณชั้นปีอิงปีการศึกษา: <strong id="import-stat-acad-year">2568</strong> (จุดตัดเดือนมิถุนายน)</span>
+            </div>
+            <span style="font-size:11px; color:#3B82F6;">สร้างอีเมล @up.ac.th อัตโนมัติ</span>
+          </div>
+
+          <!-- Preview Table -->
+          <div style="font-size:13px; font-weight:600; color:#1E293B; margin-bottom:6px; display:flex; align-items:center; justify-content:space-between;">
+            <span>ตัวอย่างรายชื่อที่จะนำเข้า (<span id="import-preview-count">0</span> คน)</span>
+            <span style="font-size:11px; color:#64748B;">แสดงสูงสุด 20 คนแรก</span>
+          </div>
+          <div style="max-height:220px; overflow-y:auto; border:1px solid #E2E8F0; border-radius:8px;">
+            <table style="width:100%; border-collapse:collapse; font-size:12px; text-align:left;">
+              <thead style="background:#F8FAFC; position:sticky; top:0; z-index:1;">
+                <tr style="border-bottom:1px solid #E2E8F0; color:#475569;">
+                  <th style="padding:8px 10px;">รหัสนิสิต</th>
+                  <th style="padding:8px 10px;">ชื่อ-สกุล</th>
+                  <th style="padding:8px 10px;">ชั้นปี</th>
+                  <th style="padding:8px 10px;">เกรด</th>
+                  <th style="padding:8px 10px;">อีเมลระบบ (@up.ac.th)</th>
+                </tr>
+              </thead>
+              <tbody id="import-preview-tbody">
+              </tbody>
+            </table>
+          </div>
+
+        </div>
+
+      </div>
+
+      <!-- Modal Footer -->
+      <div style="padding:14px 24px; border-top:1px solid #E2E8F0; background:#F8FAFC; display:flex; align-items:center; justify-content:flex-end; gap:10px;">
+        <button type="button" onclick="closeImportModal()" class="btn btn-tonal btn-sm" style="cursor:pointer;">
+          ยกเลิก
+        </button>
+        <button type="button" id="btn-confirm-import" onclick="confirmImport()" class="btn btn-sm flex items-center gap-1.5 text-white" style="background:#10B981; border:none; display:none; cursor:pointer;">
+          <span class="material-icons" style="font-size:16px;">check_circle</span>
+          <span id="btn-confirm-import-text">ยืนยันนำเข้าข้อมูล</span>
         </button>
       </div>
 
