@@ -33,7 +33,7 @@ async function loadStudentChecklistData() {
       return;
     }
 
-    const { student, sections, companies } = data;
+    const { student, sections, companies, canReview } = data;
 
     // อัปเดตข้อมูลหัวเว็บ
     if (subtitle) {
@@ -55,11 +55,49 @@ async function loadStudentChecklistData() {
 
     container.innerHTML = '';
 
+    // ถ้าไม่มีสิทธิ์ประเมิน (เช่น Admin หรืออาจารย์ท่านอื่นที่ไม่ใช่ที่ปรึกษาของนิสิตคนนี้) ให้แสดง Banner โหมดดูข้อมูลเท่านั้น
+    if (!canReview) {
+      const banner = document.createElement('div');
+      banner.className = 'mb-6 p-4 bg-amber-50 border border-amber-200 rounded-2xl flex items-center gap-3 text-amber-800 shadow-sm';
+      banner.innerHTML = `
+        <span class="material-icons text-amber-600 text-2xl">visibility</span>
+        <div>
+          <p class="font-bold text-sm">โหมดดูข้อมูลเท่านั้น (Read-Only)</p>
+          <p class="text-xs text-amber-700">คุณไม่ได้เป็นอาจารย์ที่ปรึกษาของนิสิตคนนี้ จึงไม่สามารถประเมินหรือเปลี่ยนสถานะ Checklist ได้</p>
+        </div>
+      `;
+      container.appendChild(banner);
+    }
+
+    // ปรับปุ่มย้อนกลับให้ตรงกับหน้าที่อาจารย์เปิดมา (Dashboard หรือ Profile นิสิต)
+    const fromDetail = params.get('from') === 'detail' || (document.referrer && document.referrer.includes('admin_student_detail'));
+    const backBtn = document.querySelector('a[href*="dashboard_ที่ปรึกษา"]');
+    if (backBtn) {
+      if (fromDetail) {
+        backBtn.href = `/pages/admin_student_detail.html?id=${studentId}`;
+        backBtn.innerHTML = '<span class="material-icons text-base">arrow_back</span><span>กลับไปหน้า Profile นิสิต</span>';
+      } else if (!canReview) {
+        backBtn.href = '/pages/dashboard_รายวิชา.html';
+        backBtn.innerHTML = '<span class="material-icons text-base">arrow_back</span><span>กลับไปหน้า Dashboard</span>';
+      }
+    }
+
     // Render บริษัทแต่ละแห่งเป็น Accordion
     companies.forEach((comp, idx) => {
-      const card = renderCompanyReviewCard(comp, sections, idx);
+      const card = renderCompanyReviewCard(comp, sections, idx, canReview);
       container.appendChild(card);
     });
+
+    // ถ้ามี companyId ส่งมาเจาะจง ให้เลื่อนจอไปยังการ์ดของบริษัทนั้นทันที
+    const targetCompId = params.get('companyId');
+    if (targetCompId) {
+      setTimeout(() => {
+        const targetEl = document.getElementById(`company-card-${targetCompId}`);
+        if (targetEl) {
+          targetEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }, 150);
+    }
 
   } catch (err) {
     console.error('Error loading student checklist data:', err);
@@ -71,7 +109,7 @@ async function loadStudentChecklistData() {
   }
 }
 
-function renderCompanyReviewCard(comp, sections, index) {
+function renderCompanyReviewCard(comp, sections, index, canReview = true) {
   const card = document.createElement('div');
   card.className = 'company-card';
   card.id = `company-card-${comp.id}`;
@@ -157,10 +195,11 @@ function renderCompanyReviewCard(comp, sections, index) {
     <div id="body-${comp.id}" class="company-body p-4 bg-white" style="display: block;">
       ${sectionsHtml}
 
-      <!-- ส่วนที่ 5 และการประเมินด้านล่าง (ตาม Figma ภาพที่ 5) -->
+      <!-- ส่วนผลการประเมินด้านล่าง -->
       <div class="border-t border-gray-200 mt-8 pt-8 px-6 pb-6 bg-gray-50/50 rounded-2xl">
         <div class="max-w-xl mx-auto space-y-6">
 
+          ${canReview ? `
           <!-- Dropdown สถานะผลรีวิว -->
           <div>
             <label class="block text-base font-bold text-gray-800 mb-2">
@@ -199,6 +238,27 @@ function renderCompanyReviewCard(comp, sections, index) {
               <span>ยืนยันและบันทึก</span>
             </button>
           </div>
+          ` : `
+          <!-- แสดงผลสถานะแบบ Read-Only สำหรับผู้ที่ไม่มีสิทธิ์ประเมิน เช่น Admin หรืออาจารย์ท่านอื่น -->
+          <div class="space-y-4">
+            <div>
+              <span class="block text-sm font-semibold text-gray-600 mb-2">สถานะผลการตรวจ Checklist ปัจจุบัน:</span>
+              <span class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold ${
+                comp.checklistStatus === 'APPROVED' ? 'bg-green-100 text-green-800 border border-green-200' :
+                comp.checklistStatus === 'REJECTED' ? 'bg-red-100 text-red-800 border border-red-200' : 'bg-yellow-100 text-yellow-800 border border-yellow-200'
+              }">
+                <span class="material-icons text-base">${comp.checklistStatus === 'APPROVED' ? 'check_circle' : comp.checklistStatus === 'REJECTED' ? 'cancel' : 'hourglass_empty'}</span>
+                <span>${comp.checklistStatus === 'APPROVED' ? 'อาจารย์รีวิวแล้ว (ผ่าน)' : comp.checklistStatus === 'REJECTED' ? 'ไม่ผ่าน/ทำ check list เพิ่ม' : 'รอผลการตรวจ'}</span>
+              </span>
+            </div>
+            <div>
+              <span class="block text-sm font-semibold text-gray-600 mb-1.5">คอมเมนต์ / หมายเหตุปัญหา:</span>
+              <div class="p-3.5 bg-gray-100 border border-gray-200 rounded-xl text-gray-700 text-sm min-h-[44px]">
+                ${comp.checklistNote ? comp.checklistNote : '<span class="text-gray-400 italic">ไม่มีหมายเหตุ</span>'}
+              </div>
+            </div>
+          </div>
+          `}
 
         </div>
       </div>
@@ -239,7 +299,11 @@ window.updateSelectColor = function(selectEl) {
 window.saveCompanyChecklistReview = async function(companyId) {
   const selectEl = document.getElementById(`review-status-${companyId}`);
   const noteEl = document.getElementById(`review-note-${companyId}`);
-  const status = selectEl ? selectEl.value : 'PENDING';
+  if (!selectEl) {
+    alert('คุณไม่มีสิทธิ์ประเมิน Checklist สำหรับบริษัทนี้ (สิทธิ์นี้เป็นของอาจารย์ที่ปรึกษาเท่านั้น)');
+    return;
+  }
+  const status = selectEl.value;
   const note = noteEl ? noteEl.value.trim() : '';
 
   try {

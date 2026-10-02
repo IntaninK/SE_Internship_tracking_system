@@ -465,8 +465,15 @@ router.get("/students/:studentId/checklist", async (req, res) => {
       orderBy: { order: "asc" },
     });
 
+    const canReview = Boolean(
+      student.advisorId &&
+      advisorStaffId &&
+      student.advisorId === advisorStaffId
+    );
+
     res.json({
       success: true,
+      canReview,
       student: {
         id: student.id,
         studentCode: student.studentCode,
@@ -510,13 +517,17 @@ router.put("/companies/:companyId/checklist-review", async (req, res) => {
       return res.status(404).json({ success: false, message: "ไม่พบบริษัท" });
     }
 
+    // สิทธิ์การตรวจประเมิน Checklist:
+    // ต้องเป็นอาจารย์ที่ปรึกษาของนิสิตคนนี้เท่านั้น (advisorId ของนิสิตตรงกับ staff id ของผู้ตรวจ)
+    // แม้จะมี role เป็น ADMIN หรือ STAFF หากไม่ได้เป็นที่ปรึกษาของนิสิตคนนี้ จะไม่มีสิทธิ์บันทึกผล
     if (
-      req.session.user.role === "ADVISOR" &&
+      !company.student.advisorId ||
+      !advisorStaffId ||
       company.student.advisorId !== advisorStaffId
     ) {
       return res.status(403).json({
         success: false,
-        message: "ไม่มีสิทธิ์ประเมินบริษัทของนิสิตนอกความดูแล",
+        message: "ไม่มีสิทธิ์ประเมิน Checklist (สิทธิ์นี้เป็นของอาจารย์ที่ปรึกษาที่ดูแลนิสิตคนนี้เท่านั้น)",
       });
     }
 
