@@ -1,9 +1,8 @@
 require("dotenv").config();
-const http = require("http");
-const { Server } = require("socket.io");
-
 const express = require("express");
 const session = require("express-session");
+const pgSession = require("connect-pg-simple")(session);
+const { Pool } = require("pg");
 const path = require("path");
 
 const authRoutes = require("./src/auth/authRoutes");
@@ -13,32 +12,28 @@ const advisorRoutes = require("./src/api/advisorRoutes");
 const requireLogin = require("./src/auth/requireLogin");
 
 const app = express();
-const server = http.createServer(app);
-const io = new Server(server);
 
-app.set("io", io);
+// บน Vercel แต่ละ request อาจไปตก serverless instance คนละตัว ต้อง trust proxy
+// เพื่อให้ express-session รู้ว่า connection เดิมมาผ่าน HTTPS จริง (สำหรับ secure cookie)
+app.set("trust proxy", 1);
 
-app.use("/api", (req, res, next) => {
-  if (["POST", "PUT", "PATCH", "DELETE"].includes(req.method)) {
-    res.on("finish", () => {
-      if (res.statusCode >= 200 && res.statusCode < 300) {
-        io.emit("data-updated", { path: req.originalUrl, method: req.method });
-      }
-    });
-  }
-  next();
-});
+const isProduction = process.env.NODE_ENV === "production";
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 app.use(
   session({
+    store: new pgSession({
+      pool: new Pool({ connectionString: process.env.DATABASE_URL }),
+      tableName: "session", // pgSession จะสร้างตารางนี้ให้เองอัตโนมัติ (createTableIfMissing)
+      createTableIfMissing: true,
+    }),
     secret: process.env.SESSION_SECRET || "se_internship_secret_key",
     resave: false,
     saveUninitialized: false,
     cookie: {
-      secure: false, // ตั้งเป็น true ตอน deploy จริงด้วย HTTPS
+      secure: isProduction, // true บน Vercel (HTTPS) / false ตอน dev local (http)
       maxAge: 1000 * 60 * 60 * 8, // session อยู่ได้ 8 ชม.
     },
   })
@@ -96,8 +91,14 @@ app.use("/pages", requireLogin, express.static(path.join(__dirname, "src", "page
 // Static fallback สำหรับไฟล์อื่นๆ ใน src
 app.use(express.static(path.join(__dirname, "src")));
 
-const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
-  console.log(`Server running: http://localhost:${PORT}`);
-  console.log(`หน้า Login: http://localhost:${PORT}/pages/login.html`);
-});
+// Vercel เรียก app เป็น handler โดยตรง ไม่ต้อง listen เอง
+// รันแบบ local (npm start) เท่านั้นที่ต้อง listen port จริง
+if (!process.env.VERCEL) {
+  const PORT = process.env.PORT || 3000;
+  app.listen(PORT, () => {
+    console.log(`Server running: http://localhost:${PORT}`);
+    console.log(`หน้า Login: http://localhost:${PORT}/pages/login.html`);
+  });
+}
+
+module.exports = app;

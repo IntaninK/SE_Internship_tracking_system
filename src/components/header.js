@@ -52,25 +52,18 @@ fetch('../components/header.html')
     });
 
 // ==========================================
-// เชื่อมต่อ Real-time Socket.io อัตโนมัติทุกหน้า
+// Real-time refresh (polling) — แทน Socket.io เดิม
+// เพราะ serverless function บน Vercel ไม่เก็บ connection ค้างไว้
+// Consumer เดิม (dashboard.js ฯลฯ) แค่ฟัง event นี้แล้ว refetch data
+// เราจึงยิง event เดิมซ้ำทุก ๆ POLL_INTERVAL_MS แทนการ push จาก server
 // ==========================================
 (function setupRealtime() {
-  function startSocket() {
-    if (typeof io !== 'undefined' && !window.appSocket) {
-      const socket = io();
-      window.appSocket = socket;
-      socket.on('data-updated', (info) => {
-        window.dispatchEvent(new CustomEvent('app:data-updated', { detail: info }));
-      });
-    }
-  }
+  const POLL_INTERVAL_MS = 15000; // 15 วินาที ปรับได้ตามความเหมาะสม
 
-  if (typeof io === 'undefined') {
-    const s = document.createElement('script');
-    s.src = '/socket.io/socket.io.js';
-    s.onload = startSocket;
-    document.head.appendChild(s);
-  } else {
-    startSocket();
-  }
+  if (window.__appRealtimePolling) return; // กันไม่ให้ตั้ง interval ซ้ำ
+  window.__appRealtimePolling = true;
+
+  setInterval(() => {
+    window.dispatchEvent(new CustomEvent('app:data-updated', { detail: { polled: true } }));
+  }, POLL_INTERVAL_MS);
 })();
