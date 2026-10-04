@@ -41,5 +41,10 @@
   "bugs": {
     "url": "https://github.com/IntaninK/SE_Internship_tracking_system/issues"
   },
-  "homepage": "https://github.com/IntaninK/SE_Internship_tracking_system#readme"
+  "homepage": "https://github.com/IntaninK/SE_Internship_tracking_system#readme",
+  "allowScripts": {
+    "@prisma/engines@7.10.0": true,
+    "@parcel/watcher@2.5.1": true,
+    "prisma@7.10.0": true
+  }
 }
