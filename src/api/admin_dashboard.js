@@ -29,8 +29,9 @@ async function initAdminDashboard() {
   updateTableHeader();
 
   await loadDashboardSummary();
-  await loadStudents();
+  // เติม dropdown ชั้นปีก่อน เพื่อให้ค่า default (นิสิตปี 3 ปัจจุบัน) มีผลตั้งแต่โหลดตารางครั้งแรก
   await populateYearFilter('/api/admin/students');
+  await loadStudents();
   await populateAdvisorFilter();
 }
 
@@ -1127,12 +1128,22 @@ if (yearFilterEl) {
   }
 });
 
+// รหัสปีของนิสิตชั้นปี 3 ในปีการศึกษาปัจจุบัน (ตัดรอบปีการศึกษาที่เดือน มิ.ย. เหมือน studentImportParser)
+// เช่น ต.ค. 2569 → ปีการศึกษา 2569 → ปี 3 = รหัส 67 | ม.ค. 2570 → ยังเป็นปีการศึกษา 2569 → รหัส 67
+function getDefaultYearPrefix(date = new Date()) {
+  const beYear = date.getFullYear() + 543;
+  const academicYear = date.getMonth() + 1 < 6 ? beYear - 1 : beYear;
+  return String((academicYear - 2) % 100).padStart(2, '0');
+}
+
+let yearFilterInitialized = false;
+
 // ดึงรายปีจากรหัสนิสิตทั้งหมดมาใส่ Dropdown
 async function populateYearFilter(apiUrl) {
   try {
     const select = document.getElementById('year-filter');
     if (!select) return;
-    const currentVal = select.value;
+    let currentVal = select.value;
     const res = await fetch(`${apiUrl}?page=1&limit=9999`);
     const data = await res.json();
     if (!data.success || !Array.isArray(data.students)) return;
@@ -1141,6 +1152,13 @@ async function populateYearFilter(apiUrl) {
         .filter(s => s.studentCode && s.studentCode.length >= 2)
         .map(s => s.studentCode.substring(0, 2))
     )].sort((a, b) => Number(b) - Number(a));
+    // โหลดหน้าครั้งแรก: default เป็นนิสิตปี 3 ปัจจุบัน (ถ้ามีนิสิตรุ่นนั้นในระบบ ไม่งั้นแสดงทุกชั้นปี)
+    // ครั้งถัดไป (เช่น realtime refresh) คงค่าที่ผู้ใช้เลือกไว้
+    if (!yearFilterInitialized) {
+      yearFilterInitialized = true;
+      const defaultPrefix = getDefaultYearPrefix();
+      if (years.includes(defaultPrefix)) currentVal = defaultPrefix;
+    }
     select.innerHTML = '';
     const allYearsOption = document.createElement('option');
     allYearsOption.value = '';
