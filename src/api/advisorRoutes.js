@@ -576,7 +576,7 @@ router.get("/export", async (req, res) => {
       orderBy: { studentCode: "asc" },
     });
 
-    const exportData = students.map((s) => {
+    let exportData = students.map((s) => {
       // 5. ชั่วโมงอบรม Soft Skill & Hard Skill ที่ Approved
       const approvedTrainings = (s.trainingRecords || []).filter((t) => t.status === "APPROVED");
       const softHours = approvedTrainings
