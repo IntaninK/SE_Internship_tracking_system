@@ -1,29 +1,31 @@
-const express = require("express");
-const multer = require("multer");
-const path = require("path");
-const fs = require("fs");
-const prisma = require("../db");
-const requireLogin = require("../auth/requireLogin");
+import express, { Request, Response } from "express";
+import multer from "multer";
+import path from "path";
+import prisma from "../db";
+import requireLogin from "../auth/requireLogin";
+import { uploadToCloudinary } from "../utils/cloudinary";
 
 const router = express.Router();
 
 // ต้อง login ทุก route ภายใต้ /api/student
 router.use(requireLogin);
 
-const { uploadToCloudinary } = require("../utils/cloudinary");
-
 // ==========================================
 // 1. ตั้งค่าการอัปโหลดไฟล์ด้วย Multer (Memory Storage)
 // ==========================================
 const storage = multer.memoryStorage();
 
-const fileFilter = (req, file, cb) => {
+const fileFilter = (
+  _req: Request,
+  file: Express.Multer.File,
+  cb: multer.FileFilterCallback
+) => {
   const allowedExts = [".pdf", ".jpg", ".jpeg", ".png", ".webp"];
   const ext = path.extname(file.originalname).toLowerCase();
   if (allowedExts.includes(ext)) {
     cb(null, true);
   } else {
-    cb(new Error("รองรับเฉพาะไฟล์ PDF หรือรูปภาพ (JPG, PNG, WebP) เท่านั้น"), false);
+    cb(new Error("รองรับเฉพาะไฟล์ PDF หรือรูปภาพ (JPG, PNG, WebP) เท่านั้น"));
   }
 };
 
@@ -34,7 +36,7 @@ const upload = multer({
 });
 
 // Helper: ดึงหรือสร้าง student id ของ user ปัจจุบัน
-async function getStudentByUserId(userId) {
+async function getStudentByUserId(userId: number) {
   return await prisma.student.findUnique({
     where: { userId },
     include: {
@@ -55,9 +57,9 @@ async function getStudentByUserId(userId) {
 // ==========================================
 // 2. ข้อมูลส่วนตัวนิสิต (Student Profile)
 // ==========================================
-router.get("/profile", async (req, res) => {
+router.get("/profile", async (req: Request, res: Response) => {
   try {
-    const student = await getStudentByUserId(req.session.user.id);
+    const student = await getStudentByUserId(req.session.user!.id);
     res.json({
       success: true,
       user: req.session.user,
@@ -69,27 +71,28 @@ router.get("/profile", async (req, res) => {
   }
 });
 
-router.get("/advisors", async(req, res) => {
+router.get("/advisors", async (_req: Request, res: Response) => {
   try {
     const advisors = await prisma.staff.findMany({
       where: {
         user: { role: { in: ["ADVISOR", "STAFF", "ADMIN"] } },
       },
       select: {
-        id: true, name: true,
+        id: true,
+        name: true,
       },
       orderBy: { name: "asc" },
     });
-    res.json({ success: true, advisors});
+    res.json({ success: true, advisors });
   } catch (err) {
     console.error("GET /api/student/advisors error:", err);
     res.status(500).json({ success: false, message: "ดึงรายชื่ออาจารย์ที่ปรึกษาไม่สำเร็จ" });
   }
 });
 
-router.post("/profile", upload.single("profileImage"), async (req, res) => {
+router.post("/profile", upload.single("profileImage"), async (req: Request, res: Response) => {
   try {
-    const userId = req.session.user.id;
+    const userId = req.session.user!.id;
     const {
       studentCode,
       nameTh,
@@ -110,7 +113,7 @@ router.post("/profile", upload.single("profileImage"), async (req, res) => {
       });
     }
 
-    let profileImageUrl = undefined;
+    let profileImageUrl: string | undefined = undefined;
     if (req.file) {
       profileImageUrl = await uploadToCloudinary(
         req.file.buffer,
@@ -119,7 +122,7 @@ router.post("/profile", upload.single("profileImage"), async (req, res) => {
       );
     }
 
-    const dataToSave = {
+    const dataToSave: any = {
       studentCode: String(studentCode).trim(),
       nameTh: String(nameTh).trim(),
       nameEn: String(nameEn).trim(),
@@ -152,7 +155,7 @@ router.post("/profile", upload.single("profileImage"), async (req, res) => {
       message: "บันทึกข้อมูลส่วนตัวสำเร็จ",
       student,
     });
-  } catch (err) {
+  } catch (err: any) {
     console.error("POST /api/student/profile error:", err);
     res.status(500).json({ success: false, message: "บันทึกข้อมูลไม่สำเร็จ: " + err.message });
   }
@@ -161,9 +164,9 @@ router.post("/profile", upload.single("profileImage"), async (req, res) => {
 // ==========================================
 // 3. ชั่วโมงการอบรม Soft/Hard Skill
 // ==========================================
-router.get("/trainings", async (req, res) => {
+router.get("/trainings", async (req: Request, res: Response) => {
   try {
-    const student = await getStudentByUserId(req.session.user.id);
+    const student = await getStudentByUserId(req.session.user!.id);
     if (!student) {
       return res.json({ success: true, trainings: [], totalSoft: 0, totalHard: 0 });
     }
@@ -193,9 +196,9 @@ router.get("/trainings", async (req, res) => {
   }
 });
 
-router.post("/trainings", upload.single("certificate"), async (req, res) => {
+router.post("/trainings", upload.single("certificate"), async (req: Request, res: Response) => {
   try {
-    const student = await getStudentByUserId(req.session.user.id);
+    const student = await getStudentByUserId(req.session.user!.id);
     if (!student) {
       return res.status(400).json({
         success: false,
@@ -208,7 +211,7 @@ router.post("/trainings", upload.single("certificate"), async (req, res) => {
       return res.status(400).json({ success: false, message: "กรุณาระบุจำนวนชั่วโมงให้ถูกต้อง" });
     }
 
-    let certificateFileUrl = null;
+    let certificateFileUrl: string | null = null;
     if (req.file) {
       certificateFileUrl = await uploadToCloudinary(
         req.file.buffer,
@@ -236,16 +239,19 @@ router.post("/trainings", upload.single("certificate"), async (req, res) => {
       message: "เพิ่มข้อมูลการอบรมสำเร็จ",
       training,
     });
-  } catch (err) {
+  } catch (err: any) {
     console.error("POST /api/student/trainings error:", err);
     res.status(500).json({ success: false, message: "เพิ่มข้อมูลไม่สำเร็จ: " + err.message });
   }
 });
 
-router.put("/trainings/:id", async (req, res) => {
+router.put("/trainings/:id", async (req: Request, res: Response) => {
   try {
-    const student = await getStudentByUserId(req.session.user.id);
-    const trainingId = parseInt(req.params.id, 10);
+    const student = await getStudentByUserId(req.session.user!.id);
+    if (!student) {
+      return res.status(404).json({ success: false, message: "ไม่พบข้อมูลนิสิต" });
+    }
+    const trainingId = parseInt(req.params.id as string, 10);
     const { title, skillType, hours } = req.body;
 
     const training = await prisma.trainingRecord.findFirst({
@@ -272,10 +278,13 @@ router.put("/trainings/:id", async (req, res) => {
   }
 });
 
-router.delete("/trainings/:id", async (req, res) => {
+router.delete("/trainings/:id", async (req: Request, res: Response) => {
   try {
-    const student = await getStudentByUserId(req.session.user.id);
-    const trainingId = parseInt(req.params.id, 10);
+    const student = await getStudentByUserId(req.session.user!.id);
+    if (!student) {
+      return res.status(404).json({ success: false, message: "ไม่พบข้อมูลนิสิต" });
+    }
+    const trainingId = parseInt(req.params.id as string, 10);
 
     const training = await prisma.trainingRecord.findFirst({
       where: { id: trainingId, studentId: student.id },
@@ -296,9 +305,9 @@ router.delete("/trainings/:id", async (req, res) => {
 // ==========================================
 // 4. กรอกใบ CV
 // ==========================================
-router.get("/cv", async (req, res) => {
+router.get("/cv", async (req: Request, res: Response) => {
   try {
-    const student = await getStudentByUserId(req.session.user.id);
+    const student = await getStudentByUserId(req.session.user!.id);
     if (!student || !student.cv) {
       return res.json({ success: true, cv: null });
     }
@@ -309,9 +318,9 @@ router.get("/cv", async (req, res) => {
   }
 });
 
-router.post("/cv", upload.single("cv"), async (req, res) => {
+router.post("/cv", upload.single("cv"), async (req: Request, res: Response) => {
   try {
-    const student = await getStudentByUserId(req.session.user.id);
+    const student = await getStudentByUserId(req.session.user!.id);
     if (!student) {
       return res.status(400).json({
         success: false,
@@ -348,7 +357,7 @@ router.post("/cv", upload.single("cv"), async (req, res) => {
     });
 
     res.json({ success: true, message: "อัปโหลด CV สำเร็จ", cv });
-  } catch (err) {
+  } catch (err: any) {
     console.error("POST /api/student/cv error:", err);
     res.status(500).json({ success: false, message: "อัปโหลด CV ไม่สำเร็จ: " + err.message });
   }
@@ -357,7 +366,7 @@ router.post("/cv", upload.single("cv"), async (req, res) => {
 // ==========================================
 // 5. Checklist แม่แบบและประเมินบริษัท
 // ==========================================
-router.get("/checklist-template", async (req, res) => {
+router.get("/checklist-template", async (_req: Request, res: Response) => {
   try {
     const sections = await prisma.checklistSection.findMany({
       orderBy: { order: "asc" },
@@ -374,9 +383,9 @@ router.get("/checklist-template", async (req, res) => {
   }
 });
 
-router.get("/companies", async (req, res) => {
+router.get("/companies", async (req: Request, res: Response) => {
   try {
-    const student = await getStudentByUserId(req.session.user.id);
+    const student = await getStudentByUserId(req.session.user!.id);
     if (!student) {
       return res.json({ success: true, companies: [] });
     }
@@ -398,9 +407,9 @@ router.get("/companies", async (req, res) => {
 });
 
 // บันทึกบริษัทและคำตอบ Checklist (สร้างใหม่ หรือ บันทึกชุดข้อมูล)
-router.post("/companies", async (req, res) => {
+router.post("/companies", async (req: Request, res: Response) => {
   try {
-    const student = await getStudentByUserId(req.session.user.id);
+    const student = await getStudentByUserId(req.session.user!.id);
     if (!student) {
       return res.status(400).json({
         success: false,
@@ -471,17 +480,20 @@ router.post("/companies", async (req, res) => {
       message: "บันทึกข้อมูลบริษัทและ Checklist เรียบร้อยแล้ว",
       company: createdCompany,
     });
-  } catch (err) {
+  } catch (err: any) {
     console.error("POST /api/student/companies error:", err);
     res.status(500).json({ success: false, message: "บันทึกไม่สำเร็จ: " + err.message });
   }
 });
 
 // แก้ไขชื่อบริษัทและคำตอบ Checklist
-router.put("/companies/:id", async (req, res) => {
+router.put("/companies/:id", async (req: Request, res: Response) => {
   try {
-    const student = await getStudentByUserId(req.session.user.id);
-    const companyId = parseInt(req.params.id, 10);
+    const student = await getStudentByUserId(req.session.user!.id);
+    if (!student) {
+      return res.status(404).json({ success: false, message: "ไม่พบข้อมูลนิสิต" });
+    }
+    const companyId = parseInt(req.params.id as string, 10);
     const { name, answers } = req.body;
 
     const company = await prisma.company.findFirst({
@@ -546,9 +558,9 @@ router.put("/companies/:id", async (req, res) => {
 // 6. สถานะการยื่น (Submission Status)
 //    (แสดงเฉพาะบริษัทที่ checklistStatus === 'APPROVED')
 // ==========================================
-router.get("/submissions", async (req, res) => {
+router.get("/submissions", async (req: Request, res: Response) => {
   try {
-    const student = await getStudentByUserId(req.session.user.id);
+    const student = await getStudentByUserId(req.session.user!.id);
     if (!student) {
       return res.json({ success: true, approvedCompanies: [] });
     }
@@ -572,10 +584,13 @@ router.get("/submissions", async (req, res) => {
   }
 });
 
-router.put("/submissions/:companyId", async (req, res) => {
+router.put("/submissions/:companyId", async (req: Request, res: Response) => {
   try {
-    const student = await getStudentByUserId(req.session.user.id);
-    const companyId = parseInt(req.params.companyId, 10);
+    const student = await getStudentByUserId(req.session.user!.id);
+    if (!student) {
+      return res.status(404).json({ success: false, message: "ไม่พบข้อมูลนิสิต" });
+    }
+    const companyId = parseInt(req.params.companyId as string, 10);
     const { status } = req.body;
 
     const company = await prisma.company.findFirst({
@@ -614,9 +629,9 @@ router.put("/submissions/:companyId", async (req, res) => {
 // ==========================================
 // 7. ข้อมูลบริษัทที่เข้าฝึกงานจริง (Internship Placement)
 // ==========================================
-router.get("/placement", async (req, res) => {
+router.get("/placement", async (req: Request, res: Response) => {
   try {
-    const student = await getStudentByUserId(req.session.user.id);
+    const student = await getStudentByUserId(req.session.user!.id);
     if (!student || !student.placement) {
       return res.json({ success: true, placement: null });
     }
@@ -627,9 +642,9 @@ router.get("/placement", async (req, res) => {
   }
 });
 
-router.post("/placement", async (req, res) => {
+router.post("/placement", async (req: Request, res: Response) => {
   try {
-    const student = await getStudentByUserId(req.session.user.id);
+    const student = await getStudentByUserId(req.session.user!.id);
     if (!student) {
       return res.status(400).json({
         success: false,
@@ -651,9 +666,16 @@ router.post("/placement", async (req, res) => {
     } = req.body;
 
     // บังคับกรอกครบทุกช่อง (กันการข้าม validation ฝั่งหน้าเว็บ)
-    const requiredMap = {
-      position, companyNameTh, contactPersonName, contactPersonPosition,
-      companyAddress, companyPhone1, companyPhone2, companyEmail, province,
+    const requiredMap: Record<string, any> = {
+      position,
+      companyNameTh,
+      contactPersonName,
+      contactPersonPosition,
+      companyAddress,
+      companyPhone1,
+      companyPhone2,
+      companyEmail,
+      province,
     };
     const missing = Object.keys(requiredMap).filter(
       (k) => !requiredMap[k] || !String(requiredMap[k]).trim()
@@ -666,7 +688,7 @@ router.post("/placement", async (req, res) => {
       });
     }
 
-    const placementData = {
+    const placementData: any = {
       position: position ? String(position).trim() : null,
       companyNameTh: companyNameTh ? String(companyNameTh).trim() : null,
       contactPersonName: contactPersonName ? String(contactPersonName).trim() : null,
@@ -689,7 +711,7 @@ router.post("/placement", async (req, res) => {
     });
 
     res.json({ success: true, message: "บันทึกข้อมูลแหล่งฝึกงานสำเร็จ", placement });
-  } catch (err) {
+  } catch (err: any) {
     console.error("POST /api/student/placement error:", err);
     res.status(500).json({ success: false, message: "บันทึกไม่สำเร็จ: " + err.message });
   }
@@ -698,9 +720,9 @@ router.post("/placement", async (req, res) => {
 // ==========================================
 // 8. สรุปข้อมูลทั้งหมดสำหรับหน้า Dashboard (ภาพ 1 / ภาพ 5)
 // ==========================================
-router.get("/dashboard-summary", async (req, res) => {
+router.get("/dashboard-summary", async (req: Request, res: Response) => {
   try {
-    const student = await getStudentByUserId(req.session.user.id);
+    const student = await getStudentByUserId(req.session.user!.id);
     if (!student) {
       return res.json({
         success: true,
@@ -727,13 +749,13 @@ router.get("/dashboard-summary", async (req, res) => {
       .filter((t) => t.skillType === "HARD")
       .reduce((sum, t) => sum + t.hours, 0);
 
-        // คำนวณสถานะการอบรมโดยรวม และดึงหมายเหตุปัญหาจากอาจารย์
+    // คำนวณสถานะการอบรมโดยรวม และดึงหมายเหตุปัญหาจากอาจารย์
     let trainingStatus = "PENDING";
     let trainingNote = "";
 
     const hasRejected = student.trainingRecords.some((t) => t.status === "REJECTED");
     const rejectedRecord = student.trainingRecords.find((t) => t.status === "REJECTED" && t.note);
-    if (rejectedRecord) {
+    if (rejectedRecord && rejectedRecord.note) {
       trainingNote = rejectedRecord.note;
     }
 
@@ -744,7 +766,6 @@ router.get("/dashboard-summary", async (req, res) => {
     } else if (student.trainingRecords.length > 0) {
       trainingStatus = "PENDING";
     }
-
 
     // บริษัทที่ผ่าน
     const approvedCompanies = student.companies.filter((c) => c.checklistStatus === "APPROVED");
@@ -794,4 +815,6 @@ router.get("/dashboard-summary", async (req, res) => {
   }
 });
 
+export default router;
 module.exports = router;
+module.exports.default = router;

@@ -1,6 +1,6 @@
-const express = require("express");
-const prisma = require("../db");
-const requireAdvisor = require("../auth/requireAdvisor");
+import express, { Request, Response } from "express";
+import prisma from "../db";
+import requireAdvisor from "../auth/requireAdvisor";
 
 const router = express.Router();
 
@@ -8,14 +8,14 @@ const router = express.Router();
 router.use(requireAdvisor);
 
 // Helper function: จัดกลุ่ม Checklist Status ของนิสิต
-function getStudentChecklistStatus(s) {
+function getStudentChecklistStatus(s: any) {
   const companies = s.companies || [];
   if (companies.length === 0) {
     return { key: "pending", label: "รอผล", status: "PENDING" };
   }
 
-  const hasApproved = companies.some((c) => c.checklistStatus === "APPROVED");
-  const allRejected = companies.every((c) => c.checklistStatus === "REJECTED");
+  const hasApproved = companies.some((c: any) => c.checklistStatus === "APPROVED");
+  const allRejected = companies.every((c: any) => c.checklistStatus === "REJECTED");
 
   if (hasApproved) {
     return { key: "reviewed", label: "อาจารย์รีวิวแล้ว", status: "APPROVED" };
@@ -27,18 +27,18 @@ function getStudentChecklistStatus(s) {
 }
 
 // Helper function: จัดกลุ่ม Readiness Status ของนิสิต
-function getStudentReadinessStatus(s) {
-  const approvedTrainings = (s.trainingRecords || []).filter((t) => t.status === "APPROVED");
+function getStudentReadinessStatus(s: any) {
+  const approvedTrainings = (s.trainingRecords || []).filter((t: any) => t.status === "APPROVED");
   const softHours = approvedTrainings
-    .filter((t) => t.skillType === "SOFT")
-    .reduce((sum, t) => sum + t.hours, 0);
+    .filter((t: any) => t.skillType === "SOFT")
+    .reduce((sum: number, t: any) => sum + t.hours, 0);
   const hardHours = approvedTrainings
-    .filter((t) => t.skillType === "HARD")
-    .reduce((sum, t) => sum + t.hours, 0);
+    .filter((t: any) => t.skillType === "HARD")
+    .reduce((sum: number, t: any) => sum + t.hours, 0);
   const isTrainingComplete = softHours >= 12 && hardHours >= 18;
 
   const hasPlacement = s.placement && (s.placement.status === "APPROVED" || s.placement.status === "PENDING");
-  const hasPassedInterview = s.companies && s.companies.some((c) => c.submission && c.submission.status === "INTERVIEW_PASSED");
+  const hasPassedInterview = s.companies && s.companies.some((c: any) => c.submission && c.submission.status === "INTERVIEW_PASSED");
 
   if (hasPlacement || hasPassedInterview) {
     return { key: "registered", label: "ยื่นสมัครสำเร็จ" };
@@ -56,9 +56,9 @@ function getStudentReadinessStatus(s) {
 // ==========================================
 // 1. Dashboard Summary ของอาจารย์ที่ปรึกษา
 // ==========================================
-router.get("/dashboard-summary", async (req, res) => {
+router.get("/dashboard-summary", async (req: Request, res: Response) => {
   try {
-    const advisorStaffId = req.staff.id;
+    const advisorStaffId = req.staff!.id;
 
     // นิสิตที่อาจารย์คนนี้ดูแล (เฉพาะที่ยังไม่ดรอป)
     const students = await prisma.student.findMany({
@@ -75,14 +75,14 @@ router.get("/dashboard-summary", async (req, res) => {
     const totalStudents = students.length;
 
     // กราฟ 1: สถานะ Checklist ของนิสิต (อาจารย์รีวิวแล้ว, รอผล, ไม่ผ่าน/ทำchecklist เพิ่ม)
-    let checklistStats = {
+    const checklistStats: Record<string, number> = {
       reviewed: 0, // อาจารย์รีวิวแล้ว
       pending: 0,  // รอผล
       failed: 0,   // ไม่ผ่าน / ทำ checklist เพิ่ม
     };
 
     // กราฟ 2: สถานะความพร้อม (ยื่นสมัครสำเร็จ, ตรวจCVผ่าน, ยังไม่มีข้อมูล, ชั่วโมงอบรมยังไม่ครบ, ตรวจชม.อบรมครบ)
-    let readinessStats = {
+    const readinessStats: Record<string, number> = {
       registered: 0,
       cvApproved: 0,
       noData: 0,
@@ -100,7 +100,7 @@ router.get("/dashboard-summary", async (req, res) => {
 
     res.json({
       success: true,
-      advisorName: req.staff.name,
+      advisorName: req.staff!.name,
       totalStudents,
       checklistStats,
       readinessStats,
@@ -114,11 +114,13 @@ router.get("/dashboard-summary", async (req, res) => {
 // ==========================================
 // 2. รายชื่อนิสิตที่อาจารย์คนนี้เป็นที่ปรึกษา
 // ==========================================
-router.get("/students", async (req, res) => {
+router.get("/students", async (req: Request, res: Response) => {
   try {
-    const advisorStaffId = req.staff.id;
-    const { page = 1, limit = 12, search, chartType, chartKey } = req.query;
-    const skip = (parseInt(page) - 1) * parseInt(limit);
+    const advisorStaffId = req.staff!.id;
+    const { page, limit, search, chartType, chartKey } = req.query as Record<string, string | undefined>;
+    const pageNum = parseInt(page || "1", 10);
+    const limitNum = parseInt(limit || "12", 10);
+    const skip = (pageNum - 1) * limitNum;
 
     const allStudents = await prisma.student.findMany({
       where: { advisorId: advisorStaffId, isDropped: false },
@@ -155,7 +157,7 @@ router.get("/students", async (req, res) => {
         nickname: s.major ? `ปี ${s.year}` : "-",
         email: s.user.email,
         phone: s.phone,
-        advisorName: req.staff.name,
+        advisorName: req.staff!.name,
         checklistStatusKey: cStatus.key,
         checklistStatusLabel: cStatus.label,
         checklistStatusCode: cStatus.status,
@@ -171,9 +173,13 @@ router.get("/students", async (req, res) => {
     });
 
     mapped.sort((a, b) => {
-      const codeA = BigInt(a.studentCode);
-      const codeB = BigInt(b.studentCode);
-      return codeA === codeB ? 0 : codeA > codeB ? -1 : 1;
+      try {
+        const codeA = BigInt(a.studentCode);
+        const codeB = BigInt(b.studentCode);
+        return codeA === codeB ? 0 : codeA > codeB ? -1 : 1;
+      } catch {
+        return a.studentCode.localeCompare(b.studentCode);
+      }
     });
 
     // กรองตาม Search query
@@ -189,13 +195,13 @@ router.get("/students", async (req, res) => {
     }
 
     // Filter ตามปีของรหัสนิสิต (2 หลักแรก เช่น 67, 68)
-    const yearPrefix = req.query.yearPrefix;
+    const yearPrefix = req.query.yearPrefix as string | undefined;
     if (yearPrefix) {
       mapped = mapped.filter((s) => s.studentCode && s.studentCode.startsWith(yearPrefix));
     }
 
     // Filter ตาม dropdown "สถานะ"
-    const statusFilter = req.query.statusFilter;
+    const statusFilter = req.query.statusFilter as string | undefined;
     if (statusFilter) {
       switch (statusFilter) {
         case "training_passed":
@@ -226,7 +232,7 @@ router.get("/students", async (req, res) => {
     }
 
     // Filter ตาม dropdown "Skill" (Soft/Hard skill)
-    const skillFilter = req.query.skillFilter;
+    const skillFilter = req.query.skillFilter as string | undefined;
     if (skillFilter) {
       switch (skillFilter) {
         case "lack_soft":
@@ -242,18 +248,22 @@ router.get("/students", async (req, res) => {
     }
 
     // สถิติสำหรับกราฟวงกลม: คำนวณจากข้อมูลที่ผ่าน filter ค้นหา/ปี/สถานะ/skill แล้ว
-    // (ไม่รวม chartType/chartKey เพราะนั่นคือ filter ที่คลิกจากกราฟเอง กราฟจึงควรยังแสดงสัดส่วนทุกกลุ่มให้คลิกเลือกต่อได้)
-    const chartStats = {
+    const chartStats: {
+      totalStudents: number;
+      checklistStats: Record<string, number>;
+      readinessStats: Record<string, number>;
+    } = {
       totalStudents: mapped.length,
       checklistStats: { reviewed: 0, pending: 0, failed: 0 },
       readinessStats: { registered: 0, cvApproved: 0, noData: 0, hoursIncomplete: 0, trainingComplete: 0 },
     };
+
     mapped.forEach((s) => {
-      chartStats.checklistStats[s.checklistStatusKey]++;
-      chartStats.readinessStats[s.readinessStatusKey]++;
+      chartStats.checklistStats[s.checklistStatusKey] = (chartStats.checklistStats[s.checklistStatusKey] || 0) + 1;
+      chartStats.readinessStats[s.readinessStatusKey] = (chartStats.readinessStats[s.readinessStatusKey] || 0) + 1;
     });
 
-    // กรองตาม Chart ที่คลิกถ้ามี (ใช้กรองตารางรายชื่อ ไม่กระทบสัดส่วนในกราฟ)
+    // กรองตาม Chart ที่คลิกถ้ามี
     if (chartType && chartKey) {
       if (chartType === "checklist") {
         mapped = mapped.filter((s) => s.checklistStatusKey === chartKey);
@@ -263,15 +273,15 @@ router.get("/students", async (req, res) => {
     }
 
     const total = mapped.length;
-    const paginated = mapped.slice(skip, skip + parseInt(limit));
+    const paginated = mapped.slice(skip, skip + limitNum);
 
     res.json({
       success: true,
       students: paginated,
       total,
-      page: parseInt(page),
-      limit: parseInt(limit),
-      totalPages: Math.ceil(total / parseInt(limit)) || 1,
+      page: pageNum,
+      limit: limitNum,
+      totalPages: Math.ceil(total / limitNum) || 1,
       chartStats,
     });
   } catch (err) {
@@ -283,9 +293,9 @@ router.get("/students", async (req, res) => {
 // ==========================================
 // 3. Batch ตั้งสถานะ Checklist นิสิตหลายคนพร้อมกัน
 // ==========================================
-router.put("/batch-checklist-status", async (req, res) => {
+router.put("/batch-checklist-status", async (req: Request, res: Response) => {
   try {
-    const advisorStaffId = req.staff.id;
+    const advisorStaffId = req.staff!.id;
     const { studentIds, status, note } = req.body;
 
     if (!Array.isArray(studentIds) || studentIds.length === 0) {
@@ -299,7 +309,7 @@ router.put("/batch-checklist-status", async (req, res) => {
     // ตรวจสอบว่าเป็นนิสิตของอาจารย์คนนี้จริง
     const validStudents = await prisma.student.findMany({
       where: {
-        id: { in: studentIds.map((id) => parseInt(id)) },
+        id: { in: studentIds.map((id: any) => parseInt(id, 10)) },
         advisorId: advisorStaffId,
       },
       select: { id: true },
@@ -316,7 +326,7 @@ router.put("/batch-checklist-status", async (req, res) => {
       data: {
         checklistStatus: status,
         checklistNote: note || null,
-        reviewedById: req.session.user.id,
+        reviewedById: req.session.user!.id,
         reviewedAt: new Date(),
       },
     });
@@ -334,9 +344,9 @@ router.put("/batch-checklist-status", async (req, res) => {
 // ==========================================
 // 3.1 Batch ตั้งสถานะนิสิต (Checklist หรือ ข้อมูลบริษัทที่เข้าฝึกงาน)
 // ==========================================
-router.put("/batch-status", async (req, res) => {
+router.put("/batch-status", async (req: Request, res: Response) => {
   try {
-    const advisorStaffId = req.staff.id;
+    const advisorStaffId = req.staff!.id;
     const { studentIds, statusType, status, note } = req.body;
 
     if (!Array.isArray(studentIds) || studentIds.length === 0) {
@@ -354,7 +364,7 @@ router.put("/batch-status", async (req, res) => {
     // ตรวจสอบว่าเป็นนิสิตของอาจารย์ที่ปรึกษาคนนี้จริง
     const validStudents = await prisma.student.findMany({
       where: {
-        id: { in: studentIds.map((id) => parseInt(id)) },
+        id: { in: studentIds.map((id: any) => parseInt(id, 10)) },
         advisorId: advisorStaffId,
       },
       select: { id: true },
@@ -371,7 +381,7 @@ router.put("/batch-status", async (req, res) => {
         data: {
           checklistStatus: status,
           checklistNote: note || null,
-          reviewedById: req.session.user.id,
+          reviewedById: req.session.user!.id,
           reviewedAt: new Date(),
         },
       });
@@ -389,13 +399,13 @@ router.put("/batch-status", async (req, res) => {
               studentId: sid,
               status,
               note: note || null,
-              reviewedById: req.session.user.id,
+              reviewedById: req.session.user!.id,
               reviewedAt: new Date(),
             },
             update: {
               status,
               note: note || null,
-              reviewedById: req.session.user.id,
+              reviewedById: req.session.user!.id,
               reviewedAt: new Date(),
             },
           })
@@ -416,10 +426,10 @@ router.put("/batch-status", async (req, res) => {
 // ==========================================
 // 4. ดู Checklist ของนิสิตรายบุคคล (สำหรับอาจารย์ที่ปรึกษา)
 // ==========================================
-router.get("/students/:studentId/checklist", async (req, res) => {
+router.get("/students/:studentId/checklist", async (req: Request, res: Response) => {
   try {
-    const advisorStaffId = req.staff.id;
-    const studentId = parseInt(req.params.studentId);
+    const advisorStaffId = req.staff!.id;
+    const studentId = parseInt(req.params.studentId as string, 10);
 
     const student = await prisma.student.findUnique({
       where: { id: studentId },
@@ -446,7 +456,7 @@ router.get("/students/:studentId/checklist", async (req, res) => {
 
     // ตรวจสอบสิทธิ์ (ถ้าไม่ใช่ ADMIN / STAFF ต้องเป็นอาจารย์ที่ปรึกษาของนิสิต)
     if (
-      req.session.user.role === "ADVISOR" &&
+      req.session.user!.role === "ADVISOR" &&
       student.advisorId !== advisorStaffId
     ) {
       return res.status(403).json({
@@ -498,10 +508,10 @@ router.get("/students/:studentId/checklist", async (req, res) => {
 // ==========================================
 // 5. บันทึกผลการตรวจ Checklist ของบริษัทใดบริษัทหนึ่ง
 // ==========================================
-router.put("/companies/:companyId/checklist-review", async (req, res) => {
+router.put("/companies/:companyId/checklist-review", async (req: Request, res: Response) => {
   try {
-    const advisorStaffId = req.staff.id;
-    const companyId = parseInt(req.params.companyId);
+    const advisorStaffId = req.staff!.id;
+    const companyId = parseInt(req.params.companyId as string, 10);
     const { status, note } = req.body;
 
     if (!["APPROVED", "REJECTED", "PENDING"].includes(status)) {
@@ -519,7 +529,6 @@ router.put("/companies/:companyId/checklist-review", async (req, res) => {
 
     // สิทธิ์การตรวจประเมิน Checklist:
     // ต้องเป็นอาจารย์ที่ปรึกษาของนิสิตคนนี้เท่านั้น (advisorId ของนิสิตตรงกับ staff id ของผู้ตรวจ)
-    // แม้จะมี role เป็น ADMIN หรือ STAFF หากไม่ได้เป็นที่ปรึกษาของนิสิตคนนี้ จะไม่มีสิทธิ์บันทึกผล
     if (
       !company.student.advisorId ||
       !advisorStaffId ||
@@ -536,7 +545,7 @@ router.put("/companies/:companyId/checklist-review", async (req, res) => {
       data: {
         checklistStatus: status,
         checklistNote: note || null,
-        reviewedById: req.session.user.id,
+        reviewedById: req.session.user!.id,
         reviewedAt: new Date(),
       },
     });
@@ -555,9 +564,9 @@ router.put("/companies/:companyId/checklist-review", async (req, res) => {
 // ==========================================
 // 6. Export ข้อมูลนิสิตแบบละเอียด (สำหรับ CSV)
 // ==========================================
-router.get("/export", async (req, res) => {
+router.get("/export", async (req: Request, res: Response) => {
   try {
-    const advisorStaffId = req.staff.id;
+    const advisorStaffId = req.staff!.id;
 
     const students = await prisma.student.findMany({
       where: { advisorId: advisorStaffId },
@@ -613,13 +622,13 @@ router.get("/export", async (req, res) => {
       // 8. ผลการสมัคร/สัมภาษณ์
       const submissions = companies.map((c) => c.submission).filter(Boolean);
       let interviewStatus = "ยังไม่ได้ยื่น";
-      if (submissions.some((sub) => sub.status === "INTERVIEW_PASSED")) {
+      if (submissions.some((sub) => sub?.status === "INTERVIEW_PASSED")) {
         interviewStatus = "สัมภาษณ์ผ่านแล้ว";
-      } else if (submissions.some((sub) => sub.status === "INTERVIEWED_PENDING")) {
+      } else if (submissions.some((sub) => sub?.status === "INTERVIEWED_PENDING")) {
         interviewStatus = "สัมภาษณ์แล้ว รอผล";
-      } else if (submissions.some((sub) => sub.status === "SUBMITTED_WAITING")) {
+      } else if (submissions.some((sub) => sub?.status === "SUBMITTED_WAITING")) {
         interviewStatus = "ยื่นแล้ว รอสัมภาษณ์";
-      } else if (submissions.some((sub) => sub.status === "INTERVIEW_FAILED_REAPPLIED")) {
+      } else if (submissions.some((sub) => sub?.status === "INTERVIEW_FAILED_REAPPLIED")) {
         interviewStatus = "สัมภาษณ์ไม่ผ่าน ยื่นเพิ่มแล้ว";
       } else {
         interviewStatus = "ยังไม่ได้ยื่น";
@@ -686,28 +695,26 @@ router.get("/export", async (req, res) => {
 
     // 1. กรองตาม IDs (เฉพาะรายการที่เลือกผ่าน checkbox)
     if (req.query.ids) {
-      const idList = req.query.ids.split(",").map((id) => parseInt(id.trim())).filter(Boolean);
+      const idList = String(req.query.ids).split(",").map((id) => parseInt(id.trim(), 10)).filter(Boolean);
       if (idList.length > 0) {
         const idSet = new Set(idList);
         exportData = exportData.filter((s) => idSet.has(s.id));
       }
     } else if (req.query.all !== "true") {
       // 2. กรองตามเงื่อนไข (Filtered)
-      // กรองตาม search
       if (req.query.search) {
-        const q = req.query.search.toLowerCase();
+        const q = String(req.query.search).toLowerCase();
         exportData = exportData.filter(
           (s) =>
             (s.studentCode && s.studentCode.toLowerCase().includes(q)) ||
             (s.nameTh && s.nameTh.toLowerCase().includes(q)) ||
-            (s.nameEn && s.nameEn.toLowerCase().includes(q)) ||
             (s.email && s.email.toLowerCase().includes(q))
         );
       }
 
       // กรองตาม yearPrefix
       if (req.query.yearPrefix) {
-        exportData = exportData.filter((s) => s.studentCode && s.studentCode.startsWith(req.query.yearPrefix));
+        exportData = exportData.filter((s) => s.studentCode && s.studentCode.startsWith(String(req.query.yearPrefix)));
       }
 
       // กรองตาม statusFilter
@@ -774,9 +781,9 @@ router.get("/export", async (req, res) => {
 // ==========================================
 // ตั้งสถานะอนุมัติที่ฝึกงานของนิสิต (อาจารย์ที่ปรึกษา)
 // ==========================================
-router.put("/students/:studentId/placement-status", async (req, res) => {
+router.put("/students/:studentId/placement-status", async (req: Request, res: Response) => {
   try {
-    const studentId = parseInt(req.params.studentId);
+    const studentId = parseInt(req.params.studentId as string, 10);
     const { status, note } = req.body;
 
     const updated = await prisma.internshipPlacement.upsert({
@@ -785,13 +792,13 @@ router.put("/students/:studentId/placement-status", async (req, res) => {
         studentId,
         status,
         note: note || null,
-        reviewedById: req.session.user.id,
+        reviewedById: req.session.user!.id,
         reviewedAt: new Date(),
       },
       update: {
         status,
         note: note || null,
-        reviewedById: req.session.user.id,
+        reviewedById: req.session.user!.id,
         reviewedAt: new Date(),
       },
     });
@@ -803,4 +810,6 @@ router.put("/students/:studentId/placement-status", async (req, res) => {
   }
 });
 
+export default router;
 module.exports = router;
+module.exports.default = router;

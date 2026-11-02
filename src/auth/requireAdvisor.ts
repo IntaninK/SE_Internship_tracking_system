@@ -1,7 +1,8 @@
-const prisma = require("../db");
+import { Request, Response, NextFunction } from "express";
+import prisma from "../db";
 
 // Middleware: ตรวจสอบว่าเป็น ADVISOR, STAFF หรือ ADMIN
-async function requireAdvisor(req, res, next) {
+export async function requireAdvisor(req: Request, res: Response, next: NextFunction) {
   if (!req.session || !req.session.user) {
     return res.redirect("/pages/login.html");
   }
@@ -53,4 +54,6 @@ async function requireAdvisor(req, res, next) {
   }
 }
 
+export default requireAdvisor;
 module.exports = requireAdvisor;
+module.exports.default = requireAdvisor;
