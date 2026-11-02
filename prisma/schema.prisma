@@ -1,6 +1,5 @@
 generator client {
-  provider        = "prisma-client-js"
-  previewFeatures = ["driverAdapters"]
+  provider = "prisma-client-js"
 }
 
 datasource db {
@@ -52,8 +51,14 @@ model Student {
   studentCode     String          @unique // รหัสนิสิต เช่น 676767 / 670xxxxx
   nameTh          String          // ชื่อ-สกุล (ไทย)
   nameEn          String          // Name & Surname (English)
+  nickname        String?         // ชื่อเล่น
+  faculty         String          @default("คณะเทคโนโลยีสารสนเทศและการสื่อสาร") // คณะ
+  curriculum      String?         // หลักสูตร / สาขาวิชา
+  academicYear    String?         // ปีการศึกษา เช่น "2567" หรือ "2568"
+  studentStatus   String?         @default("กำลังศึกษา") // สถานะนิสิต เช่น กำลังศึกษา, พักการเรียน
+  internshipType  String?         @default("NEW")       // ประเภทการฝึก เช่น NEW (ฝึกรอบแรก), RETEST (ฝึกรอบใหม่/ตกค้าง)
   year            Int             // ชั้นปีที่
-  major           String?         // สาขาวิชา
+  major           String?         // สาขาวิชา เช่น "สาขาวิชาวิศวกรรมซอฟต์แวร์"
   gpa             Float?          // เกรดเฉลี่ย
   phone           String?
   lineId          String?
@@ -62,6 +67,9 @@ model Student {
 
   advisorId       Int?
   advisor         Staff?          @relation("AdvisorToStudents", fields: [advisorId], references: [id])
+
+  supervisorId    Int?            // อาจารย์นิเทศก์
+  supervisor      Staff?          @relation("SupervisorToStudents", fields: [supervisorId], references: [id])
 
   stage           InternshipStage @default(PENDING_DOCUMENTS)
   isDropped       Boolean         @default(false)
@@ -77,14 +85,22 @@ model Student {
   updatedAt       DateTime        @updatedAt
 }
 
-// อาจารย์ที่ปรึกษา / อาจารย์รายวิชา — ทั้งสอง role ใช้ตารางเดียวกัน แยกด้วย user.role
+// อาจารย์ที่ปรึกษา / อาจารย์รายวิชา / อาจารย์นิเทศก์ / เจ้าหน้าที่ (Staff)
 model Staff {
-  id       Int    @id @default(autoincrement())
-  userId   Int    @unique
-  user     User   @relation(fields: [userId], references: [id])
-  name     String
+  id                 Int       @id @default(autoincrement())
+  userId             Int       @unique
+  user               User      @relation(fields: [userId], references: [id])
+  name               String
+  department         String?   // สาขาวิชา เช่น "วิศวกรรมซอฟต์แวร์", "ธุรกิจดิจิทัล"
 
-  studentsAdvised Student[] @relation("AdvisorToStudents")
+  // Multi-role flags สำหรับอาจารย์ / บุคลากร
+  isCourseAdmin      Boolean   @default(false) // อาจารย์ประจำวิชา / ประธานหลักสูตร
+  isAdvisor          Boolean   @default(true)  // อาจารย์ที่ปรึกษา
+  isSupervisor       Boolean   @default(false) // อาจารย์นิเทศก์
+  isStaff            Boolean   @default(false) // เจ้าหน้าที่คณะ (เช่น พี่จอม) - ถ้าเป็น true จะเป็นเจ้าหน้าที่ฝ่ายฝึกงาน
+
+  studentsAdvised    Student[] @relation("AdvisorToStudents")
+  studentsSupervised Student[] @relation("SupervisorToStudents")
 }
 
 // =====================================================================
@@ -137,6 +153,8 @@ model TrainingRecord {
   skillType         SkillType
   hours             Int            // จำนวนชั่วโมง
   certificateFileUrl String?
+  academicYear      String?        // ปีการศึกษา เช่น "2567"
+  source            String?        @default("STUDENT_UPLOAD") // แหล่งที่มา: "STUDENT_UPLOAD" หรือ "STAFF_IMPORT"
 
   status            ApprovalStatus @default(PENDING) // อนุมัติใน Cert. (ผ่าน/ไม่ผ่าน)
   note              String?
@@ -258,4 +276,16 @@ model InternshipPlacement {
 
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt
+}
+
+// =====================================================================
+// 9. EXPRESS-SESSION STORE (connect-pg-simple)
+// =====================================================================
+
+model session {
+  sid    String   @id @db.VarChar
+  sess   Json     @db.Json
+  expire DateTime @db.Timestamp(6)
+
+  @@index([expire], map: "IDX_session_expire")
 }
