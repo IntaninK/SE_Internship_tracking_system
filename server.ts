@@ -1,15 +1,16 @@
-require("dotenv").config();
-const express = require("express");
-const session = require("express-session");
-const pgSession = require("connect-pg-simple")(session);
-const { Pool } = require("pg");
-const path = require("path");
+import "dotenv/config";
+import express, { Request, Response } from "express";
+import session from "express-session";
+import connectPgSimple from "connect-pg-simple";
+import { Pool } from "pg";
+import path from "path";
 
-const authRoutes = require("./src/auth/authRoutes");
-const studentRoutes = require("./src/api/studentRoutes");
-const adminRoutes = require("./src/api/adminRoutes");
-const advisorRoutes = require("./src/api/advisorRoutes");
-const requireLogin = require("./src/auth/requireLogin");
+// Import route handlers and middlewares
+import authRoutes from "./src/auth/authRoutes";
+import studentRoutes from "./src/api/studentRoutes";
+import adminRoutes from "./src/api/adminRoutes";
+import advisorRoutes from "./src/api/advisorRoutes";
+import requireLogin from "./src/auth/requireLogin";
 
 const app = express();
 
@@ -22,9 +23,11 @@ const isProduction = process.env.NODE_ENV === "production";
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+const PgSession = connectPgSimple(session);
+
 app.use(
   session({
-    store: new pgSession({
+    store: new PgSession({
       pool: new Pool({ connectionString: process.env.DATABASE_URL }),
       tableName: "session", // pgSession จะสร้างตารางนี้ให้เองอัตโนมัติ (createTableIfMissing)
       createTableIfMissing: true,
@@ -58,7 +61,7 @@ app.use("/components", express.static(path.join(__dirname, "src", "components"))
 app.use("/uploads", express.static(path.join(__dirname, "public", "uploads")));
 
 // หน้าแรก (root): ถ้าล็อกอินแล้วไป dashboard ตาม role ถ้ายังไม่ล็อกอินให้ไป login.html
-app.get("/", (req, res) => {
+app.get("/", (req: Request, res: Response) => {
   if (req.session && req.session.user) {
     const role = req.session.user.role;
     if (role === "STAFF" || role === "ADMIN") {
@@ -72,7 +75,7 @@ app.get("/", (req, res) => {
 });
 
 // หน้า Login: ถ้าล็อกอินอยู่แล้วให้ข้ามไปหน้า dashboard ตาม role ทันที
-app.get("/pages/login.html", (req, res) => {
+app.get("/pages/login.html", (req: Request, res: Response) => {
   if (req.session && req.session.user) {
     const role = req.session.user.role;
     if (role === "STAFF" || role === "ADMIN") {
@@ -101,4 +104,6 @@ if (!process.env.VERCEL) {
   });
 }
 
+export default app;
 module.exports = app;
+module.exports.default = app;

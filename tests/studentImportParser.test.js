@@ -1,4 +1,4 @@
-const { calculateCurrentAcademicYear, calculateStudentYear } = require("../src/utils/studentImportParser");
+const { calculateCurrentAcademicYear, calculateStudentYear } = require("../dist/src/utils/studentImportParser");
 
 describe("calculateCurrentAcademicYear", () => {
   test("returns the same BE year for a date in June or later", () => {

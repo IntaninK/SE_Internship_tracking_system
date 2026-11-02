@@ -1,15 +1,15 @@
-const express = require("express");
-const { msalClient, REDIRECT_URI, SCOPES } = require("./msalConfig");
-const prisma = require("../db");
+import express, { Request, Response } from "express";
+import { msalClient, REDIRECT_URI, SCOPES } from "./msalConfig";
+import prisma from "../db";
 
 const router = express.Router();
 
-// TODO: เปลี่ยนเป็นโดเมนอีเมลจริงของมหาวิทยาลัย ถ้าอยากบังคับว่าต้อง login
+// โดเมนอีเมลจริงของมหาวิทยาลัย ถ้าอยากบังคับว่าต้อง login
 // ด้วยอีเมลนิสิต/อาจารย์เท่านั้น (ปิดไว้ก่อนถ้ายังไม่พร้อม ค่อยเปิดทีหลังได้)
-const ALLOWED_EMAIL_DOMAIN = null; // เช่น '@up.ac.th'
+const ALLOWED_EMAIL_DOMAIN: string | null = null; // เช่น '@up.ac.th'
 
 // 1) กดปุ่ม Login with Microsoft -> เด้งไปหน้า login ของ Microsoft
-router.get("/login", async (req, res) => {
+router.get("/login", async (_req: Request, res: Response) => {
   try {
     const authUrl = await msalClient.getAuthCodeUrl({
       scopes: SCOPES,
@@ -23,20 +23,26 @@ router.get("/login", async (req, res) => {
 });
 
 // 2) Microsoft ส่ง user กลับมาที่นี่พร้อม ?code=... เอา code ไปแลก token
-router.get("/redirect", async (req, res) => {
+router.get("/redirect", async (req: Request, res: Response) => {
+  const code = req.query.code as string | undefined;
+
   // หากไม่มี code (เช่น Microsoft redirect กลับมาหลัง logout หรือเข้า URL นี้ตรงๆ) ให้กลับหน้า login
-  if (!req.query.code) {
+  if (!code) {
     return res.redirect("/pages/login.html");
   }
 
   try {
     const tokenResponse = await msalClient.acquireTokenByCode({
-      code: req.query.code,
+      code,
       scopes: SCOPES,
       redirectUri: REDIRECT_URI,
     });
 
     const account = tokenResponse.account;
+    if (!account) {
+      return res.status(400).send("ไม่พบข้อมูลบัญชี Microsoft");
+    }
+
     const email = account.username; // MSAL ใส่ email/UPN ไว้ตรงนี้
     const displayName = account.name || email;
 
@@ -84,7 +90,7 @@ router.get("/redirect", async (req, res) => {
 });
 
 // 3) Logout: เคลียร์ session ฝั่งเรา แล้วเด้งไป logout ฝั่ง Microsoft ด้วย
-router.get("/logout", (req, res) => {
+router.get("/logout", (req: Request, res: Response) => {
   const userEmail = req.session?.user?.email;
   req.session.destroy(() => {
     // ถ้าผู้ใช้ต้องการ logout เฉพาะในระบบเรา (?local=true)
@@ -111,7 +117,7 @@ router.get("/logout", (req, res) => {
 });
 
 // 4) ดึงข้อมูล User ที่กำลัง Login อยู่ (ส่งให้ frontend ใช้งาน)
-router.get("/me", async (req, res) => {
+router.get("/me", async (req: Request, res: Response) => {
   if (!req.session || !req.session.user) {
     return res.status(401).json({ authenticated: false, message: "ยังไม่ได้เข้าสู่ระบบ" });
   }
@@ -158,4 +164,6 @@ router.get("/me", async (req, res) => {
   }
 });
 
+export default router;
 module.exports = router;
+module.exports.default = router;

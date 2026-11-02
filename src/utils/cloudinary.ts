@@ -1,6 +1,6 @@
-require("dotenv").config();
-const cloudinary = require("cloudinary").v2;
-const path = require("path");
+import "dotenv/config";
+import { v2 as cloudinary } from "cloudinary";
+import path from "path";
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -8,7 +8,11 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-async function uploadToCloudinary(fileBuffer, originalName, folder = "general") {
+export async function uploadToCloudinary(
+  fileBuffer: Buffer,
+  originalName: string,
+  folder: string = "general"
+): Promise<string> {
   return new Promise((resolve, reject) => {
     const ext = path.extname(originalName || "").toLowerCase();
     const isPdf = ext === ".pdf";
@@ -27,6 +31,9 @@ async function uploadToCloudinary(fileBuffer, originalName, folder = "general") 
           console.error("Cloudinary upload error:", error);
           return reject(error);
         }
+        if (!result || !result.secure_url) {
+          return reject(new Error("Cloudinary upload did not return a secure_url"));
+        }
         resolve(result.secure_url);
       }
     );
@@ -34,4 +41,5 @@ async function uploadToCloudinary(fileBuffer, originalName, folder = "general") 
   });
 }
 
+export { cloudinary };
 module.exports = { cloudinary, uploadToCloudinary };
