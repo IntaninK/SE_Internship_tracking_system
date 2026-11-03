@@ -95,7 +95,7 @@ model Staff {
 
   // Multi-role flags สำหรับอาจารย์ / บุคลากร
   isCourseAdmin      Boolean   @default(false) // อาจารย์ประจำวิชา / ประธานหลักสูตร
-  isAdvisor          Boolean   @default(true)  // อาจารย์ที่ปรึกษา
+  isAdvisor          Boolean   @default(false) // อาจารย์ที่ปรึกษา
   isSupervisor       Boolean   @default(false) // อาจารย์นิเทศก์
   isStaff            Boolean   @default(false) // เจ้าหน้าที่คณะ (เช่น พี่จอม) - ถ้าเป็น true จะเป็นเจ้าหน้าที่ฝ่ายฝึกงาน
 
