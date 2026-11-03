@@ -10,6 +10,7 @@ if (!studentId) {
 }
 
 let currentUserRole = null;
+let currentUserFlags = { isAdvisor: false, isCourseAdmin: false, isStaff: false, isSupervisor: false };
 
 async function initStudentDetail() {
   if (!studentId) return;
@@ -19,6 +20,7 @@ async function initStudentDetail() {
     const meData = await meRes.json();
     if (meData.authenticated) {
       currentUserRole = meData.user.role;
+      currentUserFlags = { isAdvisor: Boolean(meData.user.isAdvisor || meData.user.role === 'ADVISOR'), isCourseAdmin: Boolean(meData.user.isCourseAdmin || meData.user.role === 'ADMIN'), isStaff: Boolean(meData.user.isStaff || meData.user.role === 'STAFF'), isSupervisor: Boolean(meData.user.isSupervisor) };
       if (currentUserRole === 'ADVISOR') {
         const backBtn = document.querySelector('a[href*="dashboard"]');
         if (backBtn) {
@@ -43,7 +45,7 @@ async function initStudentDetail() {
     renderPlacement(data.placement);
     renderDocumentSummary(data);
 
-    if (currentUserRole === 'ADVISOR') {
+    if (!currentUserFlags.isCourseAdmin) {
       const trainingApproval = document.getElementById('training-approval-area');
       const trainingSave = document.getElementById('training-save-area');
       if (trainingApproval) trainingApproval.style.display = 'none';
@@ -58,7 +60,7 @@ async function initStudentDetail() {
       if (placementApproval) placementApproval.style.display = 'flex';
     } else {
       const placementApproval = document.getElementById('placement-approval-area');
-      if (placementApproval) placementApproval.style.display = 'none';
+      if (placementApproval) placementApproval.style.display = currentUserFlags.isAdvisor ? 'flex' : 'none';
     }
   } catch (err) {
     console.error('Load student detail error:', err);
@@ -244,7 +246,7 @@ function renderCv(cv) {
       <div>${previewHtml}</div>
       <div style="flex:1; min-width:250px; max-width: 400px;">
         <p style="font-size:16px; margin-bottom:8px;"><strong>ไฟล์:</strong> ${cv.fileName || 'CV'}</p>
-        <p style="font-size:16px; margin-bottom:12px;"><strong>สถานะปัจจุบัน:</strong> ${statusBadge}</p>
+        <p style="font-size:16px; margin-bottom:12px;"><strong>สถานะปัจจุบัน:</strong>  ${statusBadge}</p>
         ${cv.note ? `<p style="font-size:16px; color:#64748b; margin-bottom:12px;">หมายเหตุ: ${cv.note}</p>` : ''}
         <div style="display:flex; flex-direction:column; gap:10px; max-width:350px;">
           <label style="font-size:16px; font-weight:600; color:#334155;">ตั้งสถานะ CV</label>

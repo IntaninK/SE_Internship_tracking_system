@@ -65,20 +65,59 @@ router.get("/redirect", async (req: Request, res: Response) => {
         password: null, // login ผ่าน Microsoft ไม่ใช้ password ของระบบเราเอง
         role: "STUDENT",
       },
+      include: { staff: true },
     });
+
+    let staff = user.staff;
+    if (!staff && user.role !== "STUDENT") {
+      staff = await prisma.staff.create({
+        data: {
+          userId: user.id,
+          name: user.username || user.email,
+          isCourseAdmin: user.role === "ADMIN",
+          isAdvisor: user.role === "ADVISOR",
+          isStaff: user.role === "STAFF",
+          isSupervisor: false,
+        },
+      });
+    }
+
+    const isCourseAdmin = Boolean(staff?.isCourseAdmin || user.role === "ADMIN");
+    const isStaff = Boolean(staff?.isStaff || user.role === "STAFF");
+    const isAdvisor = Boolean(staff?.isAdvisor || user.role === "ADVISOR");
+    const isSupervisor = Boolean(staff?.isSupervisor);
+
+    let activeRole: string = user.role;
+    if (user.role === "STUDENT") {
+      activeRole = "STUDENT";
+    } else if (isCourseAdmin) {
+      activeRole = "COURSE_ADMIN";
+    } else if (isStaff) {
+      activeRole = "STAFF";
+    } else if (isAdvisor) {
+      activeRole = "ADVISOR";
+    } else if (isSupervisor) {
+      activeRole = "SUPERVISOR";
+    }
 
     req.session.user = {
       id: user.id,
       email: user.email,
       username: user.username,
       role: user.role,
+      isAdvisor,
+      isCourseAdmin,
+      isSupervisor,
+      isStaff,
+      department: staff?.department || null,
+      activeRole,
     };
 
     // Role-based redirect: แต่ละ role ไป dashboard ที่ต่างกัน
     let redirectUrl = "/pages/dashboard.html"; // default สำหรับ STUDENT
-    if (user.role === "STAFF" || user.role === "ADMIN") {
+    if (isCourseAdmin || isStaff) {
       redirectUrl = "/pages/dashboard_รายวิชา.html";
-    } else if (user.role === "ADVISOR") {
+    } else if (isAdvisor || isSupervisor) {
       redirectUrl = "/pages/dashboard_ที่ปรึกษา.html";
     }
 
@@ -143,8 +182,29 @@ router.get("/me", async (req: Request, res: Response) => {
       return res.status(404).json({ authenticated: false, message: "ไม่พบข้อมูลผู้ใช้" });
     }
 
+    const isCourseAdmin = Boolean(user.staff?.isCourseAdmin || user.role === "ADMIN");
+    const isStaff = Boolean(user.staff?.isStaff || user.role === "STAFF");
+    const isAdvisor = Boolean(user.staff?.isAdvisor || user.role === "ADVISOR");
+    const isSupervisor = Boolean(user.staff?.isSupervisor);
+
+    let activeRole = req.session.user.activeRole;
+    if (!activeRole) {
+      if (user.role === "STUDENT") activeRole = "STUDENT";
+      else if (isCourseAdmin) activeRole = "COURSE_ADMIN";
+      else if (isStaff) activeRole = "STAFF";
+      else if (isAdvisor) activeRole = "ADVISOR";
+      else if (isSupervisor) activeRole = "SUPERVISOR";
+      else activeRole = user.role;
+    }
+
     // ซิงค์ session ให้ตรงกับข้อมูลล่าสุดใน Database เสมอ
     req.session.user.role = user.role;
+    req.session.user.isAdvisor = isAdvisor;
+    req.session.user.isCourseAdmin = isCourseAdmin;
+    req.session.user.isSupervisor = isSupervisor;
+    req.session.user.isStaff = isStaff;
+    req.session.user.department = user.staff?.department || null;
+    req.session.user.activeRole = activeRole;
     if (user.username) req.session.user.username = user.username;
 
     res.json({
@@ -154,6 +214,12 @@ router.get("/me", async (req: Request, res: Response) => {
         email: user.email,
         username: user.username,
         role: user.role,
+        isAdvisor,
+        isCourseAdmin,
+        isSupervisor,
+        isStaff,
+        department: user.staff?.department || null,
+        activeRole,
       },
       student: user.student,
       staff: user.staff,
@@ -161,6 +227,61 @@ router.get("/me", async (req: Request, res: Response) => {
   } catch (err) {
     console.error("Fetch /auth/me error:", err);
     res.status(500).json({ error: "ดึงข้อมูลผู้ใช้ไม่สำเร็จ" });
+  }
+});
+
+// 5) สลับบทบาทการใช้งาน (สำหรับบุคลากรที่มีหลายบทบาท เช่น อาจารย์ประจำวิชา + ที่ปรึกษา + นิเทศก์)
+router.post("/switch-role", async (req: Request, res: Response) => {
+  if (!req.session || !req.session.user) {
+    return res.status(401).json({ success: false, message: "ยังไม่ได้เข้าสู่ระบบ" });
+  }
+
+  try {
+    const { activeRole } = req.body;
+    const user = await prisma.user.findUnique({
+      where: { id: req.session.user.id },
+      include: { staff: true },
+    });
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: "ไม่พบข้อมูลผู้ใช้" });
+    }
+
+    const isCourseAdmin = Boolean(user.staff?.isCourseAdmin || user.role === "ADMIN");
+    const isStaff = Boolean(user.staff?.isStaff || user.role === "STAFF");
+    const isAdvisor = Boolean(user.staff?.isAdvisor || user.role === "ADVISOR");
+    const isSupervisor = Boolean(user.staff?.isSupervisor);
+
+    const allowedRoles: string[] = [];
+    if (isCourseAdmin) allowedRoles.push("COURSE_ADMIN", "ADMIN");
+    if (isStaff) allowedRoles.push("STAFF");
+    if (isAdvisor) allowedRoles.push("ADVISOR");
+    if (isSupervisor) allowedRoles.push("SUPERVISOR");
+
+    if (!allowedRoles.includes(activeRole)) {
+      return res.status(403).json({
+        success: false,
+        message: "คุณไม่มีสิทธิ์สลับไปยังบทบาทนี้",
+      });
+    }
+
+    req.session.user.activeRole = activeRole;
+
+    let redirectUrl = "/pages/dashboard.html";
+    if (activeRole === "COURSE_ADMIN" || activeRole === "ADMIN" || activeRole === "STAFF") {
+      redirectUrl = "/pages/dashboard_รายวิชา.html";
+    } else if (activeRole === "ADVISOR" || activeRole === "SUPERVISOR") {
+      redirectUrl = "/pages/dashboard_ที่ปรึกษา.html";
+    }
+
+    res.json({
+      success: true,
+      activeRole,
+      redirectUrl,
+    });
+  } catch (err) {
+    console.error("POST /auth/switch-role error:", err);
+    res.status(500).json({ success: false, message: "สลับบทบาทไม่สำเร็จ" });
   }
 });
 

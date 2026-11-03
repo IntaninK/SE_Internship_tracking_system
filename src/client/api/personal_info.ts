@@ -29,6 +29,18 @@ fetch('/api/student/profile')
                 if (s.facebook) document.getElementById('facebook').value = s.facebook;
                 if (s.lineId) document.getElementById('lineId').value = s.lineId;
 
+                // [REQ-04] ล็อคข้อมูลทางวิชาการจาก REG ห้ามนิสิตแก้ไข (รหัสนิสิต, ชื่อ-สกุลไทย, ชั้นปี, GPAX)
+                const lockedRegFields = ['studentCode', 'nameTh', 'year', 'gpa'];
+                lockedRegFields.forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el && el.value) {
+                        el.readOnly = true;
+                        el.style.backgroundColor = '#f8fafc';
+                        el.style.cursor = 'not-allowed';
+                        el.title = 'ข้อมูลจากระบบทะเบียน (REG) ถูกล็อค ไม่สามารถแก้ไขได้';
+                    }
+                });
+
                 if (s.isDropped) {
                     isDroppedStudent = true;
                     const inputIds = ['nameTh', 'nameEn', 'studentCode', 'year', 'gpa', 'phone', 'facebook', 'lineId', 'email'];

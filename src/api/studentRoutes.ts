@@ -75,11 +75,15 @@ router.get("/advisors", async (_req: Request, res: Response) => {
   try {
     const advisors = await prisma.staff.findMany({
       where: {
-        user: { role: { in: ["ADVISOR", "STAFF", "ADMIN"] } },
+        OR: [
+          { isAdvisor: true },
+          { user: { role: "ADVISOR" } },
+        ],
       },
       select: {
         id: true,
         name: true,
+        department: true,
       },
       orderBy: { name: "asc" },
     });
@@ -97,6 +101,7 @@ router.post("/profile", upload.single("profileImage"), async (req: Request, res:
       studentCode,
       nameTh,
       nameEn,
+      nickname,
       year,
       major,
       gpa,
@@ -106,7 +111,11 @@ router.post("/profile", upload.single("profileImage"), async (req: Request, res:
       advisorId,
     } = req.body;
 
-    if (!studentCode || !nameTh || !nameEn) {
+    const existingStudent = await prisma.student.findUnique({
+      where: { userId },
+    });
+
+    if (!existingStudent && (!studentCode || !nameTh || !nameEn)) {
       return res.status(400).json({
         success: false,
         message: "กรุณากรอกรหัสนิสิต, ชื่อภาษาไทย และชื่อภาษาอังกฤษให้ครบถ้วน",
@@ -122,33 +131,56 @@ router.post("/profile", upload.single("profileImage"), async (req: Request, res:
       );
     }
 
-    const dataToSave: any = {
-      studentCode: String(studentCode).trim(),
-      nameTh: String(nameTh).trim(),
-      nameEn: String(nameEn).trim(),
-      year: year ? parseInt(year, 10) : 3,
-      major: major ? String(major).trim() : "วิศวกรรมซอฟต์แวร์",
-      gpa: gpa ? parseFloat(gpa) : null,
-      phone: phone ? String(phone).trim() : null,
-      lineId: lineId ? String(lineId).trim() : null,
-      facebook: facebook ? String(facebook).trim() : null,
-      advisorId: advisorId ? parseInt(advisorId, 10) : null,
-    };
+    // [REQ-04] Locked REG Fields:
+    // หากมีข้อมูลนิสิตในระบบแล้ว (เช่น นำเข้าจาก REG) ห้ามนิสิตแก้ไขรหัสนิสิต, ชื่อ-สกุลไทย, ชั้นปี, สาขาวิชา, GPAX
+    // อนุญาตให้แก้ไขเฉพาะข้อมูลติดต่อ (ชื่อเล่น, ชื่ออังกฤษ, เบอร์โทร, Line ID, Facebook, รูปโปรไฟล์, อาจารย์ที่ปรึกษาถ้ายังไม่ถูกล็อค)
+    let student;
+    if (existingStudent) {
+      const updateData: any = {
+        phone: phone !== undefined ? (phone ? String(phone).trim() : null) : existingStudent.phone,
+        lineId: lineId !== undefined ? (lineId ? String(lineId).trim() : null) : existingStudent.lineId,
+        facebook: facebook !== undefined ? (facebook ? String(facebook).trim() : null) : existingStudent.facebook,
+      };
+      if (nickname !== undefined) {
+        updateData.nickname = nickname ? String(nickname).trim() : null;
+      }
+      if (nameEn && String(nameEn).trim() && String(nameEn).trim() !== "-") {
+        updateData.nameEn = String(nameEn).trim();
+      }
+      if (advisorId !== undefined && !existingStudent.advisorId) {
+        updateData.advisorId = advisorId ? parseInt(advisorId, 10) : null;
+      }
+      if (profileImageUrl) {
+        updateData.profileImageUrl = profileImageUrl;
+      }
 
-    if (profileImageUrl) {
-      dataToSave.profileImageUrl = profileImageUrl;
-    }
-
-    // Upsert Student profile
-    const student = await prisma.student.upsert({
-      where: { userId },
-      update: dataToSave,
-      create: {
+      student = await prisma.student.update({
+        where: { userId },
+        data: updateData,
+      });
+    } else {
+      const createData: any = {
         userId,
-        ...dataToSave,
+        studentCode: String(studentCode).trim(),
+        nameTh: String(nameTh).trim(),
+        nameEn: String(nameEn).trim(),
+        nickname: nickname ? String(nickname).trim() : null,
+        year: year ? parseInt(year, 10) : 3,
+        major: major ? String(major).trim() : "วิศวกรรมซอฟต์แวร์",
+        gpa: gpa ? parseFloat(gpa) : null,
+        phone: phone ? String(phone).trim() : null,
+        lineId: lineId ? String(lineId).trim() : null,
+        facebook: facebook ? String(facebook).trim() : null,
+        advisorId: advisorId ? parseInt(advisorId, 10) : null,
         stage: "PENDING_DOCUMENTS",
-      },
-    });
+      };
+      if (profileImageUrl) {
+        createData.profileImageUrl = profileImageUrl;
+      }
+      student = await prisma.student.create({
+        data: createData,
+      });
+    }
 
     res.json({
       success: true,
@@ -230,6 +262,7 @@ router.post("/trainings", upload.single("certificate"), async (req: Request, res
         skillType: normalizedSkillType,
         hours: parseInt(hours, 10),
         certificateFileUrl,
+        source: "STUDENT_UPLOAD",
         status: "PENDING",
       },
     });
@@ -262,6 +295,13 @@ router.put("/trainings/:id", async (req: Request, res: Response) => {
       return res.status(404).json({ success: false, message: "ไม่พบรายการอบรมนี้" });
     }
 
+    if (training.source === "STAFF_IMPORT" || training.source === "ADMIN_IMPORT") {
+      return res.status(403).json({
+        success: false,
+        message: "ไม่สามารถแก้ไขรายการอบรมที่นำเข้าจากระบบคณะหรืออาจารย์ประจำวิชาได้",
+      });
+    }
+
     const updated = await prisma.trainingRecord.update({
       where: { id: trainingId },
       data: {
@@ -292,6 +332,13 @@ router.delete("/trainings/:id", async (req: Request, res: Response) => {
 
     if (!training) {
       return res.status(404).json({ success: false, message: "ไม่พบรายการอบรมนี้" });
+    }
+
+    if (training.source === "STAFF_IMPORT" || training.source === "ADMIN_IMPORT") {
+      return res.status(403).json({
+        success: false,
+        message: "ไม่สามารถลบรายการอบรมที่นำเข้าจากระบบคณะหรืออาจารย์ประจำวิชาได้",
+      });
     }
 
     await prisma.trainingRecord.delete({ where: { id: trainingId } });
@@ -432,6 +479,17 @@ router.post("/companies", async (req: Request, res: Response) => {
       return res.status(400).json({
         success: false,
         message: "ยังไม่สามารถทำ Checklist ได้ เนื่องจากชั่วโมงการอบรมยังไม่ครบ หรือ CV ยังไม่ผ่านการอนุมัติ",
+      });
+    }
+
+    // [REQ-05] จำกัดจำนวนบริษัทในแบบสำรวจ Checklist สูงสุดไม่เกิน 3 บริษัท
+    const existingCompanyCount = await prisma.company.count({
+      where: { studentId: student.id },
+    });
+    if (existingCompanyCount >= 3) {
+      return res.status(400).json({
+        success: false,
+        message: "สามารถส่งแบบสำรวจสถานประกอบการ (Checklist) ได้สูงสุดไม่เกิน 3 บริษัทเท่านั้น",
       });
     }
 
@@ -626,6 +684,25 @@ router.put("/submissions/:companyId", async (req: Request, res: Response) => {
   }
 });
 
+// [REQ-06] ตรวจสอบว่าสถานประกอบการที่ยื่นฝึกงานจริง ตรงกับ 1 ในบริษัทที่ผ่านการอนุมัติใน Checklist หรือไม่
+function checkPlacementMatchesChecklist(placement: any, companies: any[]): boolean {
+  if (!placement) return false;
+  const approvedList = (companies || []).filter((c) => c.checklistStatus === "APPROVED");
+  if (approvedList.length === 0) return false;
+
+  if (placement.companyId && approvedList.some((c) => c.id === placement.companyId)) {
+    return true;
+  }
+
+  const targetName = (placement.companyNameTh || "").trim().toLowerCase();
+  if (!targetName) return false;
+
+  return approvedList.some((c) => {
+    const cName = (c.name || "").trim().toLowerCase();
+    return cName && (cName === targetName || cName.includes(targetName) || targetName.includes(cName));
+  });
+}
+
 // ==========================================
 // 7. ข้อมูลบริษัทที่เข้าฝึกงานจริง (Internship Placement)
 // ==========================================
@@ -635,7 +712,17 @@ router.get("/placement", async (req: Request, res: Response) => {
     if (!student || !student.placement) {
       return res.json({ success: true, placement: null });
     }
-    res.json({ success: true, placement: student.placement });
+    const isMatchedWithChecklist = checkPlacementMatchesChecklist(
+      student.placement,
+      student.companies || []
+    );
+    res.json({
+      success: true,
+      placement: {
+        ...student.placement,
+        isMatchedWithChecklist,
+      },
+    });
   } catch (err) {
     console.error("GET /api/student/placement error:", err);
     res.status(500).json({ success: false, message: "ดึงข้อมูลสถานที่ฝึกงานไม่สำเร็จ" });
@@ -710,7 +797,19 @@ router.post("/placement", async (req: Request, res: Response) => {
       },
     });
 
-    res.json({ success: true, message: "บันทึกข้อมูลแหล่งฝึกงานสำเร็จ", placement });
+    const isMatchedWithChecklist = checkPlacementMatchesChecklist(
+      placement,
+      student.companies || []
+    );
+
+    res.json({
+      success: true,
+      message: "บันทึกข้อมูลแหล่งฝึกงานสำเร็จ",
+      placement: {
+        ...placement,
+        isMatchedWithChecklist,
+      },
+    });
   } catch (err: any) {
     console.error("POST /api/student/placement error:", err);
     res.status(500).json({ success: false, message: "บันทึกไม่สำเร็จ: " + err.message });
@@ -775,6 +874,10 @@ router.get("/dashboard-summary", async (req: Request, res: Response) => {
       (c) => c.submission && c.submission.status === "INTERVIEW_PASSED"
     );
 
+    const isMatchedWithChecklist = student.placement
+      ? checkPlacementMatchesChecklist(student.placement, student.companies || [])
+      : false;
+
     res.json({
       success: true,
       hasProfile: true,
@@ -784,6 +887,12 @@ router.get("/dashboard-summary", async (req: Request, res: Response) => {
         studentCode: student.studentCode,
         nameTh: student.nameTh,
         nameEn: student.nameEn,
+        nickname: student.nickname,
+        faculty: student.faculty,
+        curriculum: student.curriculum,
+        academicYear: student.academicYear,
+        studentStatus: student.studentStatus,
+        internshipType: student.internshipType,
         year: student.year,
         major: student.major,
         gpa: student.gpa,
@@ -807,7 +916,12 @@ router.get("/dashboard-summary", async (req: Request, res: Response) => {
       companies: student.companies,
       approvedCompaniesCount: approvedCompanies.length,
       passedInterviewCompany: passedInterview || null,
-      placement: student.placement,
+      placement: student.placement
+        ? {
+            ...student.placement,
+            isMatchedWithChecklist,
+          }
+        : null,
     });
   } catch (err) {
     console.error("GET /api/student/dashboard-summary error:", err);

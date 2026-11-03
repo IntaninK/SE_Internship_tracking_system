@@ -1,5 +1,5 @@
 // @ts-nocheck
-// header.js — โหลด header.html และตั้งค่า nav ตาม role
+// header_prof.js — โหลด header_prof.html และตั้งค่า nav ตาม role
 fetch('../components/header_prof.html')
     .then(response => response.text())
     .then(html => {
@@ -14,21 +14,37 @@ fetch('../components/header_prof.html')
             });
         }
 
-        // ดึง role แล้วปรับ nav link ตาม role
+        // ดึง role แล้วปรับ nav link ตาม role (รองรับ Multi-Role ของอาจารย์)
         fetch('/auth/me')
             .then(r => r.json())
             .then(data => {
                 if (!data.authenticated) return;
 
                 const role = data.user.role;
+                const isCourseAdminOrStaff = Boolean(
+                    data.user.isCourseAdmin || data.user.isStaff || role === 'STAFF' || role === 'ADMIN'
+                );
+                const isAdvOrSup = Boolean(
+                    data.user.isAdvisor || data.user.isSupervisor || role === 'ADVISOR'
+                );
                 const navDashboard = headerNav ? headerNav.querySelector('a[href*="dashboard"]') : null;
 
-                if (role === 'STAFF' || role === 'ADMIN') {
+                if (isCourseAdminOrStaff) {
                     if (navDashboard) {
                         navDashboard.href = '../pages/dashboard_รายวิชา.html';
                         navDashboard.textContent = 'Dashboard (Admin)';
                     }
-                } else if (role === 'ADVISOR') {
+                    if (isAdvOrSup && headerNav && !headerNav.querySelector('#multi-role-advisor-link')) {
+                        const advLink = document.createElement('a');
+                        advLink.id = 'multi-role-advisor-link';
+                        advLink.href = '../pages/dashboard_ที่ปรึกษา.html';
+                        advLink.className = navDashboard ? navDashboard.className : '';
+                        advLink.textContent = 'Dashboard (ที่ปรึกษา)';
+                        if (navDashboard && navDashboard.parentElement) {
+                            navDashboard.parentElement.insertBefore(advLink, navDashboard.nextSibling);
+                        }
+                    }
+                } else if (isAdvOrSup) {
                     if (navDashboard) {
                         navDashboard.href = '../pages/dashboard_ที่ปรึกษา.html';
                         navDashboard.textContent = 'Dashboard (ที่ปรึกษา)';
@@ -36,11 +52,12 @@ fetch('../components/header_prof.html')
                 }
 
                 // Highlight active nav link
-                const currentPath = window.location.pathname;
+                const currentPath = decodeURIComponent(window.location.pathname);
                 if (headerNav) {
                     headerNav.querySelectorAll('a').forEach(a => {
                         a.classList.remove('active');
-                        if (currentPath.includes(a.getAttribute('href').replace('../pages/', '/pages/'))) {
+                        const targetHref = decodeURIComponent((a.getAttribute('href') || '').replace('../pages/', '/pages/'));
+                        if (targetHref && currentPath.includes(targetHref)) {
                             a.classList.add('active');
                         }
                     });
@@ -54,14 +71,11 @@ fetch('../components/header_prof.html')
 
 // ==========================================
 // Real-time refresh (polling) — แทน Socket.io เดิม
-// เพราะ serverless function บน Vercel ไม่เก็บ connection ค้างไว้
-// Consumer เดิม (admin_dashboard.js ฯลฯ) แค่ฟัง event นี้แล้ว refetch data
-// เราจึงยิง event เดิมซ้ำทุก ๆ POLL_INTERVAL_MS แทนการ push จาก server
 // ==========================================
 (function setupRealtime() {
-  const POLL_INTERVAL_MS = 15000; // 15 วินาที ปรับได้ตามความเหมาะสม
+  const POLL_INTERVAL_MS = 15000;
 
-  if (window.__appRealtimePolling) return; // กันไม่ให้ตั้ง interval ซ้ำ
+  if (window.__appRealtimePolling) return;
   window.__appRealtimePolling = true;
 
   setInterval(() => {

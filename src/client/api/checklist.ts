@@ -184,6 +184,10 @@ function renderCompanyCard(comp, index) {
 function addNewCompanyCard(name = 'บริษัท...') {
   if (isDroppedStudent) return;
   const newIndex = document.querySelectorAll('.company-card').length;
+  if (newIndex >= 3) {
+    alert('สามารถส่งแบบสำรวจสถานประกอบการ (Checklist) ได้สูงสุดไม่เกิน 3 บริษัทเท่านั้น');
+    return;
+  }
   renderCompanyCard({ name: name, answers: [] }, newIndex);
 }
 
