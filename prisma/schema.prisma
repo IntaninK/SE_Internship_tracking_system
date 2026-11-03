@@ -154,7 +154,7 @@ model TrainingRecord {
   hours             Int            // จำนวนชั่วโมง
   certificateFileUrl String?
   academicYear      String?        // ปีการศึกษา เช่น "2567"
-  source            String?        @default("STUDENT_UPLOAD") // แหล่งที่มา: "STUDENT_UPLOAD" หรือ "STAFF_IMPORT"
+  source            String?        @default("STUDENT_UPLOAD") // แหล่งที่มา: "STUDENT_UPLOAD" (นิสิตยื่นเอง), "STAFF_IMPORT" (พี่จอมนำเข้า), "ADMIN_IMPORT" (อาจารย์ประจำวิชาเพิ่มให้/นำเข้า)
 
   status            ApprovalStatus @default(PENDING) // อนุมัติใน Cert. (ผ่าน/ไม่ผ่าน)
   note              String?
