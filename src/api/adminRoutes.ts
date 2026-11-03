@@ -1207,5 +1207,3 @@ router.post("/students/import-confirm", async (req: Request, res: Response) => {
 });
 
 export default router;
-module.exports = router;
-module.exports.default = router;

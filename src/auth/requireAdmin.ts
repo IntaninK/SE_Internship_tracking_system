@@ -49,5 +49,3 @@ export async function requireAdmin(req: Request, res: Response, next: NextFuncti
 }
 
 export default requireAdmin;
-module.exports = requireAdmin;
-module.exports.default = requireAdmin;

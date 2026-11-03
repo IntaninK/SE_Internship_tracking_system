@@ -42,4 +42,3 @@ export async function uploadToCloudinary(
 }
 
 export { cloudinary };
-module.exports = { cloudinary, uploadToCloudinary };

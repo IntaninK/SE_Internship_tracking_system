@@ -238,11 +238,3 @@ export function parseStudentSpreadsheet(
   };
 }
 
-module.exports = {
-  calculateCurrentAcademicYear,
-  calculateStudentYear,
-  isSoftwareEngineering,
-  parseStudentSpreadsheet,
-  cleanStr,
-  extractRowData,
-};

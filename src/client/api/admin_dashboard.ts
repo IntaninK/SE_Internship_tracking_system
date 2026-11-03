@@ -1,0 +1,1460 @@
+// @ts-nocheck
+let allStudents = [];
+let currentFilter = null;
+let currentPage = 1;
+const pageLimit = 12;
+let selectedStudentIds = new Set();
+let currentUserRole = null; // เก็บ role ของ user ที่ login อยู่
+let currentTab = 'active'; // 'active' | 'dropped'
+let totalActiveStudents = 0;
+let totalDroppedStudents = 0;
+let currentFilteredCount = 0;
+
+// ==========================================
+// โหลดข้อมูลสรุปและรายชื่อนิสิต
+// ==========================================
+async function initAdminDashboard() {
+  // ดึง role ของ user ที่ login อยู่
+  try {
+    const meRes = await fetch('/auth/me');
+    const meData = await meRes.json();
+    if (meData.authenticated) {
+      currentUserRole = meData.user.role;
+    }
+  } catch (err) {
+    console.error('Failed to fetch user role:', err);
+  }
+
+  // ถ้าเป็น STAFF ให้ซ่อนปุ่มที่ไม่มีสิทธิ์
+  applyStaffRestrictions();
+  updateTableHeader();
+
+  await loadDashboardSummary();
+  // เติม dropdown ชั้นปีก่อน เพื่อให้ค่า default (นิสิตปี 3 ปัจจุบัน) มีผลตั้งแต่โหลดตารางครั้งแรก
+  await populateYearFilter('/api/admin/students');
+  await loadStudents();
+  await populateAdvisorFilter();
+}
+
+// ==========================================
+// ซ่อน UI ที่ STAFF ไม่มีสิทธิ์ใช้
+// ==========================================
+function applyStaffRestrictions() {
+  if (currentUserRole !== 'STAFF') return;
+
+  // ซ่อนปุ่ม "ตั้งสถานะนิสิต"
+  const btnSetStatus = document.getElementById('btn-set-status');
+  if (btnSetStatus) btnSetStatus.style.display = 'none';
+
+  // ซ่อนปุ่ม "ตั้งอาจารย์ที่ปรึกษา"
+  const btnSetAdvisor = document.getElementById('btn-set-advisor');
+  if (btnSetAdvisor) btnSetAdvisor.style.display = 'none';
+
+  // ซ่อนปุ่ม "ดรอปนิสิต" และ "กู้คืนสถานะ"
+  const btnDrop = document.getElementById('btn-drop-student');
+  if (btnDrop) btnDrop.style.display = 'none';
+  const btnRestore = document.getElementById('btn-restore-student');
+  if (btnRestore) btnRestore.style.display = 'none';
+}
+
+// ==========================================
+// 1. โหลดข้อมูลสรุป (กราฟวงกลม + อาจารย์ + จำนวน)
+// ==========================================
+async function loadDashboardSummary() {
+  try {
+    const res = await fetch('/api/admin/dashboard-summary');
+    const data = await res.json();
+    if (!data.success) return;
+
+    renderDashboardCharts(data.readinessStats, data.trainingStats, data.cvStats, data.placementStats, data.totalStudents);
+
+    // --- ตารางอาจารย์ที่ปรึกษา ---
+    renderAdvisorTable(data.advisorSummary);
+
+    // --- สรุปจำนวนนิสิต ---
+    const totalEl = document.getElementById('summary-total');
+    const withEl = document.getElementById('summary-with-advisor');
+    const withoutEl = document.getElementById('summary-without-advisor');
+    if (totalEl) totalEl.textContent = data.totalStudents;
+    if (withEl) withEl.textContent = data.studentsWithAdvisor;
+    if (withoutEl) withoutEl.textContent = data.studentsWithoutAdvisor;
+
+    // --- Badge บนแท็บ (Active vs Dropped) ---
+    totalActiveStudents = data.totalStudents ?? 0;
+    totalDroppedStudents = data.totalDropped ?? 0;
+    const tabActiveBadge = document.getElementById('tab-badge-active');
+    const tabDroppedBadge = document.getElementById('tab-badge-dropped');
+    if (tabActiveBadge) tabActiveBadge.textContent = totalActiveStudents;
+    if (tabDroppedBadge) tabDroppedBadge.textContent = totalDroppedStudents;
+  } catch (err) {
+    console.error('Load dashboard summary error:', err);
+  }
+}
+
+// วาดกราฟวงกลมทั้ง 4 อันจากสถิติที่ได้รับมา
+// ใช้ทั้งตอนโหลดครั้งแรก (loadDashboardSummary, ข้อมูลรวมทั้งหมด) และทุกครั้งที่ loadStudents คืนค่า chartStats ที่ผ่าน filter แล้ว
+function renderDashboardCharts(readinessStats, trainingStats, cvStats, placementStats, totalStudents) {
+  // --- กราฟ 1: สถานะความพร้อม ---
+  const r = readinessStats;
+  renderPieChart('chart-readiness', 'readiness', [
+    { key: 'approvedPlacement', label: 'อนุมัติที่ฝึกงานแล้ว', value: r.approvedPlacement, color: '#FF3EA5' },
+    { key: 'cvApproved', label: 'ตรวจCVผ่าน', value: r.cvApproved, color: '#FFD233' },
+    { key: 'noDataOrHoursLack', label: 'ไม่มีข้อมูล/ชม.ไม่ครบ', value: r.noDataOrHoursLack, color: '#8B5CF6' },
+    { key: 'trainingComplete', label: 'ผ่านการตรวจชม.ครบ', value: r.trainingComplete, color: '#00C3D0' },
+    { key: 'cvNotReviewed', label: 'ยังไม่ได้รีวิว CV', value: r.cvNotReviewed, color: '#3B82F6' },
+  ], 'สถานะความพร้อม', 'readiness-table', totalStudents);
+
+  // --- กราฟ 2: สถานะการอบรม ---
+  const t = trainingStats;
+  renderPieChart('chart-training', 'training', [
+    { key: 'passedComplete', label: 'ผ่านการตรวจชม.ครบ', value: t.passedComplete, color: '#FF3EA5' },
+    { key: 'completeNotChecked', label: 'ชม.ครบ ยังไม่ตรวจ', value: t.completeNotChecked, color: '#FFD233' },
+    { key: 'checkedNotPass', label: 'ตรวจแล้ว ยังไม่ผ่าน', value: t.checkedNotPass, color: '#00C3D0' },
+    { key: 'hoursNotComplete', label: 'ชั่วโมงยังไม่ครบ', value: t.hoursNotComplete, color: '#8B5CF6' },
+  ], 'สถานะการอบรม', 'training-table', totalStudents);
+
+  // --- กราฟ 3: สถานะ CV ---
+  const c = cvStats;
+  renderPieChart('chart-cv', 'cv', [
+    { key: 'reviewed', label: 'รีวิวCVแล้ว', value: c.reviewed, color: '#FF3EA5' },
+    { key: 'notReviewed', label: 'ยังไม่ได้รีวิว CV', value: c.notReviewed, color: '#FFD233' },
+    { key: 'failed', label: 'ไม่ผ่าน CV', value: c.failed, color: '#00C3D0' },
+    { key: 'noCv', label: 'ยังไม่ทำ CV', value: c.noCv, color: '#8B5CF6' },
+  ], 'สถานะการตรวจCV', 'cv-table', totalStudents);
+
+  // --- กราฟ 4: สถานะอนุมัติฝึกงาน ---
+  const p = placementStats;
+  const placementTotal = p.pending + p.approved + p.rejected;
+  renderPieChart('chart-placement', 'placement', [
+    { key: 'pending', label: 'รอผล', value: p.pending, color: '#FF3EA5' },
+    { key: 'approved', label: 'อนุมัติที่ฝึกงานแล้ว', value: p.approved, color: '#00C3D0' },
+    { key: 'rejected', label: 'ไม่อนุมัติที่ฝึกงาน', value: p.rejected, color: '#FFD233' },
+  ], 'สถานะอนุมัติฝึกงาน', 'placement-table', placementTotal || 1);
+}
+
+// ==========================================
+// สร้างกราฟวงกลม SVG + ตารางสถานะ
+// ==========================================
+function renderPieChart(containerId, chartType, segments, headerLabel, tableId, total) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+
+  // คำนวณ percentage และ dasharray
+  let cumulativeOffset = 0;
+  const circumference = 2 * Math.PI * 14; // r=14
+
+  let svgCircles = '';
+  segments.forEach((seg) => {
+    const pct = total > 0 ? (seg.value / total) * 100 : 0;
+    const dashLen = (pct / 100) * circumference;
+    const dashGap = circumference - dashLen;
+    const offset = -(cumulativeOffset / 100) * circumference;
+
+    if (pct > 0) {
+      svgCircles += `<circle cx="18" cy="18" r="14" fill="none" stroke="${seg.color}" stroke-width="4"
+        stroke-dasharray="${dashLen} ${dashGap}" stroke-dashoffset="${offset}" />`;
+    }
+    cumulativeOffset += pct;
+  });
+
+  // ถ้าไม่มีข้อมูลเลย แสดงวงกลมสีเทา
+  if (total === 0 || cumulativeOffset === 0) {
+    svgCircles = `<circle cx="18" cy="18" r="14" fill="none" stroke="#e5e7eb" stroke-width="4" />`;
+  }
+
+  container.innerHTML = `
+    <div class="bg-slate-50/60 border border-slate-200/80 rounded-xl p-3 flex flex-col h-full">
+      <h4 class="text-xs font-bold text-blue-800 mb-2.5 text-center">${headerLabel}</h4>
+      <div class="flex items-center gap-2 flex-1">
+        <div class="relative w-[90px] h-[90px] flex-shrink-0">
+          <svg viewBox="0 0 36 36" class="w-full h-full -rotate-90">
+            ${svgCircles}
+          </svg>
+          <div class="absolute inset-0 flex flex-col items-center justify-center">
+            <span class="text-[7px] text-gray-400">Total</span>
+            <span class="text-base font-bold text-gray-800">${total}</span>
+          </div>
+        </div>
+        <table class="text-[11px] border-collapse flex-1" id="${tableId}">
+          <thead>
+            <tr>
+              <th class="text-left pr-2 pb-1 font-medium text-gray-500">สถานะ</th>
+              <th class="text-right pr-2 pb-1 font-medium text-gray-500">จำนวน</th>
+              <th class="text-right pb-1 font-medium text-gray-500">%</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${segments.map((seg) => {
+              const pct = total > 0 ? ((seg.value / total) * 100).toFixed(1) : '0.0';
+              return `<tr class="chart-status-row cursor-pointer hover:bg-purple-100/70 transition-colors" data-chart="${chartType}" data-key="${seg.key}" data-label="${seg.label}" title="คลิกเพื่อกรองสถานะนี้">
+                <td class="pr-2 py-0.5 truncate max-w-[110px]" title="${seg.label}">
+                  <span class="inline-block w-1.5 h-1.5 rounded-full mr-1" style="background:${seg.color}"></span>${seg.label}
+                </td>
+                <td class="text-right pr-2">${seg.value}</td>
+                <td class="text-right text-gray-500">${pct}%</td>
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
+
+  // คงไฮไลต์แถวที่กำลังกรองอยู่ (ถ้ามี) แม้กราฟจะถูก re-render ใหม่ทุกครั้งที่ filter เปลี่ยน
+  if (currentFilter && currentFilter.chartType === chartType) {
+    const activeRow = container.querySelector(`.chart-status-row[data-key="${currentFilter.chartKey}"]`);
+    if (activeRow) activeRow.classList.add('bg-purple-100', 'font-bold');
+  }
+
+  // Event: คลิกสถานะในตาราง → กรองรายชื่อนิสิต (Toggle)
+  container.querySelectorAll('.chart-status-row').forEach(row => {
+    row.addEventListener('click', () => {
+      const isAlreadyActive = row.classList.contains('bg-purple-100');
+      document.querySelectorAll('.chart-status-row').forEach(r => r.classList.remove('bg-purple-100', 'font-bold'));
+
+      if (isAlreadyActive) {
+        currentFilter = null;
+      } else {
+        row.classList.add('bg-purple-100', 'font-bold');
+        currentFilter = {
+          chartType: row.dataset.chart,
+          chartKey: row.dataset.key,
+          label: row.dataset.label,
+        };
+        clearSearchBox();
+      }
+      currentPage = 1;
+      updateFilterUI();
+      loadStudents();
+    });
+  });
+}
+
+// ==========================================
+// สลับแท็บ นิสิตปกติ (Active) vs นิสิตที่ดรอป (Dropped)
+// ==========================================
+window.switchStudentTab = function(tab) {
+  if (currentTab === tab) return;
+  currentTab = tab;
+  selectedStudentIds.clear();
+  currentPage = 1;
+
+  const btnActive = document.getElementById('tab-active');
+  const btnDropped = document.getElementById('tab-dropped');
+  const activeActions = document.getElementById('active-action-buttons');
+  const droppedActions = document.getElementById('dropped-action-buttons');
+
+  if (tab === 'active') {
+    if (btnActive) {
+      btnActive.className = 'tab-pill px-3 py-1.5 text-xs font-semibold rounded-lg transition-all flex items-center gap-1.5 bg-white text-blue-700 shadow-sm cursor-pointer border border-blue-100';
+    }
+    if (btnDropped) {
+      btnDropped.className = 'tab-pill px-3 py-1.5 text-xs font-medium rounded-lg transition-all flex items-center gap-1.5 text-gray-500 hover:text-gray-800 cursor-pointer border border-transparent bg-transparent';
+    }
+    if (activeActions) activeActions.style.display = 'flex';
+    if (droppedActions) droppedActions.style.display = 'none';
+  } else {
+    if (btnActive) {
+      btnActive.className = 'tab-pill px-3 py-1.5 text-xs font-medium rounded-lg transition-all flex items-center gap-1.5 text-gray-500 hover:text-gray-800 cursor-pointer border border-transparent bg-transparent';
+    }
+    if (btnDropped) {
+      btnDropped.className = 'tab-pill px-3 py-1.5 text-xs font-semibold rounded-lg transition-all flex items-center gap-1.5 bg-white text-red-700 shadow-sm cursor-pointer border border-red-200';
+    }
+    if (activeActions) activeActions.style.display = 'none';
+    if (droppedActions) droppedActions.style.display = 'flex';
+  }
+
+  // ซ่อนปุ่มที่ STAFF ไม่มีสิทธิ์
+  applyStaffRestrictions();
+  updateTableHeader();
+  loadStudents();
+};
+
+function updateTableHeader() {
+  const thead = document.getElementById('students-thead');
+  if (!thead) return;
+
+  if (currentTab === 'dropped') {
+    thead.innerHTML = `
+      <tr>
+        <th style="width: 14%;">Student ID</th>
+        <th style="width: 20%;">ชื่อ-นามสกุล</th>
+        <th style="width: 18%;">อาจารย์ที่ปรึกษา</th>
+        <th style="width: 22%;">เหตุผลที่ดรอป</th>
+        <th style="width: 16%;">วันที่ดรอป</th>
+        <th style="width: 10%; min-width: 90px;" class="text-center">
+          <label style="display:inline-flex;align-items:center;gap:4px;cursor:pointer;white-space:nowrap;" title="เลือกนักศึกษาทั้งหมดในหน้านี้">
+            <span style="font-size:12px;">เลือกทั้งหมด</span>
+            <input type="checkbox" id="select-all-students" style="width:16px;height:16px;cursor:pointer;" />
+          </label>
+        </th>
+      </tr>
+    `;
+  } else {
+    thead.innerHTML = `
+      <tr>
+        <th style="width: 14%;">Student ID</th>
+        <th style="width: 22%;">ชื่อ-นามสกุล</th>
+        <th style="width: 20%;">อาจารย์ที่ปรึกษา</th>
+        <th style="width: 34%;">สถานะ</th>
+        <th style="width: 10%; min-width: 90px;" class="text-center">
+          <label style="display:inline-flex;align-items:center;gap:4px;cursor:pointer;white-space:nowrap;" title="เลือกนักศึกษาทั้งหมดในหน้านี้">
+            <span style="font-size:12px;">เลือกทั้งหมด</span>
+            <input type="checkbox" id="select-all-students" style="width:16px;height:16px;cursor:pointer;" />
+          </label>
+        </th>
+      </tr>
+    `;
+  }
+}
+
+// ==========================================
+// 2. โหลดรายชื่อนิสิต
+// ==========================================
+async function loadStudents() {
+  try {
+    const searchInput = document.getElementById('student-search');
+    const searchVal = searchInput ? searchInput.value.trim() : '';
+
+    let url = `/api/admin/students?page=${currentPage}&limit=${pageLimit}&viewDropped=${currentTab === 'dropped'}`;
+    if (searchVal) url += `&search=${encodeURIComponent(searchVal)}`;
+    if (currentFilter) {
+      url += `&chartType=${encodeURIComponent(currentFilter.chartType)}&chartKey=${encodeURIComponent(currentFilter.chartKey)}`;
+    }
+    const yearFilter = document.getElementById('year-filter');
+    const selectedYear = yearFilter ? yearFilter.value : '';
+    if (selectedYear) url += `&yearPrefix=${encodeURIComponent(selectedYear)}`;
+
+    // Dropdown filters ใหม่
+    const statusFilter = document.getElementById('status-filter');
+    const advisorFilter = document.getElementById('advisor-filter');
+    const skillFilter = document.getElementById('skill-filter');
+    if (statusFilter && statusFilter.value) url += `&statusFilter=${encodeURIComponent(statusFilter.value)}`;
+    if (advisorFilter && advisorFilter.value) url += `&advisorFilter=${encodeURIComponent(advisorFilter.value)}`;
+    if (skillFilter && skillFilter.value) url += `&skillFilter=${encodeURIComponent(skillFilter.value)}`;
+
+    const res = await fetch(url);
+    const data = await res.json();
+    if (!data.success) return;
+
+    if (data.chartStats) {
+      renderDashboardCharts(
+        data.chartStats.readinessStats,
+        data.chartStats.trainingStats,
+        data.chartStats.cvStats,
+        data.chartStats.placementStats,
+        data.chartStats.totalStudents
+      );
+    }
+
+    let studentsToRender = data.students || [];
+    let totalToRender = data.total;
+    // Fallback: กรองฝั่ง client-side เพิ่มเติม
+    if (selectedYear) {
+      studentsToRender = studentsToRender.filter(s => s.studentCode && s.studentCode.startsWith(selectedYear));
+      totalToRender = studentsToRender.length;
+    }
+    currentFilteredCount = totalToRender;
+
+    renderStudentTable(studentsToRender, totalToRender, data.page, Math.max(1, Math.ceil(totalToRender / pageLimit)));
+  } catch (err) {
+    console.error('Load students error:', err);
+  }
+}
+
+// ==========================================
+// Render ตารางรายชื่อนิสิต
+// ==========================================
+function renderStudentTable(students, total, page, totalPages) {
+  const tbody = document.getElementById('students-tbody');
+  if (!tbody) return;
+  tbody.innerHTML = '';
+
+  const colCount = currentTab === 'dropped' ? 6 : 5;
+  const emptyText = currentTab === 'dropped' ? 'ไม่พบนิสิตที่ดรอป' : 'ไม่พบข้อมูลนิสิต';
+
+  if (students.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="${colCount}" class="text-center py-8 text-gray-400">${emptyText}</td></tr>`;
+    renderPagination(1, 1, 0);
+    return;
+  }
+
+  students.forEach((s) => {
+    const isChecked = selectedStudentIds.has(s.id);
+    const tr = document.createElement('tr');
+
+    if (currentTab === 'dropped') {
+      const dropDateFormatted = s.droppedAt
+        ? new Date(s.droppedAt).toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+        : '-';
+
+      tr.innerHTML = `
+        <td>${s.studentCode}</td>
+        <td>${s.nameTh}</td>
+        <td>${s.advisorName || '<span class="text-gray-400">-</span>'}</td>
+        <td>
+          <span class="inline-block px-2.5 py-0.5 text-xs font-semibold rounded-full bg-red-100 text-red-700">
+            ${s.dropReason || 'ดรอปจากระบบ'}
+          </span>
+        </td>
+        <td class="text-gray-500 text-xs">${dropDateFormatted}</td>
+        <td class="text-center">
+          <div style="display: flex; align-items: center; gap: 8px; justify-content: center;">
+            ${currentUserRole !== 'STAFF' ? `<button class="btn-detail-dots" title="ดูรายละเอียด" onclick="window.location.href='/pages/admin_student_detail.html?id=${s.id}'" style="background:none;border:none;cursor:pointer;padding:4px;">
+              <span class="material-icons text-gray-500 hover:text-blue-600" style="font-size:18px;">more_vert</span>
+            </button>` : ''}
+            <input type="checkbox" class="student-checkbox" data-id="${s.id}" ${isChecked ? 'checked' : ''} style="width:16px;height:16px;cursor:pointer;" />
+          </div>
+        </td>
+      `;
+    } else {
+      const displayStatus = s.activeStatus || s.overallStatus;
+      const statusColor = getStatusBadgeColor(s.statusCategory, displayStatus);
+
+      // สร้างป้ายเตือนเฉพาะจุด (Alert / Context tag) เมื่อมีประเด็นเรื่องชั่วโมงหรือเมื่อใช้ฟิลเตอร์ (ตอบโจทย์ข้อ 1, 2 และ 3)
+      const alertTags = [];
+      const softHours = s.trainingApprovedSoft || 0;
+      const hardHours = s.trainingApprovedHard || 0;
+      const softLack = softHours < 12;
+      const hardLack = hardHours < 18;
+
+      const currentSkillFilter = document.getElementById('skill-filter')?.value;
+      if (currentSkillFilter === 'lack_soft' && softLack) {
+        alertTags.push(`<span class="inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium rounded-md bg-amber-50 text-amber-800 border border-amber-200">
+          <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span> ขาด Soft (${softHours}/12 ชม.)
+        </span>`);
+      } else if (currentSkillFilter === 'lack_hard' && hardLack) {
+        alertTags.push(`<span class="inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium rounded-md bg-amber-50 text-amber-800 border border-amber-200">
+          <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span> ขาด Hard (${hardHours}/18 ชม.)
+        </span>`);
+      } else if (currentSkillFilter === 'lack_both' && (softLack || hardLack)) {
+        alertTags.push(`<span class="inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium rounded-md bg-amber-50 text-amber-800 border border-amber-200">
+          <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span> ขาด Soft (${softHours}/12) + Hard (${hardHours}/18)
+        </span>`);
+      } else if (!s.isTrainingComplete && (s.statusCategory === 'placement_approved' || s.statusCategory === 'ready' || s.hasChecklistApproved || s.cvStatus === 'APPROVED')) {
+        // ประเด็นข้อ 3: ขั้นตอนอื่นผ่านแล้วแต่ชั่วโมงอบรมตกเกณฑ์ / ขาด
+        if (softLack && hardLack) {
+          alertTags.push(`<span class="inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium rounded-md bg-rose-50 text-rose-700 border border-rose-200" title="Soft: ${softHours}/12, Hard: ${hardHours}/18 ชม.">
+            ⚠️ ตกเกณฑ์อบรม (Soft ${softHours}/12, Hard ${hardHours}/18)
+          </span>`);
+        } else if (softLack) {
+          alertTags.push(`<span class="inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium rounded-md bg-amber-50 text-amber-800 border border-amber-200" title="Soft: ${softHours}/12 ชม.">
+            ⚠️ ขาด Soft (${softHours}/12 ชม.)
+          </span>`);
+        } else if (hardLack) {
+          alertTags.push(`<span class="inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium rounded-md bg-amber-50 text-amber-800 border border-amber-200" title="Hard: ${hardHours}/18 ชม.">
+            ⚠️ ขาด Hard (${hardHours}/18 ชม.)
+          </span>`);
+        }
+      }
+
+      tr.innerHTML = `
+        <td>${s.studentCode}</td>
+        <td>${s.nameTh}</td>
+        <td>${s.advisorName || '<span class="text-gray-400">-</span>'}</td>
+        <td>
+          <div class="flex flex-col items-start gap-1 py-0.5">
+            <span class="inline-block px-2.5 py-0.5 text-xs font-semibold rounded-full ${statusColor}">${displayStatus}</span>
+            ${alertTags.join('')}
+          </div>
+        </td>
+        <td class="text-center">
+          <div style="display: flex; align-items: center; gap: 8px; justify-content: center;">
+            ${currentUserRole !== 'STAFF' ? `<button class="btn-detail-dots" title="ดูรายละเอียด" onclick="window.location.href='/pages/admin_student_detail.html?id=${s.id}'" style="background:none;border:none;cursor:pointer;padding:4px;">
+              <span class="material-icons text-gray-500 hover:text-blue-600" style="font-size:18px;">more_vert</span>
+            </button>` : ''}
+            <input type="checkbox" class="student-checkbox" data-id="${s.id}" ${isChecked ? 'checked' : ''} style="width:16px;height:16px;cursor:pointer;" />
+          </div>
+        </td>
+      `;
+    }
+    tbody.appendChild(tr);
+  });
+
+  // Checkbox events
+  tbody.querySelectorAll('.student-checkbox').forEach(cb => {
+    cb.addEventListener('change', (e) => {
+      const id = parseInt(e.target.dataset.id);
+      if (e.target.checked) {
+        selectedStudentIds.add(id);
+      } else {
+        selectedStudentIds.delete(id);
+      }
+      updateSelectAllCheckbox();
+    });
+  });
+
+  const selectAllCheckbox = document.getElementById('select-all-students');
+  if (selectAllCheckbox) {
+    selectAllCheckbox.addEventListener('change', (e) => {
+      tbody.querySelectorAll('.student-checkbox').forEach(cb => {
+        cb.checked = e.target.checked;
+        const id = parseInt(cb.dataset.id);
+        if (e.target.checked) {
+          selectedStudentIds.add(id);
+        } else {
+          selectedStudentIds.delete(id);
+        }
+      });
+      updateSelectAllCheckbox();
+    });
+    updateSelectAllCheckbox();
+  }
+
+  // Pagination
+  renderPagination(page, totalPages, total);
+}
+
+function updateSelectAllCheckbox() {
+  const selectAllCheckbox = document.getElementById('select-all-students');
+  const visibleCheckboxes = document.querySelectorAll('#students-tbody .student-checkbox');
+  if (!selectAllCheckbox || visibleCheckboxes.length === 0) {
+    if (selectAllCheckbox) {
+      selectAllCheckbox.checked = false;
+      selectAllCheckbox.indeterminate = false;
+    }
+    return;
+  }
+
+  const selectedCount = [...visibleCheckboxes].filter(cb => cb.checked).length;
+  selectAllCheckbox.checked = selectedCount === visibleCheckboxes.length;
+  selectAllCheckbox.indeterminate = selectedCount > 0 && selectedCount < visibleCheckboxes.length;
+}
+
+function getStatusBadgeColor(category, displayStatus) {
+  if (displayStatus === 'ยังไม่ได้รีวิว CV' || displayStatus === 'รอผล' || displayStatus === 'ชม.ครบ ยังไม่ตรวจ' || displayStatus === 'รออนุมัติที่ฝึกงาน') {
+    return 'bg-yellow-100 text-yellow-700';
+  }
+  if (displayStatus === 'ไม่ผ่าน CV' || displayStatus === 'ไม่อนุมัติที่ฝึกงาน' || displayStatus === 'ตรวจแล้ว ยังไม่ผ่าน' || displayStatus === 'ชั่วโมงยังไม่ครบ' || displayStatus === 'ยังไม่ทำ CV' || displayStatus === 'ชั่วโมงอบรมไม่ผ่าน') {
+    return 'bg-red-100 text-red-600';
+  }
+  if (displayStatus === 'รีวิวCVแล้ว' || displayStatus === 'อนุมัติที่ฝึกงานแล้ว' || displayStatus === 'ผ่านการตรวจชม.ครบ' || displayStatus === 'ตรวจCVผ่าน' || displayStatus === 'สัมภาษณ์ผ่านแล้ว' || displayStatus === 'ตรวจCVผ่าน + ชม.ครบ') {
+    return 'bg-green-100 text-green-700';
+  }
+  const colors = {
+    placement_approved: 'bg-green-100 text-green-700',
+    placement_rejected: 'bg-red-100 text-red-600',
+    placement_pending: 'bg-yellow-100 text-yellow-700',
+    interview_passed: 'bg-green-100 text-green-700',
+    ready: 'bg-green-100 text-green-700',
+    cv_approved: 'bg-green-100 text-green-700',
+    cv_rejected: 'bg-red-100 text-red-600',
+    cv_pending: 'bg-yellow-100 text-yellow-700',
+    training_complete: 'bg-green-100 text-green-700',
+    training_rejected: 'bg-red-100 text-red-600',
+    training_incomplete: 'bg-yellow-100 text-yellow-700',
+    none: 'bg-red-100 text-red-600',
+  };
+  return colors[category] || 'bg-gray-100 text-gray-600';
+}
+
+function renderPagination(page, totalPages, total) {
+  const paginationEl = document.getElementById('pagination-controls');
+  const infoEl = document.getElementById('pagination-info');
+  if (!paginationEl) return;
+
+  const start = (page - 1) * pageLimit + 1;
+  const end = Math.min(page * pageLimit, total);
+  if (infoEl) infoEl.textContent = `Showing ${start}-${end} from ${total} data`;
+
+  paginationEl.innerHTML = '';
+  for (let i = 1; i <= Math.min(totalPages, 5); i++) {
+    const btn = document.createElement('button');
+    btn.textContent = i;
+    btn.className = i === page
+      ? 'w-7 h-7 rounded-lg bg-[#1541D2] text-white text-xs font-medium'
+      : 'w-7 h-7 rounded-lg bg-gray-100 text-gray-600 text-xs hover:bg-gray-200';
+    btn.addEventListener('click', () => {
+      currentPage = i;
+      loadStudents();
+    });
+    paginationEl.appendChild(btn);
+  }
+}
+
+// ==========================================
+// ตารางอาจารย์ที่ปรึกษา
+// ==========================================
+function renderAdvisorTable(advisors) {
+  const tbody = document.getElementById('advisor-tbody');
+  if (!tbody) return;
+  tbody.innerHTML = '';
+
+  if (advisors.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="4" class="text-center py-4 text-gray-400">ยังไม่มีข้อมูลอาจารย์ที่ปรึกษา</td></tr>';
+    return;
+  }
+
+  advisors.forEach((a) => {
+    const notCheckedColor = a.checklistNotReviewed > 5 ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-700';
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${a.name}</td>
+      <td>${a.totalAdvised}</td>
+      <td>${a.checklistReviewed}</td>
+      <td><span class="inline-block px-2 py-0.5 text-xs font-medium rounded-full ${notCheckedColor}">${a.checklistNotReviewed}</span></td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+// ==========================================
+// Modal: ตั้งสถานะนิสิต
+// ==========================================
+window.openSetStatusModal = function() {
+  if (selectedStudentIds.size === 0) {
+    alert('กรุณาเลือก checkbox นิสิตอย่างน้อย 1 คน');
+    return;
+  }
+  const modal = document.getElementById('status-modal');
+  if (modal) modal.style.display = 'flex';
+};
+
+window.closeSetStatusModal = function() {
+  const modal = document.getElementById('status-modal');
+  if (modal) modal.style.display = 'none';
+};
+
+window.submitBatchStatus = async function() {
+  const statusType = document.getElementById('batch-status-type').value;
+  const statusValue = document.getElementById('batch-status-value').value;
+  const note = document.getElementById('batch-status-note').value;
+
+  if (!statusType || !statusValue) {
+    alert('กรุณาเลือกประเภทสถานะและค่าสถานะ');
+    return;
+  }
+
+  try {
+    const res = await fetch('/api/admin/students/batch-status', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        studentIds: Array.from(selectedStudentIds),
+        statusType,
+        statusValue,
+        note,
+      }),
+    });
+    const data = await res.json();
+    if (data.success) {
+      alert(`✅ ตั้งสถานะสำเร็จ (${data.updatedCount} รายการ)`);
+      selectedStudentIds.clear();
+      closeSetStatusModal();
+      loadDashboardSummary();
+      loadStudents();
+    } else {
+      alert('เกิดข้อผิดพลาด: ' + data.message);
+    }
+  } catch (err) {
+    console.error(err);
+    alert('เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์');
+  }
+};
+
+// ==========================================
+// Modal: ตั้งอาจารย์ที่ปรึกษา
+// ==========================================
+window.openSetAdvisorModal = async function() {
+  if (selectedStudentIds.size === 0) {
+    alert('กรุณาเลือก checkbox นิสิตอย่างน้อย 1 คน');
+    return;
+  }
+
+  // โหลดรายชื่ออาจารย์
+  try {
+    const res = await fetch('/api/admin/advisors');
+    const data = await res.json();
+    const select = document.getElementById('advisor-select');
+    if (select && data.success) {
+      select.innerHTML = '<option value="">-- เลือกอาจารย์ที่ปรึกษา --</option>';
+      data.advisors.forEach(a => {
+        select.innerHTML += `<option value="${a.id}">${a.name} (ดูแล ${a.studentCount} คน)</option>`;
+      });
+    }
+  } catch (err) {
+    console.error(err);
+  }
+
+  const modal = document.getElementById('advisor-modal');
+  if (modal) modal.style.display = 'flex';
+};
+
+window.closeSetAdvisorModal = function() {
+  const modal = document.getElementById('advisor-modal');
+  if (modal) modal.style.display = 'none';
+};
+
+window.submitBatchAdvisor = async function() {
+  const advisorId = document.getElementById('advisor-select').value;
+  if (!advisorId) {
+    alert('กรุณาเลือกอาจารย์ที่ปรึกษา');
+    return;
+  }
+
+  try {
+    const res = await fetch('/api/admin/students/batch-advisor', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        studentIds: Array.from(selectedStudentIds),
+        advisorId: parseInt(advisorId),
+      }),
+    });
+    const data = await res.json();
+    if (data.success) {
+      alert(`✅ ตั้งอาจารย์ที่ปรึกษาสำเร็จ (${data.updatedCount} คน)`);
+      selectedStudentIds.clear();
+      closeSetAdvisorModal();
+      loadDashboardSummary();
+      loadStudents();
+    } else {
+      alert('เกิดข้อผิดพลาด: ' + data.message);
+    }
+  } catch (err) {
+    console.error(err);
+    alert('เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์');
+  }
+};
+
+// สลับการเปิด/ปิดช่องกรอกหมายเหตุตามเหตุผลที่เลือก
+window.toggleDropReasonNote = function() {
+  const presetEl = document.getElementById('drop-reason-preset');
+  const noteEl = document.getElementById('drop-reason-note');
+  if (!presetEl || !noteEl) return;
+
+  const isCustom = presetEl.value === 'custom';
+  noteEl.disabled = !isCustom;
+  if (isCustom) {
+    noteEl.style.backgroundColor = '#ffffff';
+    noteEl.style.cursor = 'text';
+    noteEl.placeholder = 'ระบุเหตุผลการดรอป...';
+    noteEl.focus();
+  } else {
+    noteEl.value = '';
+    noteEl.style.backgroundColor = '#f1f5f9';
+    noteEl.style.cursor = 'not-allowed';
+    noteEl.placeholder = "เปิดให้กรอกเมื่อเลือก 'อื่นๆ (ระบุในหมายเหตุ)'";
+  }
+};
+
+// ==========================================
+// Modal: ดรอปนิสิต (Drop Student)
+// ==========================================
+window.openDropStudentModal = function() {
+  if (selectedStudentIds.size === 0) {
+    alert('กรุณาเลือก checkbox นิสิตอย่างน้อย 1 คน');
+    return;
+  }
+  const countEl = document.getElementById('drop-selected-count');
+  if (countEl) countEl.textContent = selectedStudentIds.size;
+  const presetEl = document.getElementById('drop-reason-preset');
+  if (presetEl) presetEl.selectedIndex = 0;
+  const noteEl = document.getElementById('drop-reason-note');
+  if (noteEl) noteEl.value = '';
+  toggleDropReasonNote();
+
+  const modal = document.getElementById('drop-modal');
+  if (modal) modal.style.display = 'flex';
+};
+
+window.closeDropStudentModal = function() {
+  const modal = document.getElementById('drop-modal');
+  if (modal) modal.style.display = 'none';
+};
+
+window.submitDropStudents = async function() {
+  if (selectedStudentIds.size === 0) return;
+  const preset = document.getElementById('drop-reason-preset')?.value || '';
+  const note = document.getElementById('drop-reason-note')?.value.trim() || '';
+  let reason = preset;
+  if (preset === 'custom') {
+    if (!note) {
+      alert('กรุณาระบุเหตุผลการดรอปในช่องหมายเหตุ');
+      document.getElementById('drop-reason-note')?.focus();
+      return;
+    }
+    reason = note;
+  }
+
+  try {
+    const res = await fetch('/api/admin/students/drop', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        studentIds: Array.from(selectedStudentIds),
+        reason,
+      }),
+    });
+    const data = await res.json();
+    if (data.success) {
+      alert(`✅ ${data.message}`);
+      selectedStudentIds.clear();
+      closeDropStudentModal();
+      await loadDashboardSummary();
+      await loadStudents();
+    } else {
+      alert('เกิดข้อผิดพลาด: ' + data.message);
+    }
+  } catch (err) {
+    console.error('Drop students error:', err);
+    alert('เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์');
+  }
+};
+
+// ==========================================
+// Modal: กู้คืนสถานะนิสิต (Restore Student)
+// ==========================================
+window.openRestoreStudentModal = function() {
+  if (selectedStudentIds.size === 0) {
+    alert('กรุณาเลือก checkbox นิสิตที่ต้องการกู้คืนอย่างน้อย 1 คน');
+    return;
+  }
+  const countEl = document.getElementById('restore-selected-count');
+  if (countEl) countEl.textContent = selectedStudentIds.size;
+
+  const modal = document.getElementById('restore-modal');
+  if (modal) modal.style.display = 'flex';
+};
+
+window.closeRestoreStudentModal = function() {
+  const modal = document.getElementById('restore-modal');
+  if (modal) modal.style.display = 'none';
+};
+
+window.submitRestoreStudents = async function() {
+  if (selectedStudentIds.size === 0) return;
+  try {
+    const res = await fetch('/api/admin/students/restore', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        studentIds: Array.from(selectedStudentIds),
+      }),
+    });
+    const data = await res.json();
+    if (data.success) {
+      alert(`✅ ${data.message}`);
+      selectedStudentIds.clear();
+      closeRestoreStudentModal();
+      await loadDashboardSummary();
+      await loadStudents();
+    } else {
+      alert('เกิดข้อผิดพลาด: ' + data.message);
+    }
+  } catch (err) {
+    console.error('Restore students error:', err);
+    alert('เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์');
+  }
+};
+
+// ==========================================
+// Export Excel / CSV ด้วย Export Modal Dialog
+// ==========================================
+window.openExportModal = function() {
+  const modal = document.getElementById('export-modal');
+  if (!modal) return;
+
+  const totalSelected = selectedStudentIds.size;
+  const totalFiltered = currentFilteredCount;
+  const totalAll = (currentTab === 'dropped' ? totalDroppedStudents : totalActiveStudents) || totalFiltered;
+
+  // ตั้งค่าตัวเลขจำนวน
+  const countFilteredEl = document.getElementById('export-count-filtered');
+  const countSelectedEl = document.getElementById('export-count-selected');
+  const countAllEl = document.getElementById('export-count-all');
+  if (countFilteredEl) countFilteredEl.textContent = `${totalFiltered} รายการ`;
+  if (countSelectedEl) countSelectedEl.textContent = `${totalSelected} รายการ`;
+  if (countAllEl) countAllEl.textContent = `${totalAll} รายการ`;
+
+  const allTitleEl = document.getElementById('export-all-title');
+  if (allTitleEl) {
+    allTitleEl.textContent = currentTab === 'dropped' ? 'นิสิตที่ดรอปทั้งหมดในระบบ' : 'นิสิตปกติทั้งหมดในระบบ';
+  }
+
+  const radioSelected = document.getElementById('export-scope-selected');
+  const radioFiltered = document.getElementById('export-scope-filtered');
+  const optSelectedLabel = document.getElementById('export-opt-selected-label');
+  const selectedDesc = document.getElementById('export-selected-desc');
+
+  if (totalSelected > 0) {
+    if (radioSelected) {
+      radioSelected.disabled = false;
+      radioSelected.checked = true;
+    }
+    if (optSelectedLabel) {
+      optSelectedLabel.style.opacity = '1';
+      optSelectedLabel.style.cursor = 'pointer';
+    }
+    if (selectedDesc) selectedDesc.textContent = `ส่งออกเฉพาะนิสิต ${totalSelected} คนที่ติ๊กเลือกไว้`;
+  } else {
+    if (radioSelected) {
+      radioSelected.disabled = true;
+      radioSelected.checked = false;
+    }
+    if (optSelectedLabel) {
+      optSelectedLabel.style.opacity = '0.5';
+      optSelectedLabel.style.cursor = 'not-allowed';
+    }
+    if (selectedDesc) selectedDesc.textContent = 'ยังไม่ได้ติ๊กเลือกนิสิตในตาราง';
+    if (radioFiltered) radioFiltered.checked = true;
+  }
+
+  updateExportSummary();
+  modal.style.display = 'flex';
+};
+
+window.closeExportModal = function() {
+  const modal = document.getElementById('export-modal');
+  if (modal) modal.style.display = 'none';
+};
+
+window.updateExportSummary = function() {
+  const selectedRadio = document.querySelector('input[name="export-scope"]:checked');
+  const scope = selectedRadio ? selectedRadio.value : 'filtered';
+  const totalSelected = selectedStudentIds.size;
+  const totalFiltered = currentFilteredCount;
+  const totalAll = (currentTab === 'dropped' ? totalDroppedStudents : totalActiveStudents) || totalFiltered;
+
+  ['filtered', 'selected', 'all'].forEach(s => {
+    const label = document.getElementById(`export-opt-${s}-label`);
+    if (label) {
+      if (s === scope) {
+        label.style.borderColor = '#1541D2';
+        label.style.backgroundColor = '#F0F5FF';
+      } else {
+        label.style.borderColor = '#E2E8F0';
+        label.style.backgroundColor = '#FFFFFF';
+      }
+    }
+  });
+
+  const summaryText = document.getElementById('export-summary-text');
+  if (!summaryText) return;
+
+  if (scope === 'selected') {
+    summaryText.textContent = `เตรียมส่งออกข้อมูลนิสิต ${totalSelected} รายการ (เฉพาะที่ติ๊กเลือก)`;
+  } else if (scope === 'filtered') {
+    summaryText.textContent = `เตรียมส่งออกข้อมูลนิสิต ${totalFiltered} รายการ (ตามตัวกรอง / การค้นหา)`;
+  } else {
+    summaryText.textContent = `เตรียมส่งออกข้อมูลนิสิต ${totalAll} รายการ (ทั้งหมดในระบบ)`;
+  }
+};
+
+window.confirmExport = async function() {
+  const btn = document.getElementById('btn-confirm-export');
+  const originalBtnHtml = btn ? btn.innerHTML : '';
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = `<span class="material-icons text-sm" style="animation: spin 1s linear infinite;">autorenew</span> กำลังสร้างไฟล์...`;
+  }
+
+  try {
+    const selectedRadio = document.querySelector('input[name="export-scope"]:checked');
+    const scope = selectedRadio ? selectedRadio.value : 'filtered';
+
+    let url = '/api/admin/export?';
+    if (scope === 'selected') {
+      if (selectedStudentIds.size === 0) {
+        alert('กรุณาเลือกนิสิตในตารางก่อนทำการส่งออก');
+        return;
+      }
+      url += `ids=${Array.from(selectedStudentIds).join(',')}`;
+    } else if (scope === 'filtered') {
+      const searchInput = document.getElementById('student-search');
+      const searchVal = searchInput ? searchInput.value.trim() : '';
+      const yearFilter = document.getElementById('year-filter');
+      const selectedYear = yearFilter ? yearFilter.value : '';
+      const statusFilter = document.getElementById('status-filter');
+      const advisorFilter = document.getElementById('advisor-filter');
+      const skillFilter = document.getElementById('skill-filter');
+
+      const params = new URLSearchParams();
+      params.set('viewDropped', currentTab === 'dropped');
+      if (searchVal) params.set('search', searchVal);
+      if (selectedYear) params.set('yearPrefix', selectedYear);
+      if (statusFilter && statusFilter.value) params.set('statusFilter', statusFilter.value);
+      if (advisorFilter && advisorFilter.value) params.set('advisorFilter', advisorFilter.value);
+      if (skillFilter && skillFilter.value) params.set('skillFilter', skillFilter.value);
+      if (currentFilter) {
+        params.set('chartType', currentFilter.chartType);
+        params.set('chartKey', currentFilter.chartKey);
+      }
+      url += params.toString();
+    } else {
+      url += `viewDropped=${currentTab === 'dropped'}&all=true`;
+    }
+
+    const res = await fetch(url);
+    const data = await res.json();
+    if (!data.success) {
+      alert('Export ไม่สำเร็จ: ' + (data.message || ''));
+      return;
+    }
+
+    let exportList = data.data || [];
+
+    // Fallback กรองฝั่ง client-side หากต้องการ
+    if (scope === 'selected' && selectedStudentIds.size > 0 && exportList.length > selectedStudentIds.size) {
+      exportList = exportList.filter(s => selectedStudentIds.has(s.id));
+    }
+
+    if (exportList.length === 0) {
+      alert('ไม่พบข้อมูลนิสิตสำหรับ export ตามเงื่อนไขที่เลือก');
+      return;
+    }
+
+    const headers = [
+      'รหัสนิสิต',
+      'ชื่อ - นามสกุล',
+      'เบอร์โทรนิสิต',
+      'อาจารย์ที่ปรึกษา',
+      'ชั่วโมงอบรม (Soft/Hard/รวม)',
+      'สถานะ CV',
+      'สถานะ Checklist',
+      'ผลการสมัคร/สัมภาษณ์',
+      'ชื่อสถานประกอบการ / บริษัท',
+      'ตำแหน่งที่ฝึก',
+      'ชื่อบุคคลที่ให้ทำหนังสือ (เรียน...)',
+      'ตำแหน่งบุคคลที่ให้ทำหนังสือ',
+      'ที่อยู่บริษัท',
+      'จังหวัด',
+      'เบอร์โทรศัพท์บริษัท',
+      'อีเมลติดต่อบริษัท',
+      'สถานะอนุมัติที่ฝึกงาน',
+      'สถานะในระบบ',
+    ];
+
+    const rows = exportList.map(s => [
+      s.studentCode,
+      s.nameTh,
+      s.phone,
+      s.advisorName,
+      s.trainingProgress,
+      s.cvStatus,
+      s.checklistStatus,
+      s.interviewStatus,
+      s.companyNameTh,
+      s.position,
+      s.contactPersonName,
+      s.contactPersonPosition,
+      s.companyAddress,
+      s.province,
+      s.companyPhone,
+      s.companyEmail,
+      s.placementStatus,
+      s.dropStatus,
+    ].map(v => `"${(v ?? '').toString().replace(/"/g, '""')}"`).join(','));
+
+    const csvContent = '\uFEFF' + [headers.map(h => `"${h}"`).join(','), ...rows].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const blobUrl = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = blobUrl;
+    const dateStr = new Date().toISOString().slice(0, 10);
+    const tabSuffix = currentTab === 'dropped' ? '_dropped' : '';
+    a.download = `รายชื่อและข้อมูลนิสิตฝึกงาน_${scope}${tabSuffix}_${dateStr}.csv`;
+    a.click();
+    URL.revokeObjectURL(blobUrl);
+
+    closeExportModal();
+  } catch (err) {
+    console.error('Export error:', err);
+    alert('เกิดข้อผิดพลาดในการ Export');
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = originalBtnHtml;
+    }
+  }
+};
+
+window.exportStudents = function() {
+  window.openExportModal();
+};
+
+// ปิด Export Modal เมื่อคลิกพื้นหลัง หรือกดปุ่ม Escape
+window.addEventListener('click', (e) => {
+  const exportModal = document.getElementById('export-modal');
+  if (e.target === exportModal) {
+    closeExportModal();
+  }
+});
+
+window.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    closeExportModal();
+  }
+});
+
+// Search event
+const searchInput = document.getElementById('student-search');
+if (searchInput) {
+  let searchTimeout;
+  searchInput.addEventListener('input', () => {
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(() => {
+      currentPage = 1;
+      loadStudents();
+    }, 300);
+  });
+}
+
+// Year filter event
+window.onYearFilterChange = function() {
+  clearSearchBox();
+  currentPage = 1;
+  loadStudents();
+};
+
+const yearFilterEl = document.getElementById('year-filter');
+if (yearFilterEl) {
+  yearFilterEl.addEventListener('change', window.onYearFilterChange);
+}
+
+// Dropdown filter events (สถานะ, อาจารย์, Skill)
+['status-filter', 'advisor-filter', 'skill-filter'].forEach(id => {
+  const el = document.getElementById(id);
+  if (el) {
+    el.addEventListener('change', () => {
+      if (currentFilter) {
+        currentFilter = null;
+        document.querySelectorAll('.chart-status-row').forEach(r => r.classList.remove('bg-purple-100', 'font-bold'));
+      }
+      clearSearchBox();
+      currentPage = 1;
+      updateFilterUI();
+      loadStudents();
+    });
+  }
+});
+
+// รหัสปีของนิสิตชั้นปี 3 ในปีการศึกษาปัจจุบัน (ตัดรอบปีการศึกษาที่เดือน มิ.ย. เหมือน studentImportParser)
+// เช่น ต.ค. 2569 → ปีการศึกษา 2569 → ปี 3 = รหัส 67 | ม.ค. 2570 → ยังเป็นปีการศึกษา 2569 → รหัส 67
+function getDefaultYearPrefix(date = new Date()) {
+  const beYear = date.getFullYear() + 543;
+  const academicYear = date.getMonth() + 1 < 6 ? beYear - 1 : beYear;
+  return String((academicYear - 2) % 100).padStart(2, '0');
+}
+
+let yearFilterInitialized = false;
+
+// ดึงรายปีจากรหัสนิสิตทั้งหมดมาใส่ Dropdown
+async function populateYearFilter(apiUrl) {
+  try {
+    const select = document.getElementById('year-filter');
+    if (!select) return;
+    let currentVal = select.value;
+    const res = await fetch(`${apiUrl}?page=1&limit=9999`);
+    const data = await res.json();
+    if (!data.success || !Array.isArray(data.students)) return;
+    const years = [...new Set(
+      data.students
+        .filter(s => s.studentCode && s.studentCode.length >= 2)
+        .map(s => s.studentCode.substring(0, 2))
+    )].sort((a, b) => Number(b) - Number(a));
+    // โหลดหน้าครั้งแรก: default เป็นนิสิตปี 3 ปัจจุบัน (ถ้ามีนิสิตรุ่นนั้นในระบบ ไม่งั้นแสดงทุกชั้นปี)
+    // ครั้งถัดไป (เช่น realtime refresh) คงค่าที่ผู้ใช้เลือกไว้
+    if (!yearFilterInitialized) {
+      yearFilterInitialized = true;
+      const defaultPrefix = getDefaultYearPrefix();
+      if (years.includes(defaultPrefix)) currentVal = defaultPrefix;
+    }
+    select.innerHTML = '';
+    const allYearsOption = document.createElement('option');
+    allYearsOption.value = '';
+    allYearsOption.textContent = 'ทุกชั้นปี';
+    allYearsOption.selected = !years.includes(currentVal);
+    select.appendChild(allYearsOption);
+    years.forEach(y => {
+      const opt = document.createElement('option');
+      opt.value = y;
+      opt.textContent = `ปี ${y} (25${y})`;
+      if (y === currentVal) opt.selected = true;
+      select.appendChild(opt);
+    });
+  } catch (err) {
+    console.error('Populate year filter error:', err);
+  }
+}
+
+// ดึงรายชื่ออาจารย์มาใส่ Dropdown ฟิลเตอร์
+async function populateAdvisorFilter() {
+  try {
+    const select = document.getElementById('advisor-filter');
+    if (!select) return;
+    const res = await fetch('/api/admin/advisors');
+    const data = await res.json();
+    if (!data.success) return;
+    select.innerHTML = '<option value="">ทุกอาจารย์</option>';
+    data.advisors.forEach(a => {
+      const opt = document.createElement('option');
+      opt.value = a.name;
+      opt.textContent = `${a.name} (${a.studentCount} คน)`;
+      select.appendChild(opt);
+    });
+  } catch (err) {
+    console.error('Populate advisor filter error:', err);
+  }
+}
+
+// ล้างช่องค้นหาทุกครั้งที่มีการใช้ filter อื่น (dropdown/กราฟ) เพื่อไม่ให้เงื่อนไขค้นหา+filter ขัดแย้งกัน
+function clearSearchBox() {
+  const searchEl = document.getElementById('student-search');
+  if (searchEl) searchEl.value = '';
+}
+
+function updateFilterUI() {
+  const badge = document.getElementById('active-filter-badge');
+  const btn = document.getElementById('btn-clear-filter');
+
+  // เช็คว่ามี filter ไหนที่เลือกอยู่บ้าง
+  const statusVal = document.getElementById('status-filter')?.value;
+  const advisorVal = document.getElementById('advisor-filter')?.value;
+  const skillVal = document.getElementById('skill-filter')?.value;
+  const hasDropdownFilter = statusVal || advisorVal || skillVal;
+
+  if (currentFilter || hasDropdownFilter) {
+    const parts = [];
+    if (currentFilter) parts.push(currentFilter.label);
+    if (statusVal) parts.push(document.getElementById('status-filter').selectedOptions[0]?.text);
+    if (advisorVal) parts.push(advisorVal);
+    if (skillVal) parts.push(document.getElementById('skill-filter').selectedOptions[0]?.text);
+    if (badge) {
+      badge.textContent = `กรอง: ${parts.join(', ')}`;
+      badge.style.display = 'inline-block';
+    }
+    if (btn) btn.style.display = 'inline-flex';
+  } else {
+    if (badge) badge.style.display = 'none';
+    if (btn) btn.style.display = 'none';
+  }
+}
+
+// Clear filter (จากกราฟ)
+window.clearFilter = function() {
+  currentFilter = null;
+  currentPage = 1;
+  document.querySelectorAll('.chart-status-row').forEach(r => r.classList.remove('bg-purple-100', 'font-bold'));
+  updateFilterUI();
+  loadStudents();
+};
+
+// Clear ALL filters (ทุก dropdown + กราฟ)
+window.clearAllFilters = function() {
+  currentFilter = null;
+  currentPage = 1;
+  document.querySelectorAll('.chart-status-row').forEach(r => r.classList.remove('bg-purple-100', 'font-bold'));
+  ['status-filter', 'advisor-filter', 'skill-filter', 'year-filter'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  const searchEl = document.getElementById('student-search');
+  if (searchEl) searchEl.value = '';
+  updateFilterUI();
+  loadStudents();
+};
+
+// เริ่มโหลด
+initAdminDashboard();
+
+// ⚡ เมื่อมีสัญญาณ Real-time จาก Socket.io ให้อัปเดต Dashboard อาจารย์รายวิชาทันที
+window.addEventListener('app:data-updated', () => {
+  initAdminDashboard();
+});
+
+// =========================================================================
+// นำเข้ารายชื่อนิสิตจากระบบ REG (Excel / CSV)
+// =========================================================================
+let currentImportStudents = [];
+let selectedImportFile = null;
+
+window.openImportModal = function() {
+  const modal = document.getElementById('import-modal');
+  if (modal) {
+    modal.style.display = 'flex';
+    resetImportFile();
+  }
+};
+
+window.closeImportModal = function() {
+  const modal = document.getElementById('import-modal');
+  if (modal) modal.style.display = 'none';
+  resetImportFile();
+};
+
+window.resetImportFile = function() {
+  currentImportStudents = [];
+  selectedImportFile = null;
+  const fileInput = document.getElementById('import-file-input');
+  if (fileInput) fileInput.value = '';
+
+  const uploadZone = document.getElementById('import-upload-zone');
+  const fileWrap = document.getElementById('import-selected-file-wrap');
+  const previewWrap = document.getElementById('import-preview-wrap');
+  const loading = document.getElementById('import-loading');
+  const btnConfirm = document.getElementById('btn-confirm-import');
+
+  if (uploadZone) uploadZone.style.display = 'block';
+  if (fileWrap) fileWrap.style.display = 'none';
+  if (previewWrap) previewWrap.style.display = 'none';
+  if (loading) loading.style.display = 'none';
+  if (btnConfirm) btnConfirm.style.display = 'none';
+};
+
+window.handleImportDrop = function(e) {
+  e.preventDefault();
+  const uploadZone = document.getElementById('import-upload-zone');
+  if (uploadZone) {
+    uploadZone.style.borderColor = '#CBD5E1';
+    uploadZone.style.background = '#FAFAFA';
+  }
+  if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+    processImportFile(e.dataTransfer.files[0]);
+  }
+};
+
+window.handleImportFileSelect = function(e) {
+  if (e.target.files && e.target.files.length > 0) {
+    processImportFile(e.target.files[0]);
+  }
+};
+
+async function processImportFile(file) {
+  if (!file) return;
+
+  const validExts = ['.xlsx', '.xls', '.csv'];
+  const ext = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
+  if (!validExts.includes(ext)) {
+    alert('กรุณาเลือกไฟล์ Excel (.xlsx, .xls) หรือ .csv เท่านั้น');
+    return;
+  }
+
+  selectedImportFile = file;
+
+  const uploadZone = document.getElementById('import-upload-zone');
+  const fileWrap = document.getElementById('import-selected-file-wrap');
+  const fileNameEl = document.getElementById('import-selected-file-name');
+  const loading = document.getElementById('import-loading');
+  const previewWrap = document.getElementById('import-preview-wrap');
+  const btnConfirm = document.getElementById('btn-confirm-import');
+
+  if (uploadZone) uploadZone.style.display = 'none';
+  if (fileWrap) fileWrap.style.display = 'flex';
+  if (fileNameEl) fileNameEl.textContent = `${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
+  if (loading) loading.style.display = 'block';
+  if (previewWrap) previewWrap.style.display = 'none';
+  if (btnConfirm) btnConfirm.style.display = 'none';
+
+  const formData = new FormData();
+  formData.append('file', file);
+
+  try {
+    const res = await fetch('/api/admin/students/import-preview', {
+      method: 'POST',
+      body: formData
+    });
+
+    const data = await res.json();
+    if (loading) loading.style.display = 'none';
+
+    if (!data.success) {
+      alert(data.message || 'ไม่สามารถอ่านไฟล์ได้');
+      resetImportFile();
+      return;
+    }
+
+    currentImportStudents = data.matchedStudents || [];
+    
+    // Render Stats
+    const totalEl = document.getElementById('import-stat-total');
+    const matchedEl = document.getElementById('import-stat-matched');
+    const skippedEl = document.getElementById('import-stat-skipped');
+    const acadYearEl = document.getElementById('import-stat-acad-year');
+    const previewCountEl = document.getElementById('import-preview-count');
+    const tbody = document.getElementById('import-preview-tbody');
+
+    if (totalEl) totalEl.textContent = data.summary.totalRows || 0;
+    if (matchedEl) matchedEl.textContent = data.summary.matchedCount || 0;
+    if (skippedEl) skippedEl.textContent = data.summary.skippedCount || 0;
+    if (acadYearEl) acadYearEl.textContent = data.summary.academicYear || '-';
+    if (previewCountEl) previewCountEl.textContent = currentImportStudents.length;
+
+    // Render Preview Table Rows
+    if (tbody) {
+      if (currentImportStudents.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" style="padding:20px; text-align:center; color:#E11D48;">ไม่พบรายชื่อนิสิตสาขาวิศวกรรมซอฟต์แวร์ในไฟล์นี้ (ข้ามสาขาอื่น ${data.summary.skippedCount} คน)</td></tr>`;
+      } else {
+        const previewList = currentImportStudents.slice(0, 20);
+        tbody.innerHTML = previewList.map(s => `
+          <tr style="border-bottom:1px solid #F1F5F9;">
+            <td style="padding:6px 10px; font-weight:600; color:#1E293B;">${s.studentCode}</td>
+            <td style="padding:6px 10px; color:#334155;">${s.nameTh || '-'}</td>
+            <td style="padding:6px 10px; text-align:center;"><span style="background:#E0E7FF; color:#3730A3; padding:2px 8px; border-radius:9999px; font-size:11px; font-weight:600;">ปี ${s.year}</span></td>
+            <td style="padding:6px 10px; color:#475569;">${typeof s.gpa === 'number' ? s.gpa.toFixed(2) : '-'}</td>
+            <td style="padding:6px 10px; color:#2563EB; font-family:monospace;">${s.email}</td>
+          </tr>
+        `).join('');
+      }
+    }
+
+    if (previewWrap) previewWrap.style.display = 'block';
+
+    if (currentImportStudents.length > 0 && btnConfirm) {
+      const btnText = document.getElementById('btn-confirm-import-text');
+      if (btnText) btnText.textContent = `ยืนยันนำเข้าข้อมูล (${currentImportStudents.length} คน)`;
+      btnConfirm.style.display = 'inline-flex';
+    }
+
+  } catch (err) {
+    console.error('Import preview error:', err);
+    if (loading) loading.style.display = 'none';
+    alert('เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์');
+    resetImportFile();
+  }
+}
+
+window.confirmImport = async function() {
+  if (!currentImportStudents || currentImportStudents.length === 0) {
+    alert('ไม่มีข้อมูลนิสิตที่ต้องนำเข้า');
+    return;
+  }
+
+  const btnConfirm = document.getElementById('btn-confirm-import');
+  if (btnConfirm) {
+    btnConfirm.disabled = true;
+    btnConfirm.style.opacity = '0.7';
+    btnConfirm.innerHTML = '<span class="inline-block animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></span> กำลังบันทึก...';
+  }
+
+  try {
+    const res = await fetch('/api/admin/students/import-confirm', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ students: currentImportStudents })
+    });
+
+    const data = await res.json();
+    if (data.success) {
+      alert(`✅ นำเข้ารายชื่อนิสิตสำเร็จ ${data.importedCount} คน` + (data.failedCount > 0 ? ` (ไม่สำเร็จ ${data.failedCount} คน)` : ''));
+      closeImportModal();
+      loadStudents();
+      initAdminDashboard();
+    } else {
+      alert('เกิดข้อผิดพลาด: ' + (data.message || 'บันทึกไม่สำเร็จ'));
+      if (btnConfirm) {
+        btnConfirm.disabled = false;
+        btnConfirm.style.opacity = '1';
+        btnConfirm.innerHTML = `<span class="material-icons" style="font-size:16px;">check_circle</span> ยืนยันนำเข้าข้อมูล (${currentImportStudents.length} คน)`;
+      }
+    }
+  } catch (err) {
+    console.error('Import confirm error:', err);
+    alert('เกิดข้อผิดพลาดในการบันทึกข้อมูล');
+    if (btnConfirm) {
+      btnConfirm.disabled = false;
+      btnConfirm.style.opacity = '1';
+      btnConfirm.innerHTML = `<span class="material-icons" style="font-size:16px;">check_circle</span> ยืนยันนำเข้าข้อมูล (${currentImportStudents.length} คน)`;
+    }
+  }
+};

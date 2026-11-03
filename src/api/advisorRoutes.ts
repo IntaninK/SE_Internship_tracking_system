@@ -811,5 +811,3 @@ router.put("/students/:studentId/placement-status", async (req: Request, res: Re
 });
 
 export default router;
-module.exports = router;
-module.exports.default = router;

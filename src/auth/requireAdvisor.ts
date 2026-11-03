@@ -55,5 +55,3 @@ export async function requireAdvisor(req: Request, res: Response, next: NextFunc
 }
 
 export default requireAdvisor;
-module.exports = requireAdvisor;
-module.exports.default = requireAdvisor;

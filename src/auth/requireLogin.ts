@@ -10,5 +10,3 @@ export function requireLogin(req: Request, res: Response, next: NextFunction) {
 }
 
 export default requireLogin;
-module.exports = requireLogin;
-module.exports.default = requireLogin;
