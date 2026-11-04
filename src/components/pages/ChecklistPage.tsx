@@ -3,15 +3,159 @@
 import React from "react";
 import PageShell from "./PageShell";
 
-const PAGE_TITLE = "Check List บริษัท - ระบบติดตามการเตรียมฝึกงานของนิสิต SE";
+const PAGE_TITLE = "แบบสำรวจสถานประกอบการ (Checklist ยื่นทีละ 1 บริษัท) - คณะ ICT ม.พะเยา";
 const PAGE_STYLES: string[] = [
-  "\r\n    .company-card {\r\n      margin-bottom: 6px;\r\n      border-radius: 12px;\r\n      overflow: hidden;\r\n      box-shadow: 0 4px 12px rgba(0,0,0,0.08);\r\n      border: 1px solid #d1d5db;\r\n      background: white;\r\n    }\r\n    .company-header {\r\n      background: linear-gradient(90deg, #1e3a8a, #2563eb);\r\n      color: white;\r\n      padding: 12px 20px;\r\n      display: flex;\r\n      align-items: center;\r\n      justify-content: space-between;\r\n      gap: 12px;\r\n    }\r\n    .company-name-input {\r\n      background: white;\r\n      color: #1e3a8a;\r\n      font-weight: 600;\r\n      font-size: 1.1rem;\r\n      border: none;\r\n      border-radius: 8px;\r\n      padding: 6px 14px;\r\n      width: 100%;\r\n      max-width: 380px;\r\n      outline: none;\r\n    }\r\n    .section-title {\r\n      font-size: 1.25rem;\r\n      font-weight: 600;\r\n      color: #1d4ed8;\r\n      margin: 24px 0 12px 0;\r\n      display: flex;\r\n      align-items: center;\r\n      gap: 8px;\r\n    }\r\n    .checklist-table {\r\n      width: 100%;\r\n      border-collapse: collapse;\r\n      margin-bottom: 20px;\r\n      font-size: 0.95rem;\r\n    }\r\n    .checklist-table th, .checklist-table td {\r\n      border: 1px solid #e5e7eb;\r\n      padding: 10px 14px;\r\n    }\r\n    .checklist-table th {\r\n      background-color: #f9fafb;\r\n      font-weight: 600;\r\n      text-align: center;\r\n      color: #374151;\r\n    }\r\n    .checklist-table td.desc-col {\r\n      text-align: left;\r\n      color: #1f2937;\r\n      width: 60%;\r\n    }\r\n    .checklist-table td.check-col {\r\n      text-align: center;\r\n      width: 10%;\r\n    }\r\n    .checklist-table td.detail-col {\r\n      width: 30%;\r\n    }\r\n    .custom-checkbox {\r\n      width: 20px;\r\n      height: 20px;\r\n      cursor: pointer;\r\n      accent-color: #2563eb;\r\n    }\r\n    .detail-input {\r\n      width: 100%;\r\n      padding: 6px 10px;\r\n      border: 1px solid #d1d5db;\r\n      border-radius: 6px;\r\n      outline: none;\r\n    }\r\n    .detail-input:focus {\r\n      border-color: #2563eb;\r\n    }\r\n  "
+  `
+    .company-card {
+      margin-bottom: 18px;
+      border-radius: 20px;
+      overflow: hidden;
+      box-shadow: 0 10px 30px -10px rgba(30, 27, 75, 0.08);
+      border: 1px solid #E2E8F0;
+      background: white;
+    }
+    .company-header {
+      background: linear-gradient(135deg, #1E1B4B 0%, #312E81 50%, #4338CA 100%);
+      color: white;
+      padding: 14px 22px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .company-name-input {
+      background: white;
+      color: #1E1B4B;
+      font-weight: 700;
+      font-size: 1rem;
+      border: 1.5px solid #C7D2FE;
+      border-radius: 10px;
+      padding: 7px 14px;
+      width: 100%;
+      max-width: 440px;
+      outline: none;
+    }
+    .section-title {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: #312E81;
+      margin: 20px 0 10px 0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .checklist-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 18px;
+      font-size: 0.92rem;
+    }
+    .checklist-table th, .checklist-table td {
+      border: 1px solid #E2E8F0;
+      padding: 10px 14px;
+    }
+    .checklist-table th {
+      background-color: #F8FAFC;
+      font-weight: 700;
+      text-align: center;
+      color: #334155;
+    }
+    .checklist-table td.desc-col {
+      text-align: left;
+      color: #1E293B;
+      width: 60%;
+    }
+    .checklist-table td.check-col {
+      text-align: center;
+      width: 10%;
+    }
+    .checklist-table td.detail-col {
+      width: 30%;
+    }
+    .custom-checkbox {
+      width: 19px;
+      height: 19px;
+      cursor: pointer;
+      accent-color: #4338CA;
+    }
+    .detail-input {
+      width: 100%;
+      padding: 6px 10px;
+      border: 1px solid #CBD5E1;
+      border-radius: 8px;
+      outline: none;
+    }
+    .detail-input:focus {
+      border-color: #4338CA;
+    }
+  `
 ];
 const PAGE_SCRIPTS: string[] = [
   "../components/header.js",
   "../api/checklist.js"
 ];
-const PAGE_BODY_HTML = "<!-- Header -->\r\n  <div id=\"header-placeholder\"></div>\r\n\r\n  <!-- Main Content -->\r\n  <main class=\"main-content max-w-[1200px] mx-auto py-8 px-4\">\r\n    \r\n    <!-- Top Box Header -->\r\n    <div class=\"bg-white rounded-2xl shadow-md border border-gray-200 p-6 mb-6\">\r\n      <div class=\"flex items-center justify-between flex-wrap gap-4\">\r\n        <div class=\"flex items-center gap-3\">\r\n          <span class=\"material-icons text-3xl text-blue-700\">playlist_add_check</span>\r\n          <h1 class=\"text-3xl font-bold text-gray-800\">Check List บริษัทที่สนใจยื่นฝึกงาน</h1>\r\n        </div>\r\n        \r\n        <!-- ปุ่มเขียว: เพิ่มบริษัท (ภาพที่ 9, 10) -->\r\n        <button type=\"button\" id=\"add-company-btn\" class=\"inline-flex items-center gap-2 px-6 py-3 bg-[#00C853] hover:bg-[#00B248] text-white font-semibold rounded-full shadow transition text-lg cursor-pointer border-none\">\r\n          <span class=\"material-icons\">add_circle</span>\r\n          <span>เพิ่มบริษัท</span>\r\n        </button>\r\n      </div>\r\n    </div>\r\n\r\n    <!-- Container สำหรับใส่กล่องบริษัทแต่ละแห่ง -->\r\n    <div id=\"companies-container\">\r\n      <div class=\"text-center py-10 text-gray-500 font-medium\" id=\"loading-spinner\">กำลังโหลดแบบฟอร์ม Checklist...</div>\r\n    </div>\r\n\r\n    <!-- ปุ่มเขียว: ยืนยันและบันทึกข้อมูล (ภาพที่ 9, 11) -->\r\n    <div class=\"flex justify-center mt-10 mb-12\">\r\n      <button type=\"button\" id=\"save-all-btn\" \r\n        class=\"inline-flex items-center justify-center gap-3 px-12 py-4 rounded-full bg-[#00C853] hover:bg-[#00B248] text-white font-bold text-2xl shadow-lg border-3 border-gray-400 cursor-pointer transition\">\r\n        <span class=\"material-icons text-3xl\">check_circle</span>\r\n        <span>ยืนยันและบันทึกข้อมูล</span>\r\n      </button>\r\n    </div>\r\n\r\n  </main>";
+const PAGE_BODY_HTML = `
+  <!-- Header -->
+  <div id="header-placeholder"></div>
+
+  <!-- Main Content -->
+  <main class="main-content max-w-[1200px] mx-auto py-8 px-4">
+
+    <!-- Top Box Header (นโยบายใหม่: ยื่นได้ทีละ 1 บริษัท + Auto-suggest Master Data + Archive) -->
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 mb-6">
+      <div class="flex items-center justify-between flex-wrap gap-4">
+        <div class="flex items-start gap-3.5">
+          <div style="width:48px; height:48px; border-radius:14px; background:linear-gradient(135deg,#1E1B4B,#4338CA); color:white; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+            <span class="material-icons text-2xl">playlist_add_check</span>
+          </div>
+          <div>
+            <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+              <h1 class="text-xl font-bold text-slate-900" style="margin:0;">แบบสำรวจสถานประกอบการที่ต้องการยื่นฝึกงาน (Company Checklist)</h1>
+              <span style="background:#EEF2FF; color:#4338CA; border:1px solid #C7D2FE; font-size:11.5px; font-weight:700; padding:2px 10px; border-radius:999px;">ยื่นขอฝึกงานได้ทีละ 1 แห่ง</span>
+              <span style="background:#ECFDF5; color:#065F46; border:1px solid #A7F3D0; font-size:11.5px; font-weight:700; padding:2px 10px; border-radius:999px;">มี Auto-suggest จากฐานข้อมูลบริษัทกลาง</span>
+            </div>
+            <p class="text-xs text-slate-500 mt-1" style="margin-bottom:0;">
+              นโยบายคณะ ICT: นิสิตยื่นขอฝึกงานได้ทีละ 1 แห่งให้อาจารย์ที่ปรึกษาพิจารณาอนุมัติก่อนออกหนังสือขอความอนุเคราะห์ (หากอาจารย์ไม่อนุมัติ หรือบริษัทปฏิเสธ ระบบจะปลดล็อกให้ยื่นบริษัทแห่งใหม่และเก็บข้อมูลเดิมใน Archive)
+            </p>
+          </div>
+        </div>
+
+        <!-- ปุ่มยื่นบริษัทใหม่ (แสดงเมื่อปลดล็อกหรือยังไม่มีบริษัทที่รออนุมัติ) -->
+        <button type="button" id="add-company-btn" class="btn btn-success inline-flex items-center gap-2 px-5 py-2.5 text-white font-semibold rounded-xl shadow transition text-sm cursor-pointer border-none" style="display:none;">
+          <span class="material-icons" style="font-size:18px;">add_circle</span>
+          <span>ยื่นบริษัทแห่งใหม่ (ปลดล็อกแล้ว)</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Datalist สำหรับ Auto-suggest รายชื่อบริษัทจาก Master Data -->
+    <datalist id="master-companies-datalist"></datalist>
+
+    <!-- Container สำหรับใส่กล่องบริษัทปัจจุบัน (ทีละ 1 แห่ง) -->
+    <div id="companies-container">
+      <div class="text-center py-10 text-gray-500 font-medium" id="loading-spinner">กำลังโหลดแบบฟอร์ม Checklist...</div>
+    </div>
+
+    <!-- ปุ่มยืนยันและบันทึกข้อมูล -->
+    <div class="flex justify-center mt-8 mb-8">
+      <button type="button" id="save-all-btn"
+        class="btn btn-success inline-flex items-center justify-center gap-3 px-10 py-3.5 rounded-full text-white font-bold text-lg shadow-lg border-none cursor-pointer transition">
+        <span class="material-icons text-2xl">check_circle</span>
+        <span>ยืนยันและส่งให้อาจารย์ที่ปรึกษาตรวจสอบ</span>
+      </button>
+    </div>
+
+    <!-- ส่วนแสดงประวัติบริษัทเดิมที่ไม่ผ่าน / บริษัทปฏิเสธ (Archive แบบย่อ) -->
+    <div id="archived-companies-box" style="display:none; margin-bottom:32px; background:#F8FAFC; border:1px solid #E2E8F0; border-radius:16px; padding:16px 20px;">
+      <div style="display:flex; align-items:center; gap:8px; margin-bottom:10px;">
+        <span class="material-icons" style="color:#64748B; font-size:20px;">inventory_2</span>
+        <h3 style="font-size:14px; font-weight:700; color:#334155; margin:0;">ประวัติการยื่นบริษัทเดิมที่ไม่ผ่าน / บริษัทปฏิเสธ (Archive แบบย่อ)</h3>
+      </div>
+      <div id="archived-companies-list" style="display:flex; flex-direction:column; gap:6px; font-size:12.5px; color:#475569;"></div>
+    </div>
+
+  </main>
+`;
 
 export default function ChecklistPage() {
   return (

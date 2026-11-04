@@ -1,30 +1,56 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Header</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
-    <link rel="stylesheet" href="../css/main-output.css">
-</head>
-<body>
-    <!-- Header Bar -->
-    <header class="header-bar">
-        <div class="header-logo">
-            <img src="../img/SE_logo.jpg" alt="SE Logo" style="height:40px; width:auto; border-radius:8px; border: 1.5px solid #3B5FE0; box-shadow: 0 2px 5px rgba(21,65,210,0.2);">
+<header class="header-bar ict-persistent-topbar">
+    <!-- Left: [REQ-01] Persistent User Identity & Current Role -->
+    <div class="ict-topbar-identity" id="ict-user-identity-box">
+        <div class="ict-role-avatar role-student" id="ict-topbar-avatar">
+            <span class="material-icons" id="ict-topbar-avatar-icon" style="font-size:22px;">school</span>
         </div>
-        <h1 class="header-title">ระบบติดตามการเตรียมฝึกงานของนิสิต SE</h1>
+        <div class="ict-identity-meta">
+            <div class="ict-identity-topline">
+                <span class="ict-identity-label">บทบาทปัจจุบัน:</span>
+                <span class="ict-role-pill role-student" id="ict-topbar-role-pill">กำลังตรวจสอบสิทธิ์...</span>
+                <span id="ict-topbar-dept-badge" style="display:none; font-size:11px; font-weight:600; color:#4338CA; background:#EEF2FF; border:1px solid #C7D2FE; padding:1px 8px; border-radius:999px;"></span>
+            </div>
+            <div class="ict-identity-bottomline">
+                <span class="ict-user-fullname" id="ict-topbar-user-name">ระบบบริหารจัดการการฝึกงาน คณะ ICT ม.พะเยา</span>
+                <span class="ict-user-subinfo" id="ict-topbar-user-sub">(University of Phayao)</span>
+            </div>
+        </div>
+    </div>
 
-        <button class="menu-toggle" id="menu-toggle" aria-label="เปิดเมนู">
-            <span class="material-icons">menu</span>
-        </button>
+    <!-- Hamburger toggle (เฉพาะจอเล็ก) -->
+    <button class="menu-toggle" id="menu-toggle" aria-label="เปิดเมนู" style="color:#1E1B4B;">
+        <span class="material-icons">menu</span>
+    </button>
 
-        <nav class="header-nav" id="header-nav">
-        <a href="../pages/dashboard.html" class="active">Dashboard</a>
-        <a href="../pages/Profile.html">Profile</a>
-        <a href="/auth/logout">Logout</a>
-        </nav>
-    </header>
-</body>
-</html>
+    <!-- Center: Navigation Links -->
+    <nav class="header-nav ict-topbar-center" id="header-nav">
+        <a href="../pages/dashboard_student.html" class="nav-link active" id="nav-main-dashboard">
+            <span class="material-icons" style="font-size:16px;">space_dashboard</span>
+            <span>Dashboard</span>
+        </a>
+        <a href="../pages/Profile.html" class="nav-link" id="nav-student-profile">
+            <span class="material-icons" style="font-size:16px;">badge</span>
+            <span>Profile</span>
+        </a>
+        <a href="../pages/status_all.html" class="nav-link" id="nav-student-status-all">
+            <span class="material-icons" style="font-size:16px;">tune</span>
+            <span>จัดการข้อมูลฝึกงาน</span>
+        </a>
+        <a href="../pages/checklist.html" class="nav-link" id="nav-student-checklist">
+            <span class="material-icons" style="font-size:16px;">fact_check</span>
+            <span>Checklist 3 บริษัท</span>
+        </a>
+    </nav>
+
+    <!-- Right: [REQ-01] Multi-Role Switcher + Logout -->
+    <div class="ict-role-switcher-wrap">
+        <div id="ict-role-switcher-container" style="display:none; align-items:center; gap:8px;">
+            <span class="ict-switcher-label">สลับสิทธิ์:</span>
+            <div class="ict-switcher-pills" id="ict-switcher-pills"></div>
+        </div>
+        <a href="/auth/logout" class="ict-logout-btn" title="ออกจากระบบ">
+            <span class="material-icons" style="font-size:16px;">logout</span>
+            <span>ออกจากระบบ</span>
+        </a>
+    </div>
+</header>

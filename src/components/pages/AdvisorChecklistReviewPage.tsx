@@ -3,15 +3,128 @@
 import React from "react";
 import PageShell from "./PageShell";
 
-const PAGE_TITLE = "ตรวจ Checklist นิสิต - อาจารย์ที่ปรึกษา";
+const PAGE_TITLE = "ตรวจประเมิน Checklist นิสิต - อาจารย์ที่ปรึกษา คณะ ICT ม.พะเยา";
 const PAGE_STYLES: string[] = [
-  "\n    body {\n      font-family: 'Prompt', 'Inter', sans-serif;\n      background-color: #f0f7ff;\n    }\n    .company-card {\n      margin-bottom: 20px;\n      border-radius: 16px;\n      overflow: hidden;\n      box-shadow: 0 4px 12px rgba(0,0,0,0.06);\n      border: 1px solid #d1d5db;\n      background: white;\n    }\n    .company-header {\n      background: linear-gradient(90deg, #1e3a8a, #2563eb);\n      color: white;\n      padding: 14px 24px;\n      display: flex;\n      align-items: center;\n      justify-content: space-between;\n      gap: 12px;\n      cursor: pointer;\n      user-select: none;\n    }\n    .company-header:hover {\n      background: linear-gradient(90deg, #1e40af, #1d4ed8);\n    }\n    .section-title {\n      font-size: 1.15rem;\n      font-weight: 600;\n      color: #1d4ed8;\n      margin: 24px 0 12px 0;\n      display: flex;\n      align-items: center;\n      gap: 8px;\n    }\n    .checklist-table {\n      width: 100%;\n      border-collapse: collapse;\n      margin-bottom: 20px;\n      font-size: 0.95rem;\n    }\n    .checklist-table th, .checklist-table td {\n      border: 1px solid #e5e7eb;\n      padding: 10px 14px;\n    }\n    .checklist-table th {\n      background-color: #f9fafb;\n      font-weight: 600;\n      text-align: center;\n      color: #374151;\n    }\n    .checklist-table td.desc-col {\n      text-align: left;\n      color: #1f2937;\n      width: 60%;\n    }\n    .checklist-table td.check-col {\n      text-align: center;\n      width: 10%;\n    }\n    .checklist-table td.detail-col {\n      width: 30%;\n    }\n    .custom-checkbox {\n      width: 20px;\n      height: 20px;\n      cursor: not-allowed;\n      accent-color: #2563eb;\n    }\n    .detail-input {\n      width: 100%;\n      padding: 6px 10px;\n      border: 1px solid #e2e8f0;\n      border-radius: 6px;\n      background-color: #f8fafc;\n      color: #475569;\n      font-size: 0.9rem;\n    }\n  "
+  `
+    .company-card {
+      margin-bottom: 20px;
+      border-radius: 20px;
+      overflow: hidden;
+      box-shadow: 0 10px 30px -10px rgba(30, 27, 75, 0.08);
+      border: 1px solid #E2E8F0;
+      background: white;
+    }
+    .company-header {
+      background: linear-gradient(135deg, #1E1B4B 0%, #312E81 50%, #4338CA 100%);
+      color: white;
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      cursor: pointer;
+      user-select: none;
+    }
+    .company-header:hover {
+      background: linear-gradient(135deg, #312E81 0%, #4338CA 100%);
+    }
+    .section-title {
+      font-size: 1.08rem;
+      font-weight: 700;
+      color: #312E81;
+      margin: 22px 0 12px 0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .checklist-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 20px;
+      font-size: 0.92rem;
+    }
+    .checklist-table th, .checklist-table td {
+      border: 1px solid #E2E8F0;
+      padding: 10px 14px;
+    }
+    .checklist-table th {
+      background-color: #F8FAFC;
+      font-weight: 700;
+      text-align: center;
+      color: #334155;
+    }
+    .checklist-table td.desc-col {
+      text-align: left;
+      color: #1E293B;
+      width: 60%;
+    }
+    .checklist-table td.check-col {
+      text-align: center;
+      width: 10%;
+    }
+    .checklist-table td.detail-col {
+      width: 30%;
+    }
+    .custom-checkbox {
+      width: 19px;
+      height: 19px;
+      cursor: not-allowed;
+      accent-color: #4338CA;
+    }
+    .detail-input {
+      width: 100%;
+      padding: 6px 10px;
+      border: 1px solid #E2E8F0;
+      border-radius: 8px;
+      background-color: #F8FAFC;
+      color: #475569;
+      font-size: 0.88rem;
+    }
+  `
 ];
 const PAGE_SCRIPTS: string[] = [
   "../components/header.js",
   "../api/advisor_checklist_review.js"
 ];
-const PAGE_BODY_HTML = "<!-- Header Bar -->\n  <div id=\"header-placeholder\"></div>\n\n  <!-- Main Content -->\n  <main class=\"main-content max-w-[1200px] mx-auto py-8 px-4\">\n\n    <!-- Top Card Header: CH ของนิสิต -->\n    <div class=\"bg-gradient-to-r from-blue-900 to-blue-700 text-white rounded-2xl shadow-md p-6 mb-6\">\n      <div class=\"flex items-center justify-between flex-wrap gap-4\">\n        <div class=\"flex items-center gap-3\">\n          <span class=\"material-icons text-3xl\">fact_check</span>\n          <div>\n            <h1 class=\"text-2xl font-bold flex items-center gap-2\">\n              CH ของนิสิต\n            </h1>\n            <p id=\"student-info-subtitle\" class=\"text-blue-100 text-sm mt-1\">กำลังโหลดข้อมูลนิสิต...</p>\n          </div>\n        </div>\n        \n        <a href=\"/pages/dashboard_ที่ปรึกษา.html\" class=\"inline-flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-xl text-sm transition no-underline\">\n          <span class=\"material-icons text-base\">arrow_back</span>\n          <span>กลับไปหน้า Dashboard</span>\n        </a>\n      </div>\n    </div>\n\n    <!-- Companies Checklist Container -->\n    <div id=\"companies-checklist-container\">\n      <div class=\"text-center py-16 text-gray-500 font-medium\" id=\"loading-spinner\">\n        กำลังโหลดข้อมูล Checklist ของนิสิต...\n      </div>\n    </div>\n\n  </main>";
+const PAGE_BODY_HTML = `
+  <!-- Header Bar -->
+  <div id="header-placeholder"></div>
+
+  <!-- Main Content -->
+  <main class="main-content max-w-[1200px] mx-auto py-8 px-4">
+
+    <!-- Top Card Header: ตรวจประเมิน Checklist ของนิสิต -->
+    <div style="background:linear-gradient(135deg, #1E1B4B 0%, #312E81 50%, #4338CA 100%);" class="text-white rounded-2xl shadow-md p-6 mb-6">
+      <div class="flex items-center justify-between flex-wrap gap-4">
+        <div class="flex items-center gap-3.5">
+          <div style="width:48px; height:48px; border-radius:14px; background:rgba(255,255,255,0.16); display:flex; align-items:center; justify-content:center;">
+            <span class="material-icons text-2xl">fact_check</span>
+          </div>
+          <div>
+            <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+              <h1 class="text-xl font-bold" style="margin:0;">ตรวจประเมินแบบสำรวจสถานประกอบการ (Checklist 3 บริษัท)</h1>
+              <span style="background:rgba(255,255,255,0.18); border:1px solid rgba(255,255,255,0.28); font-size:11px; font-weight:700; padding:2px 10px; border-radius:999px;">[REQ-05 &amp; REQ-06]</span>
+            </div>
+            <p id="student-info-subtitle" class="text-indigo-100 text-xs mt-1" style="margin-bottom:0;">กำลังโหลดข้อมูลนิสิต...</p>
+          </div>
+        </div>
+
+        <a href="/pages/dashboard_ที่ปรึกษา.html" class="inline-flex items-center gap-2 px-4 py-2 bg-white/15 hover:bg-white/25 text-white rounded-xl text-xs font-semibold transition no-underline">
+          <span class="material-icons text-base">arrow_back</span>
+          <span>กลับไปหน้า Dashboard</span>
+        </a>
+      </div>
+    </div>
+
+    <!-- Companies Checklist Container -->
+    <div id="companies-checklist-container">
+      <div class="text-center py-16 text-gray-500 font-medium" id="loading-spinner">
+        กำลังโหลดข้อมูล Checklist ของนิสิต...
+      </div>
+    </div>
+
+  </main>
+`;
 
 export default function AdvisorChecklistReviewPage() {
   return (

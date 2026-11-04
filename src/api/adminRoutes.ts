@@ -3,6 +3,11 @@ import multer from "multer";
 import prisma from "../db";
 import requireAdmin from "../auth/requireAdmin";
 import { parseStudentSpreadsheet } from "../utils/studentImportParser";
+import {
+  loadSuperAdminState,
+  saveSuperAdminState,
+  calculateEventHours,
+} from "../utils/superAdminStore";
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -1728,6 +1733,907 @@ router.post("/students/import-confirm", async (req: Request, res: Response) => {
   } catch (err) {
     console.error("POST /api/admin/students/import-confirm error:", err);
     res.status(500).json({ success: false, message: "เกิดข้อผิดพลาดในการบันทึกข้อมูลเข้าสู่ระบบ" });
+  }
+});
+
+// =========================================================================
+// 9. SUPER ADMIN (พี่จอม - เจ้าหน้าที่คณะ) COMMAND CENTER ENDPOINTS
+//    - จัดการรอบปีการศึกษา & Unlock สาขาวิชา (8 สาขา)
+//    - สร้างกิจกรรมอบรมภายใน (สูงสุด 6 ชม./วัน) & ระบบ Check-in ด้วยรหัสนิสิต
+//    - จัดการฐานข้อมูลสถานประกอบการกลาง (Company Master Data & Confirm บริษัทใหม่)
+//    - ระบบออกหนังสือขอความอนุเคราะห์ (+แบบตอบรับ), ตรวจใบตอบรับ, ออกหนังสือส่งตัว & Archive
+//    - ส่งออกข้อมูลเชื่อมโยงระบบ Co-op ICT ของพี่แดง (Co-op 01)
+// =========================================================================
+
+router.get("/super-admin/overview", async (req: Request, res: Response) => {
+  try {
+    const state = loadSuperAdminState();
+
+    // ดึงนิสิตทั้งหมดพร้อมข้อมูลที่เกี่ยวข้องจากฐานข้อมูลจริง
+    const allStudents = await prisma.student.findMany({
+      where: { isDropped: false },
+      include: {
+        user: true,
+        cv: true,
+        trainingRecords: true,
+        companies: {
+          include: { submission: true },
+          orderBy: { updatedAt: "desc" },
+        },
+        placement: true,
+        advisor: true,
+        supervisor: true,
+      },
+      orderBy: { studentCode: "asc" },
+    });
+
+    // ซิงค์บริษัทที่นิสิตกรอกในระบบ (Company / InternshipPlacement) หากยังไม่มีใน Master Data ให้ขึ้นเป็น PENDING_REVIEW อัตโนมัติ
+    const normalizeName = (n: string) => n.replace(/\s+/g, "").toLowerCase();
+    const existingMasterNames = new Set(
+      state.companyMasterData.map((c) => normalizeName(c.nameTh))
+    );
+    let stateModified = false;
+
+    for (const st of allStudents) {
+      for (const comp of st.companies || []) {
+        const cleanName = (comp.name || "").trim();
+        if (!cleanName) continue;
+        const norm = normalizeName(cleanName);
+        if (!existingMasterNames.has(norm)) {
+          existingMasterNames.add(norm);
+          state.companyMasterData.unshift({
+            id: `COMP-NEW-${comp.id}`,
+            nameTh: cleanName,
+            nameEn: "-",
+            province: st.placement?.province || "รอระบุจังหวัด",
+            address: st.placement?.companyAddress || "รอตรวจสอบที่อยู่จากนิสิต",
+            hrContactName: st.placement?.contactPersonName || "-",
+            hrPhone: st.placement?.companyPhone1 || "-",
+            hrEmail: st.placement?.companyEmail || "-",
+            recommendedPositions: st.placement?.position || "นักศึกษาฝึกงาน / สหกิจศึกษา",
+            status: "PENDING_REVIEW",
+            submittedByStudentCode: st.studentCode,
+            submittedByStudentName: st.nameTh,
+            createdAt: comp.createdAt ? comp.createdAt.toISOString() : new Date().toISOString(),
+          });
+          stateModified = true;
+        }
+      }
+    }
+
+    if (stateModified) {
+      saveSuperAdminState(state);
+    }
+
+    // นับจำนวนนิสิตในแต่ละสาขาวิชาสำหรับแสดงในหน้า Unlock สาขา
+    const majorCounts: Record<string, number> = {};
+    for (const rule of state.majorUnlockRules) {
+      majorCounts[rule.code] = allStudents.filter((s) => {
+        const m = `${s.major || ""} ${s.curriculum || ""}`;
+        return m.includes(rule.majorName);
+      }).length;
+    }
+
+    // สร้างรายการคิวงานเอกสารราชการ (Document Workflow Queue)
+    // นโยบายใหม่: นิสิตยื่นได้ทีละ 1 บริษัท -> ที่ปรึกษาอนุมัติ Checklist -> ออกหนังสือขอความอนุเคราะห์ (+แบบตอบรับ) -> บริษัทส่งใบตอบรับ (รับ/ปฏิเสธ) -> ถ้ารับ พี่จอมอนุมัติและออกหนังสือส่งตัว
+    const documentQueue = allStudents.map((s) => {
+      const cat = categorizeStudent(s);
+      const activeCompany =
+        (s.companies || []).find((c) => c.checklistStatus === "APPROVED") ||
+        (s.companies || [])[0] ||
+        null;
+
+      const companyName =
+        s.placement?.companyNameTh ||
+        activeCompany?.name ||
+        "";
+      const position = s.placement?.position || "นิสิตฝึกงาน / สหกิจศึกษา";
+      const checklistStatus = activeCompany?.checklistStatus || "NONE";
+      const wfKey = String(s.id);
+      const wf = state.docWorkflowMap[wfKey] || {
+        studentId: s.id,
+        studentCode: s.studentCode,
+        companyName,
+        interviewDate: "",
+        requestLetterIssued: false,
+        companyResponseStatus: s.placement?.status === "APPROVED" ? "ACCEPTED" : "NOT_SENT",
+        dispatchLetterIssued: s.placement?.status === "APPROVED",
+        isLocked: s.placement?.status === "APPROVED",
+      };
+
+      const studentArchives = state.archivedApplications.filter(
+        (a) => a.studentCode === s.studentCode || a.studentId === s.id
+      );
+
+      return {
+        studentId: s.id,
+        studentCode: s.studentCode,
+        nameTh: s.nameTh,
+        major: s.major || "วิศวกรรมซอฟต์แวร์",
+        year: s.year,
+        gpa: s.gpa,
+        phone: s.phone || "-",
+        email: s.user?.email || "-",
+        advisorName: s.advisor?.name || "ยังไม่ระบุ",
+        supervisorName: s.supervisor?.name || "ยังไม่ระบุ",
+        softHours: cat.softHours,
+        hardHours: cat.hardHours,
+        cvStatus: s.cv?.status || "NONE",
+        cvFileUrl: s.cv?.fileUrl || null,
+        companyId: activeCompany?.id || null,
+        companyName: companyName || "ยังไม่ยื่นบริษัท",
+        position,
+        companyAddress: s.placement?.companyAddress || "-",
+        companyProvince: s.placement?.province || "-",
+        contactPersonName: s.placement?.contactPersonName || "ฝ่ายทรัพยากรบุคคล (HR)",
+        contactPersonPhone: s.placement?.companyPhone1 || "-",
+        checklistStatus,
+        interviewDate: wf.interviewDate || "2026-02-15",
+        requestLetterIssued: Boolean(wf.requestLetterIssued),
+        requestLetterDocNo: wf.requestLetterDocNo || "",
+        requestLetterDate: wf.requestLetterDate || "",
+        companyResponseStatus: wf.companyResponseStatus || "NOT_SENT",
+        companyResponseFileName: wf.companyResponseFileName || "",
+        companyResponseFileUrl: wf.companyResponseFileUrl || "",
+        companyResponseNote: wf.companyResponseNote || "",
+        dispatchLetterIssued: Boolean(wf.dispatchLetterIssued),
+        dispatchLetterDocNo: wf.dispatchLetterDocNo || "",
+        dispatchLetterDate: wf.dispatchLetterDate || "",
+        isLocked: Boolean(wf.isLocked),
+        unlockedByAdmin: Boolean(wf.unlockedByAdmin),
+        archiveCount: studentArchives.length,
+        archives: studentArchives,
+      };
+    });
+
+    // จัดกลุ่มนิสิตที่ไปบริษัทเดียวกัน (สำหรับออกหนังสือขอความอนุเคราะห์แบบรวมรายชื่อแนบท้าย Group Letter)
+    const companyGroupsMap: Record<
+      string,
+      {
+        companyName: string;
+        students: Array<{
+          studentId: number;
+          studentCode: string;
+          nameTh: string;
+          major: string;
+          position: string;
+          checklistStatus: string;
+          requestLetterIssued: boolean;
+        }>;
+      }
+    > = {};
+
+    for (const item of documentQueue) {
+      if (!item.companyName || item.companyName === "ยังไม่ยื่นบริษัท") continue;
+      const key = item.companyName.trim();
+      if (!companyGroupsMap[key]) {
+        companyGroupsMap[key] = { companyName: key, students: [] };
+      }
+      companyGroupsMap[key].students.push({
+        studentId: item.studentId,
+        studentCode: item.studentCode,
+        nameTh: item.nameTh,
+        major: item.major,
+        position: item.position,
+        checklistStatus: item.checklistStatus,
+        requestLetterIssued: item.requestLetterIssued,
+      });
+    }
+
+    res.json({
+      success: true,
+      academicConfig: state.academicConfig,
+      majorUnlockRules: state.majorUnlockRules.map((r) => ({
+        ...r,
+        studentCount: majorCounts[r.code] || 0,
+      })),
+      trainingEvents: state.trainingEvents,
+      companyMasterData: state.companyMasterData,
+      pendingMasterCompaniesCount: state.companyMasterData.filter(
+        (c) => c.status === "PENDING_REVIEW"
+      ).length,
+      documentQueue,
+      companyGroups: Object.values(companyGroupsMap),
+      archivedApplications: state.archivedApplications,
+    });
+  } catch (err) {
+    console.error("GET /api/admin/super-admin/overview error:", err);
+    res.status(500).json({ success: false, message: "โหลดข้อมูล Super Admin ไม่สำเร็จ" });
+  }
+});
+
+// 9.1 บันทึกตั้งค่าปีการศึกษา / ภาคการศึกษา / เลขที่หนังสือราชการเริ่มต้น
+router.post("/super-admin/academic-config", async (req: Request, res: Response) => {
+  try {
+    const state = loadSuperAdminState();
+    const { currentAcademicYear, currentSemester, defaultDocPrefix, deanSignatory, deanPosition } =
+      req.body;
+
+    if (currentAcademicYear) state.academicConfig.currentAcademicYear = String(currentAcademicYear).trim();
+    if (currentSemester) state.academicConfig.currentSemester = String(currentSemester).trim();
+    if (defaultDocPrefix !== undefined) state.academicConfig.defaultDocPrefix = String(defaultDocPrefix).trim();
+    if (deanSignatory !== undefined) state.academicConfig.deanSignatory = String(deanSignatory).trim();
+    if (deanPosition !== undefined) state.academicConfig.deanPosition = String(deanPosition).trim();
+    state.academicConfig.updatedAt = new Date().toISOString();
+
+    saveSuperAdminState(state);
+    res.json({
+      success: true,
+      message: "บันทึกการตั้งค่าปีการศึกษาและค่าเริ่มต้นหนังสือราชการเรียบร้อยแล้ว",
+      academicConfig: state.academicConfig,
+    });
+  } catch (err) {
+    console.error("POST /api/admin/super-admin/academic-config error:", err);
+    res.status(500).json({ success: false, message: "บันทึกการตั้งค่าไม่สำเร็จ" });
+  }
+});
+
+// 9.2 ปลดล็อก / ล็อก รอบการยื่นขอฝึกงานตามสาขาวิชา (Major Unlocking)
+router.post("/super-admin/major-unlock", async (req: Request, res: Response) => {
+  try {
+    const state = loadSuperAdminState();
+    const { code, isUnlocked, targetTerm, openDate, closeDate, note, bulkAction } = req.body;
+
+    if (bulkAction === "UNLOCK_ALL" || bulkAction === "LOCK_ALL") {
+      const unlockFlag = bulkAction === "UNLOCK_ALL";
+      state.majorUnlockRules = state.majorUnlockRules.map((r) => ({
+        ...r,
+        isUnlocked: unlockFlag,
+        updatedAt: new Date().toISOString(),
+      }));
+      saveSuperAdminState(state);
+      return res.json({
+        success: true,
+        message: unlockFlag
+          ? "ปลดล็อกระบบยื่นขอฝึกงานครบทั้ง 8 สาขาวิชาแล้ว"
+          : "ล็อกระบบยื่นขอฝึกงานทั้ง 8 สาขาวิชาชั่วคราวแล้ว",
+        majorUnlockRules: state.majorUnlockRules,
+      });
+    }
+
+    const rule = state.majorUnlockRules.find((r) => r.code === code);
+    if (!rule) {
+      return res.status(404).json({ success: false, message: "ไม่พบรหัสสาขาวิชาที่ระบุ" });
+    }
+
+    if (typeof isUnlocked === "boolean") rule.isUnlocked = isUnlocked;
+    if (targetTerm !== undefined) rule.targetTerm = String(targetTerm).trim();
+    if (openDate !== undefined) rule.openDate = String(openDate).trim();
+    if (closeDate !== undefined) rule.closeDate = String(closeDate).trim();
+    if (note !== undefined) rule.note = String(note).trim();
+    rule.updatedAt = new Date().toISOString();
+
+    saveSuperAdminState(state);
+    res.json({
+      success: true,
+      message: `อัปเดตสถานะสาขาวิชา${rule.majorName} (${rule.code}) เป็น "${rule.isUnlocked ? "ปลดล็อกให้ยื่นฝึกงาน" : "ล็อกชั่วคราว"}" เรียบร้อยแล้ว`,
+      rule,
+    });
+  } catch (err) {
+    console.error("POST /api/admin/super-admin/major-unlock error:", err);
+    res.status(500).json({ success: false, message: "อัปเดตสถานะการปลดล็อกสาขาไม่สำเร็จ" });
+  }
+});
+
+// 9.3 สร้างกิจกรรมอบรมภายในคณะ (คำนวณชั่วโมงอัตโนมัติ สูงสุดไม่เกิน 6 ชม./วัน)
+router.post("/super-admin/events", async (req: Request, res: Response) => {
+  try {
+    const state = loadSuperAdminState();
+    const { title, skillType, eventDate, startTime, endTime, targetMajor, location, academicYear } =
+      req.body;
+
+    if (!title || ! String(title).trim()) {
+      return res.status(400).json({ success: false, message: "กรุณาระบุชื่อกิจกรรมอบรม" });
+    }
+
+    const { rawHours, creditedHours } = calculateEventHours(
+      startTime || "09:00",
+      endTime || "16:00"
+    );
+
+    const newEvent = {
+      id: `EVT-${Date.now().toString().slice(-6)}`,
+      title: String(title).trim(),
+      skillType: (skillType === "HARD" ? "HARD" : "SOFT") as "SOFT" | "HARD",
+      eventDate: eventDate || new Date().toISOString().slice(0, 10),
+      startTime: startTime || "09:00",
+      endTime: endTime || "16:00",
+      rawHours,
+      creditedHours,
+      targetMajor: targetMajor || "ALL",
+      location: location || "คณะเทคโนโลยีสารสนเทศและการสื่อสาร ม.พะเยา",
+      academicYear: academicYear || state.academicConfig.currentAcademicYear,
+      createdBy: req.session?.user?.username || "พี่จอม (Super Admin)",
+      createdAt: new Date().toISOString(),
+      checkIns: [],
+    };
+
+    state.trainingEvents.unshift(newEvent);
+    saveSuperAdminState(state);
+
+    res.json({
+      success: true,
+      message: `สร้างกิจกรรม "${newEvent.title}" สำเร็จ (คำนวณชั่วโมงสุทธิ ${creditedHours} ชม. จากเวลาจริง ${rawHours} ชม. ตามเกณฑ์สูงสุดไม่เกิน 6 ชม./วัน)`,
+      event: newEvent,
+    });
+  } catch (err) {
+    console.error("POST /api/admin/super-admin/events error:", err);
+    res.status(500).json({ success: false, message: "สร้างกิจกรรมอบรมไม่สำเร็จ" });
+  }
+});
+
+// 9.4 ลบกิจกรรมอบรม
+router.delete("/super-admin/events/:eventId", async (req: Request, res: Response) => {
+  try {
+    const state = loadSuperAdminState();
+    const { eventId } = req.params;
+    state.trainingEvents = state.trainingEvents.filter((e) => e.id !== eventId);
+    saveSuperAdminState(state);
+    res.json({ success: true, message: "ลบกิจกรรมอบรมเรียบร้อยแล้ว" });
+  } catch (err) {
+    console.error("DELETE /api/admin/super-admin/events error:", err);
+    res.status(500).json({ success: false, message: "ลบกิจกรรมไม่สำเร็จ" });
+  }
+});
+
+// 9.5 บันทึก Check-in นิสิตเข้ากิจกรรมด้วยรหัสนิสิต (จากใบเซ็นชื่อหน้างาน -> เข้าระบบและบวกชั่วโมงเข้า Dashboard ทันที)
+router.post("/super-admin/events/:eventId/checkin", async (req: Request, res: Response) => {
+  try {
+    const state = loadSuperAdminState();
+    const { eventId } = req.params;
+    const { studentCodesInput } = req.body;
+
+    const event = state.trainingEvents.find((e) => e.id === eventId);
+    if (!event) {
+      return res.status(404).json({ success: false, message: "ไม่พบกิจกรรมอบรมนี้" });
+    }
+
+    const rawText = Array.isArray(studentCodesInput)
+      ? studentCodesInput.join("\n")
+      : String(studentCodesInput || "");
+    const codes = Array.from(
+      new Set(
+        rawText
+          .split(/[\s,;,\n\r\t]+/)
+          .map((c) => c.trim())
+          .filter((c) => c.length >= 4)
+      )
+    );
+
+    if (codes.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "กรุณากรอกหรือวางรหัสนิสิตอย่างน้อย 1 รหัส",
+      });
+    }
+
+    const matchedStudents = await prisma.student.findMany({
+      where: { studentCode: { in: codes } },
+    });
+    const studentMap = new Map(matchedStudents.map((s) => [s.studentCode, s]));
+
+    let addedCount = 0;
+    let duplicateCount = 0;
+    const notFoundCodes: string[] = [];
+    const checkedInDetails: Array<{ studentCode: string; nameTh: string; major: string; hours: number }> = [];
+
+    for (const code of codes) {
+      if (event.checkIns.some((c) => c.studentCode === code)) {
+        duplicateCount++;
+        continue;
+      }
+
+      const dbStudent = studentMap.get(code);
+      if (!dbStudent) {
+        notFoundCodes.push(code);
+        continue;
+      }
+
+      // บันทึกชั่วโมงอบรมเข้าตาราง TrainingRecord จริงในฐานข้อมูลพร้อมสถานะ APPROVED ทันที!
+      const record = await prisma.trainingRecord.create({
+        data: {
+          studentId: dbStudent.id,
+          title: `[Check-in กิจกรรมคณะ] ${event.title}`,
+          skillType: event.skillType,
+          hours: event.creditedHours,
+          academicYear: event.academicYear,
+          source: "STAFF_IMPORT",
+          status: "APPROVED",
+          note: `บันทึก Check-in หน้างานโดยพี่จอม เมื่อวันที่ ${event.eventDate} (${event.startTime}-${event.endTime} น.)`,
+          reviewedById: req.session?.user?.id || null,
+          reviewedAt: new Date(),
+        },
+      });
+
+      const checkInItem = {
+        studentCode: dbStudent.studentCode,
+        nameTh: dbStudent.nameTh,
+        major: dbStudent.major || "วิศวกรรมซอฟต์แวร์",
+        checkedInAt: new Date().toISOString(),
+        trainingRecordId: record.id,
+      };
+
+      event.checkIns.unshift(checkInItem);
+      checkedInDetails.push({
+        studentCode: dbStudent.studentCode,
+        nameTh: dbStudent.nameTh,
+        major: checkInItem.major,
+        hours: event.creditedHours,
+      });
+      addedCount++;
+    }
+
+    saveSuperAdminState(state);
+
+    res.json({
+      success: true,
+      message: `บันทึก Check-in สำเร็จ ${addedCount} คน (+${event.creditedHours} ชม. ${event.skillType} Skill เข้าแดชบอร์ดนิสิตทันที)`,
+      addedCount,
+      duplicateCount,
+      notFoundCodes,
+      checkedInDetails,
+      event,
+    });
+  } catch (err) {
+    console.error("POST /api/admin/super-admin/events/:eventId/checkin error:", err);
+    res.status(500).json({ success: false, message: "บันทึก Check-in ไม่สำเร็จ" });
+  }
+});
+
+// 9.6 เพิ่ม / แก้ไขข้อมูลบริษัทในฐานข้อมูลกลาง (Company Master Data)
+router.post("/super-admin/companies", async (req: Request, res: Response) => {
+  try {
+    const state = loadSuperAdminState();
+    const {
+      id,
+      nameTh,
+      nameEn,
+      province,
+      address,
+      hrContactName,
+      hrPhone,
+      hrEmail,
+      recommendedPositions,
+      status,
+    } = req.body;
+
+    if (!nameTh || !String(nameTh).trim()) {
+      return res.status(400).json({ success: false, message: "กรุณาระบุชื่อสถานประกอบการ (ภาษาไทย/ชื่อทางการ)" });
+    }
+
+    const cleanNameTh = String(nameTh).trim();
+
+    if (id) {
+      const existing = state.companyMasterData.find((c) => c.id === id);
+      if (!existing) {
+        return res.status(404).json({ success: false, message: "ไม่พบข้อมูลบริษัทในระบบ" });
+      }
+      const oldName = existing.nameTh;
+      existing.nameTh = cleanNameTh;
+      if (nameEn !== undefined) existing.nameEn = String(nameEn).trim();
+      if (province !== undefined) existing.province = String(province).trim();
+      if (address !== undefined) existing.address = String(address).trim();
+      if (hrContactName !== undefined) existing.hrContactName = String(hrContactName).trim();
+      if (hrPhone !== undefined) existing.hrPhone = String(hrPhone).trim();
+      if (hrEmail !== undefined) existing.hrEmail = String(hrEmail).trim();
+      if (recommendedPositions !== undefined)
+        existing.recommendedPositions = String(recommendedPositions).trim();
+      if (status) existing.status = status;
+      if (status === "VERIFIED" || status === "PARTNER") {
+        existing.verifiedAt = new Date().toISOString();
+      }
+
+      // หากมีการแก้ชื่อมาตรฐาน ให้อัปเดตชื่อในตาราง Company ของนิสิตให้ตรงกันอัตโนมัติ
+      if (oldName && oldName !== cleanNameTh) {
+        await prisma.company.updateMany({
+          where: { name: oldName },
+          data: { name: cleanNameTh },
+        });
+      }
+
+      saveSuperAdminState(state);
+      return res.json({
+        success: true,
+        message: `อัปเดตข้อมูลสถานประกอบการ "${cleanNameTh}" ใน Master Data เรียบร้อยแล้ว`,
+        company: existing,
+      });
+    }
+
+    const newCompany = {
+      id: `COMP-M${Date.now().toString().slice(-5)}`,
+      nameTh: cleanNameTh,
+      nameEn: String(nameEn || "-").trim(),
+      province: String(province || "กรุงเทพมหานคร").trim(),
+      address: String(address || "-").trim(),
+      hrContactName: String(hrContactName || "ฝ่ายทรัพยากรบุคคล (HR)").trim(),
+      hrPhone: String(hrPhone || "-").trim(),
+      hrEmail: String(hrEmail || "-").trim(),
+      recommendedPositions: String(recommendedPositions || "Software Developer / IT Support").trim(),
+      status: (status || "VERIFIED") as "VERIFIED" | "PARTNER" | "PENDING_REVIEW" | "BLACKLIST",
+      createdAt: new Date().toISOString(),
+      verifiedAt: new Date().toISOString(),
+    };
+
+    state.companyMasterData.unshift(newCompany);
+    saveSuperAdminState(state);
+
+    res.json({
+      success: true,
+      message: `เพิ่ม "${newCompany.nameTh}" เข้าสู่ฐานข้อมูลกลาง (Master Data) เรียบร้อยแล้ว`,
+      company: newCompany,
+    });
+  } catch (err) {
+    console.error("POST /api/admin/super-admin/companies error:", err);
+    res.status(500).json({ success: false, message: "บันทึกข้อมูลสถานประกอบการไม่สำเร็จ" });
+  }
+});
+
+// 9.7 พี่จอมกดยืนยัน (Confirm) บริษัทใหม่ที่นิสิตกรอกเข้าสู่ Master Data หรือยุบรวมชื่อซ้ำ (Merge Duplicate)
+router.post("/super-admin/companies/:id/confirm", async (req: Request, res: Response) => {
+  try {
+    const state = loadSuperAdminState();
+    const { id } = req.params;
+    const { standardizedNameTh, province, address, status, mergeIntoCompanyId } = req.body;
+
+    const target = state.companyMasterData.find((c) => c.id === id);
+    if (!target) {
+      return res.status(404).json({ success: false, message: "ไม่พบรายการบริษัทนี้" });
+    }
+
+    const originalName = target.nameTh;
+
+    // กรณียุบรวมกับบริษัทที่มีอยู่แล้วใน Master Data (แก้ปัญหานิสิตพิมพ์สะกดไม่ตรงกัน)
+    if (mergeIntoCompanyId) {
+      const masterComp = state.companyMasterData.find((c) => c.id === mergeIntoCompanyId);
+      if (!masterComp) {
+        return res.status(404).json({ success: false, message: "ไม่พบบริษัทหลักที่ต้องการยุบรวม" });
+      }
+      await prisma.company.updateMany({
+        where: { name: originalName },
+        data: { name: masterComp.nameTh },
+      });
+      await prisma.internshipPlacement.updateMany({
+        where: { companyNameTh: originalName },
+        data: { companyNameTh: masterComp.nameTh },
+      });
+      state.companyMasterData = state.companyMasterData.filter((c) => c.id !== id);
+      saveSuperAdminState(state);
+
+      return res.json({
+        success: true,
+        message: `ยุบรวมชื่อ "${originalName}" เข้ากับ "${masterComp.nameTh}" ใน Master Data เรียบร้อยแล้ว`,
+      });
+    }
+
+    // กรณียืนยันเพิ่มเข้าเป็นบริษัทมาตรฐานใน Master Data
+    const finalName = standardizedNameTh ? String(standardizedNameTh).trim() : originalName;
+    target.nameTh = finalName;
+    if (province) target.province = String(province).trim();
+    if (address) target.address = String(address).trim();
+    target.status = status === "PARTNER" ? "PARTNER" : "VERIFIED";
+    target.verifiedAt = new Date().toISOString();
+
+    if (finalName !== originalName) {
+      await prisma.company.updateMany({
+        where: { name: originalName },
+        data: { name: finalName },
+      });
+      await prisma.internshipPlacement.updateMany({
+        where: { companyNameTh: originalName },
+        data: { companyNameTh: finalName },
+      });
+    }
+
+    saveSuperAdminState(state);
+    res.json({
+      success: true,
+      message: `ยืนยัน (Confirm) "${finalName}" เข้าสู่ฐานข้อมูลสถานประกอบการกลาง (Master Data) เรียบร้อยแล้ว`,
+      company: target,
+    });
+  } catch (err) {
+    console.error("POST /api/admin/super-admin/companies/:id/confirm error:", err);
+    res.status(500).json({ success: false, message: "ยืนยันข้อมูลบริษัทไม่สำเร็จ" });
+  }
+});
+
+// 9.8 ออกหนังสือขอความอนุเคราะห์ฝึกงาน (+ แนบแบบฟอร์มใบตอบรับ) รองรับทั้งเดี่ยวและกลุ่มบริษัทเดียวกัน
+router.post("/super-admin/documents/issue-request-letter", async (req: Request, res: Response) => {
+  try {
+    const state = loadSuperAdminState();
+    const { studentIds, docNo, letterDate, interviewDate, companyName } = req.body;
+
+    const ids: number[] = Array.isArray(studentIds)
+      ? studentIds.map((n) => Number(n)).filter((n) => !isNaN(n))
+      : [Number(studentIds)].filter((n) => !isNaN(n));
+
+    if (ids.length === 0) {
+      return res.status(400).json({ success: false, message: "กรุณาเลือกนิสิตอย่างน้อย 1 คน" });
+    }
+
+    const students = await prisma.student.findMany({
+      where: { id: { in: ids } },
+      include: { companies: true, placement: true },
+    });
+
+    const finalDocNo =
+      docNo ||
+      `${state.academicConfig.defaultDocPrefix}ว ${String(Math.floor(100 + Math.random() * 899))}`;
+    const finalDate = letterDate || new Date().toISOString().slice(0, 10);
+    const batchId = `REQ-BATCH-${Date.now().toString().slice(-6)}`;
+
+    for (const s of students) {
+      const wfKey = String(s.id);
+      const compName =
+        companyName ||
+        s.placement?.companyNameTh ||
+        s.companies?.[0]?.name ||
+        "สถานประกอบการ";
+      const existingWf = state.docWorkflowMap[wfKey];
+
+      state.docWorkflowMap[wfKey] = {
+        studentId: s.id,
+        studentCode: s.studentCode,
+        companyName: compName,
+        interviewDate: interviewDate || existingWf?.interviewDate || "2026-02-15",
+        requestLetterIssued: true,
+        requestLetterDocNo: finalDocNo,
+        requestLetterDate: finalDate,
+        requestLetterBatchId: batchId,
+        companyResponseStatus:
+          existingWf?.companyResponseStatus && existingWf.companyResponseStatus !== "NOT_SENT"
+            ? existingWf.companyResponseStatus
+            : "WAITING_RESPONSE",
+        dispatchLetterIssued: existingWf?.dispatchLetterIssued || false,
+        dispatchLetterDocNo: existingWf?.dispatchLetterDocNo,
+        dispatchLetterDate: existingWf?.dispatchLetterDate,
+        isLocked: true,
+      };
+    }
+
+    saveSuperAdminState(state);
+
+    res.json({
+      success: true,
+      message:
+        ids.length > 1
+          ? `ออกหนังสือขอความอนุเคราะห์แบบรวมกลุ่ม (${ids.length} คน) เลขที่ ${finalDocNo} พร้อมแบบฟอร์มใบตอบรับเรียบร้อยแล้ว`
+          : `ออกหนังสือขอความอนุเคราะห์ เลขที่ ${finalDocNo} พร้อมแบบฟอร์มใบตอบรับเรียบร้อยแล้ว`,
+      docNo: finalDocNo,
+      letterDate: finalDate,
+      studentCount: ids.length,
+    });
+  } catch (err) {
+    console.error("POST /api/admin/super-admin/documents/issue-request-letter error:", err);
+    res.status(500).json({ success: false, message: "ออกหนังสือขอความอนุเคราะห์ไม่สำเร็จ" });
+  }
+});
+
+// 9.9 บันทึกผลใบตอบรับจากสถานประกอบการ (รับเข้าฝึกงาน vs ปฏิเสธ -> เก็บเข้า Archive และปลดล็อกให้ยื่นบริษัทใหม่)
+router.post("/super-admin/documents/record-company-response", async (req: Request, res: Response) => {
+  try {
+    const state = loadSuperAdminState();
+    const { studentId, responseStatus, note, fileName } = req.body;
+
+    const student = await prisma.student.findUnique({
+      where: { id: Number(studentId) },
+      include: { companies: true, placement: true },
+    });
+
+    if (!student) {
+      return res.status(404).json({ success: false, message: "ไม่พบข้อมูลนิสิต" });
+    }
+
+    const wfKey = String(student.id);
+    const activeComp =
+      student.companies.find((c) => c.checklistStatus === "APPROVED") || student.companies[0];
+    const companyName =
+      student.placement?.companyNameTh || activeComp?.name || "สถานประกอบการ";
+    const position = student.placement?.position || "นิสิตฝึกงาน / สหกิจศึกษา";
+
+    // กรณีบริษัทส่งแบบตอบรับว่า "ปฏิเสธ" (REJECTED):
+    // ย้ายข้อมูลบริษัทเดิมเข้า Archive แบบย่อ และปลดล็อกให้นิสิตยื่น Checklist บริษัทแห่งใหม่ได้ทันที!
+    if (responseStatus === "REJECTED") {
+      state.archivedApplications.unshift({
+        id: `ARCH-${Date.now().toString().slice(-6)}`,
+        studentId: student.id,
+        studentCode: student.studentCode,
+        studentName: student.nameTh,
+        major: student.major || "วิศวกรรมซอฟต์แวร์",
+        companyName,
+        position,
+        reason: "COMPANY_REJECTED",
+        note: note || "สถานประกอบการแจ้งปฏิเสธในใบตอบรับ (ปลดล็อกให้ยื่นบริษัทแห่งใหม่แล้ว)",
+        archivedAt: new Date().toISOString(),
+      });
+
+      // ลบหรือรีเซ็ต Company เดิมในตาราง Company เพื่อปลดล็อกให้นิสิตยื่น Checklist บริษัทแห่งใหม่ได้ทีละ 1 แห่ง
+      if (activeComp) {
+        await prisma.companyChecklistAnswer.deleteMany({
+          where: { companyId: activeComp.id },
+        });
+        await prisma.companySubmission.deleteMany({
+          where: { companyId: activeComp.id },
+        });
+        await prisma.company.delete({
+          where: { id: activeComp.id },
+        });
+      }
+
+      if (student.placement) {
+        await prisma.internshipPlacement.update({
+          where: { id: student.placement.id },
+          data: {
+            status: "REJECTED",
+            note: note || "สถานประกอบการปฏิเสธการรับเข้าฝึกงาน (ปลดล็อกให้ยื่นบริษัทใหม่)",
+          },
+        });
+      }
+
+      state.docWorkflowMap[wfKey] = {
+        studentId: student.id,
+        studentCode: student.studentCode,
+        companyName: "รอเลือกบริษัทใหม่ (ปลดล็อกแล้ว)",
+        requestLetterIssued: false,
+        companyResponseStatus: "REJECTED",
+        companyResponseNote: note || "บริษัทปฏิเสธ — เก็บประวัติเข้า Archive แล้ว",
+        dispatchLetterIssued: false,
+        isLocked: false,
+      };
+
+      saveSuperAdminState(state);
+      return res.json({
+        success: true,
+        message: `บันทึกผล "บริษัทปฏิเสธ" เรียบร้อยแล้ว ระบบได้ย้าย "${companyName}" เข้าสู่ Archive และปลดล็อกให้ ${student.nameTh} ยื่น Checklist บริษัทแห่งใหม่ได้ทันที`,
+      });
+    }
+
+    // กรณีบริษัทตอบรับ "รับเข้าฝึกงาน" (ACCEPTED)
+    const existingWf = state.docWorkflowMap[wfKey];
+    state.docWorkflowMap[wfKey] = {
+      studentId: student.id,
+      studentCode: student.studentCode,
+      companyName,
+      interviewDate: existingWf?.interviewDate || "2026-02-15",
+      requestLetterIssued: true,
+      requestLetterDocNo:
+        existingWf?.requestLetterDocNo || `${state.academicConfig.defaultDocPrefix}ว 0142`,
+      requestLetterDate: existingWf?.requestLetterDate || new Date().toISOString().slice(0, 10),
+      companyResponseStatus: "ACCEPTED",
+      companyResponseFileName: fileName || `ใบตอบรับ_${student.studentCode}.pdf`,
+      companyResponseUploadedAt: new Date().toISOString(),
+      companyResponseNote: note || "สถานประกอบการตอบรับเข้าฝึกงานเรียบร้อยแล้ว",
+      dispatchLetterIssued: existingWf?.dispatchLetterIssued || false,
+      dispatchLetterDocNo: existingWf?.dispatchLetterDocNo,
+      dispatchLetterDate: existingWf?.dispatchLetterDate,
+      isLocked: true,
+    };
+
+    saveSuperAdminState(state);
+    res.json({
+      success: true,
+      message: `ยืนยันผลใบตอบรับ "รับเข้าฝึกงาน" ของ ${student.nameTh} (${companyName}) เรียบร้อยแล้ว พร้อมสำหรับการอนุมัติออกหนังสือส่งตัว`,
+    });
+  } catch (err) {
+    console.error("POST /api/admin/super-admin/documents/record-company-response error:", err);
+    res.status(500).json({ success: false, message: "บันทึกผลใบตอบรับไม่สำเร็จ" });
+  }
+});
+
+// 9.10 พี่จอมอนุมัติและออก "หนังสือส่งตัวนิสิตเข้าฝึกงาน" (Dispatch Letter)
+router.post("/super-admin/documents/issue-dispatch-letter", async (req: Request, res: Response) => {
+  try {
+    const state = loadSuperAdminState();
+    const { studentIds, docNo, letterDate } = req.body;
+
+    const ids: number[] = Array.isArray(studentIds)
+      ? studentIds.map((n) => Number(n)).filter((n) => !isNaN(n))
+      : [Number(studentIds)].filter((n) => !isNaN(n));
+
+    if (ids.length === 0) {
+      return res.status(400).json({ success: false, message: "กรุณาเลือกนิสิตอย่างน้อย 1 คน" });
+    }
+
+    const students = await prisma.student.findMany({
+      where: { id: { in: ids } },
+      include: { companies: true, placement: true },
+    });
+
+    const finalDocNo =
+      docNo ||
+      `${state.academicConfig.defaultDocPrefix}ว ${String(Math.floor(500 + Math.random() * 499))}`;
+    const finalDate = letterDate || new Date().toISOString().slice(0, 10);
+
+    for (const s of students) {
+      const wfKey = String(s.id);
+      const compName =
+        s.placement?.companyNameTh || s.companies?.[0]?.name || "สถานประกอบการ";
+      const existingWf = state.docWorkflowMap[wfKey];
+
+      state.docWorkflowMap[wfKey] = {
+        studentId: s.id,
+        studentCode: s.studentCode,
+        companyName: compName,
+        interviewDate: existingWf?.interviewDate || "2026-02-15",
+        requestLetterIssued: true,
+        requestLetterDocNo:
+          existingWf?.requestLetterDocNo || `${state.academicConfig.defaultDocPrefix}ว 0142`,
+        requestLetterDate: existingWf?.requestLetterDate || finalDate,
+        companyResponseStatus: "ACCEPTED",
+        companyResponseFileName:
+          existingWf?.companyResponseFileName || `ใบตอบรับ_${s.studentCode}.pdf`,
+        dispatchLetterIssued: true,
+        dispatchLetterDocNo: finalDocNo,
+        dispatchLetterDate: finalDate,
+        isLocked: true,
+      };
+
+      // อัปเดตสถานะในตาราง InternshipPlacement & Student ให้เป็น APPROVED / READY
+      if (s.placement) {
+        await prisma.internshipPlacement.update({
+          where: { id: s.placement.id },
+          data: {
+            status: "APPROVED",
+            reviewedById: req.session?.user?.id || null,
+            reviewedAt: new Date(),
+          },
+        });
+      } else {
+        await prisma.internshipPlacement.create({
+          data: {
+            studentId: s.id,
+            companyId: s.companies?.[0]?.id || null,
+            companyNameTh: compName,
+            position: "นิสิตฝึกงาน / สหกิจศึกษา",
+            status: "APPROVED",
+            reviewedById: req.session?.user?.id || null,
+            reviewedAt: new Date(),
+          },
+        });
+      }
+
+      await prisma.student.update({
+        where: { id: s.id },
+        data: { stage: "READY" },
+      });
+    }
+
+    saveSuperAdminState(state);
+
+    res.json({
+      success: true,
+      message: `อนุมัติและออกหนังสือส่งตัวนิสิตเข้าฝึกงาน เลขที่ ${finalDocNo} จำนวน ${ids.length} คน เรียบร้อยแล้ว`,
+      docNo: finalDocNo,
+      letterDate: finalDate,
+    });
+  } catch (err) {
+    console.error("POST /api/admin/super-admin/documents/issue-dispatch-letter error:", err);
+    res.status(500).json({ success: false, message: "ออกหนังสือส่งตัวไม่สำเร็จ" });
+  }
+});
+
+// 9.11 ปลดล็อกการออกหนังสือซ้ำกรณีฉุกเฉิน (Executive / Super Admin Override)
+router.post("/super-admin/documents/toggle-lock", async (req: Request, res: Response) => {
+  try {
+    const state = loadSuperAdminState();
+    const { studentId } = req.body;
+    const wfKey = String(studentId);
+    const wf = state.docWorkflowMap[wfKey];
+    if (!wf) {
+      return res.status(404).json({ success: false, message: "ไม่พบประวัติการออกหนังสือของนิสิตคนนี้" });
+    }
+    wf.isLocked = !wf.isLocked;
+    wf.unlockedByAdmin = !wf.isLocked;
+    saveSuperAdminState(state);
+    res.json({
+      success: true,
+      message: wf.isLocked
+        ? "ล็อกสถานะการออกหนังสือแล้ว"
+        : "ปลดล็อกให้นิสิตสามารถแก้ไขบริษัท/ออกหนังสือใหม่กรณีฉุกเฉินเรียบร้อยแล้ว",
+      workflow: wf,
+    });
+  } catch (err) {
+    console.error("POST /api/admin/super-admin/documents/toggle-lock error:", err);
+    res.status(500).json({ success: false, message: "สลับสถานะล็อกไม่สำเร็จ" });
   }
 });
 

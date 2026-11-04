@@ -4,6 +4,7 @@ import path from "path";
 import prisma from "../db";
 import requireLogin from "../auth/requireLogin";
 import { uploadToCloudinary } from "../utils/cloudinary";
+import { loadSuperAdminState, saveSuperAdminState } from "../utils/superAdminStore";
 
 const router = express.Router();
 
@@ -432,9 +433,18 @@ router.get("/checklist-template", async (_req: Request, res: Response) => {
 
 router.get("/companies", async (req: Request, res: Response) => {
   try {
+    const state = loadSuperAdminState();
+    const masterCompanies = state.companyMasterData.filter((c) => c.status !== "BLACKLIST");
+
     const student = await getStudentByUserId(req.session.user!.id);
     if (!student) {
-      return res.json({ success: true, companies: [] });
+      return res.json({
+        success: true,
+        companies: [],
+        masterCompanies,
+        archivedCompanies: [],
+        majorRule: null,
+      });
     }
 
     const companies = await prisma.company.findMany({
@@ -446,14 +456,26 @@ router.get("/companies", async (req: Request, res: Response) => {
       },
     });
 
-    res.json({ success: true, companies });
+    const archivedCompanies = state.archivedApplications.filter(
+      (a) => a.studentId === student.id || a.studentCode === student.studentCode
+    );
+    const majorRule =
+      state.majorUnlockRules.find((r) => (student.major || "").includes(r.majorName)) || null;
+
+    res.json({
+      success: true,
+      companies,
+      masterCompanies,
+      archivedCompanies,
+      majorRule,
+    });
   } catch (err) {
     console.error("GET /api/student/companies error:", err);
     res.status(500).json({ success: false, message: "ดึงข้อมูลบริษัทไม่สำเร็จ" });
   }
 });
 
-// บันทึกบริษัทและคำตอบ Checklist (สร้างใหม่ หรือ บันทึกชุดข้อมูล)
+// บันทึกบริษัทและคำตอบ Checklist (สร้างใหม่ หรือ บันทึกชุดข้อมูล — นโยบายยื่นได้ทีละ 1 บริษัท + Archive + Master Data Auto-suggest)
 router.post("/companies", async (req: Request, res: Response) => {
   try {
     const student = await getStudentByUserId(req.session.user!.id);
@@ -461,6 +483,17 @@ router.post("/companies", async (req: Request, res: Response) => {
       return res.status(400).json({
         success: false,
         message: "กรุณากรอกข้อมูลส่วนตัวนิสิตก่อน",
+      });
+    }
+
+    const state = loadSuperAdminState();
+    const majorRule = state.majorUnlockRules.find((r) =>
+      (student.major || "").includes(r.majorName)
+    );
+    if (majorRule && !majorRule.isUnlocked) {
+      return res.status(400).json({
+        success: false,
+        message: `สาขาวิชา${majorRule.majorName} ยังไม่เปิดรอบยื่นขอฝึกงาน (${majorRule.note || "รอปลดล็อกจากเจ้าหน้าที่คณะ"})`,
       });
     }
 
@@ -482,15 +515,42 @@ router.post("/companies", async (req: Request, res: Response) => {
       });
     }
 
-    // [REQ-05] จำกัดจำนวนบริษัทในแบบสำรวจ Checklist สูงสุดไม่เกิน 3 บริษัท
-    const existingCompanyCount = await prisma.company.count({
+    // [นโยบายใหม่ ข้อ 4] บังคับให้นิสิตยื่นขอฝึกงานได้ทีละ 1 แห่ง
+    // หากบริษัทเดิมไม่ผ่าน (REJECTED) จะถูกย้ายเข้า Archive อัตโนมัติแล้วปลดล็อกให้ยื่นแห่งใหม่ได้
+    const existingCompanies = await prisma.company.findMany({
       where: { studentId: student.id },
     });
-    if (existingCompanyCount >= 3) {
+
+    const activePendingOrApproved = existingCompanies.filter(
+      (c) => c.checklistStatus === "PENDING" || c.checklistStatus === "APPROVED"
+    );
+
+    if (activePendingOrApproved.length >= 1) {
       return res.status(400).json({
         success: false,
-        message: "สามารถส่งแบบสำรวจสถานประกอบการ (Checklist) ได้สูงสุดไม่เกิน 3 บริษัทเท่านั้น",
+        message:
+          "นโยบายคณะ ICT: บังคับให้นิสิตยื่นขอฝึกงานได้ทีละ 1 แห่งเท่านั้น (หากอาจารย์ที่ปรึกษาไม่อนุมัติ หรือบริษัทปฏิเสธ ระบบจึงจะปลดล็อกให้ยื่นบริษัทแห่งใหม่ได้)",
       });
+    }
+
+    // หากมีบริษัทที่ถูก REJECTED ค้างอยู่ ให้ย้ายเข้า Archive แบบย่อและเคลียร์เพื่อให้ยื่นบริษัทใหม่ได้
+    const rejectedCompanies = existingCompanies.filter((c) => c.checklistStatus === "REJECTED");
+    for (const rej of rejectedCompanies) {
+      state.archivedApplications.unshift({
+        id: `ARCH-${Date.now().toString().slice(-6)}`,
+        studentId: student.id,
+        studentCode: student.studentCode,
+        studentName: student.nameTh,
+        major: student.major || "วิศวกรรมซอฟต์แวร์",
+        companyName: rej.name,
+        position: "นิสิตฝึกงาน / สหกิจศึกษา",
+        reason: "ADVISOR_REJECTED",
+        note: rej.checklistNote || "อาจารย์ที่ปรึกษาไม่อนุมัติ Checklist (ปลดล็อกให้ยื่นบริษัทใหม่)",
+        archivedAt: new Date().toISOString(),
+      });
+      await prisma.companyChecklistAnswer.deleteMany({ where: { companyId: rej.id } });
+      await prisma.companySubmission.deleteMany({ where: { companyId: rej.id } });
+      await prisma.company.delete({ where: { id: rej.id } });
     }
 
     const { name, answers } = req.body;
@@ -498,11 +558,36 @@ router.post("/companies", async (req: Request, res: Response) => {
       return res.status(400).json({ success: false, message: "กรุณาระบุชื่อบริษัท" });
     }
 
+    const cleanName = name.trim();
+    const norm = cleanName.replace(/\s+/g, "").toLowerCase();
+    const matchedMaster = state.companyMasterData.find(
+      (c) => c.nameTh.replace(/\s+/g, "").toLowerCase() === norm
+    );
+
+    if (!matchedMaster) {
+      state.companyMasterData.unshift({
+        id: `COMP-NEW-${Date.now().toString().slice(-5)}`,
+        nameTh: cleanName,
+        nameEn: "-",
+        province: "รอระบุจังหวัด",
+        address: "รอตรวจสอบที่อยู่",
+        hrContactName: "-",
+        hrPhone: "-",
+        hrEmail: "-",
+        recommendedPositions: "นิสิตฝึกงาน / สหกิจศึกษา",
+        status: "PENDING_REVIEW",
+        submittedByStudentCode: student.studentCode,
+        submittedByStudentName: student.nameTh,
+        createdAt: new Date().toISOString(),
+      });
+    }
+    saveSuperAdminState(state);
+
     // สร้างบริษัทใหม่
     const company = await prisma.company.create({
       data: {
         studentId: student.id,
-        name: name.trim(),
+        name: matchedMaster ? matchedMaster.nameTh : cleanName,
         checklistStatus: "PENDING",
         submission: {
           create: {

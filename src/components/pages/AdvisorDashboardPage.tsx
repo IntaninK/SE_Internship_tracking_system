@@ -3,15 +3,295 @@
 import React from "react";
 import PageShell from "./PageShell";
 
-const PAGE_TITLE = "Dashboard - อาจารย์ที่ปรึกษา";
-const PAGE_STYLES: string[] = [
-  "\r\n    body {\r\n      font-family: 'Prompt', 'Inter', sans-serif;\r\n      background-color: #f0f7ff;\r\n    }\r\n    .filter-select {\r\n      height: 36px;\r\n      font-size: 13px;\r\n      padding: 4px 10px;\r\n      border-radius: 8px;\r\n      border: 1px solid #D1D5DB;\r\n      background: #fff;\r\n      color: #374151;\r\n      cursor: pointer;\r\n      box-sizing: border-box;\r\n      transition: border-color 0.2s;\r\n    }\r\n    .filter-select:focus {\r\n      outline: none;\r\n      border-color: #1541D2;\r\n      box-shadow: 0 0 0 2px rgba(21,65,210,0.1);\r\n    }\r\n    .filter-bar {\r\n      display: flex;\r\n      flex-wrap: wrap;\r\n      gap: 8px;\r\n      align-items: center;\r\n      padding: 12px 16px;\r\n      background: #F8FAFC;\r\n      border: 1px solid #E5E7EB;\r\n      border-radius: 12px;\r\n      margin-bottom: 16px;\r\n    }\r\n    .filter-bar label {\r\n      font-size: 12px;\r\n      font-weight: 600;\r\n      color: #6B7280;\r\n      white-space: nowrap;\r\n    }\r\n    .filter-divider {\r\n      width: 1px;\r\n      height: 24px;\r\n      background: #D1D5DB;\r\n      margin: 0 4px;\r\n    }\r\n    .data-table {\r\n      table-layout: fixed;\r\n      width: 100%;\r\n    }\r\n  "
-];
+const PAGE_TITLE = "Dashboard อาจารย์ที่ปรึกษา / อาจารย์นิเทศก์ - คณะ ICT ม.พะเยา";
+const PAGE_STYLES: string[] = [];
 const PAGE_SCRIPTS: string[] = [
-  "../components/header_prof.js",
+  "../components/header.js",
   "../api/advisor_dashboard.js"
 ];
-const PAGE_BODY_HTML = "<!-- Header Bar -->\r\n  <div id=\"header-placeholder\"></div>\r\n\r\n  <!-- ========== Main Content ========== -->\r\n  <main class=\"main-content max-w-[1300px] mx-auto py-6 px-4 space-y-6\">\r\n\r\n    <!-- ===== Section 1: รายชื่อนิสิต (ด้านบน) ===== -->\r\n    <div class=\"card\">\r\n      <div class=\"card-header\">\r\n        <span class=\"material-icons header-icon\">how_to_reg</span>\r\n        <h2 class=\"card-title\">รายชื่อนิสิต ที่ปรึกษา</h2>\r\n      </div>\r\n      <div class=\"card-body\">\r\n\r\n        <!-- Filter Bar -->\r\n        <div class=\"filter-bar\">\r\n          <!-- ค้นหา -->\r\n          <div class=\"relative w-[180px] shrink-0\">\r\n            <span class=\"material-icons absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg\">search</span>\r\n            <input type=\"text\" placeholder=\"ค้นหา...\" id=\"student-search\" class=\"filter-select !pl-10 w-full\" />\r\n          </div>\r\n\r\n          <div class=\"filter-divider hidden sm:block\"></div>\r\n\r\n          <!-- ปี -->\r\n          <div class=\"flex items-center gap-1 shrink-0\">\r\n            <label>ชั้นปี</label>\r\n            <select id=\"year-filter\" class=\"filter-select\" style=\"width: 115px;\">\r\n              <option value=\"\">ทุกชั้นปี</option>\r\n            </select>\r\n          </div>\r\n\r\n          <!-- สถานะ -->\r\n          <div class=\"flex items-center gap-1 shrink-0\">\r\n            <label>สถานะ</label>\r\n            <select id=\"status-filter\" class=\"filter-select\" style=\"width: 215px;\">\r\n              <option value=\"\">ทุกสถานะ</option>\r\n              <optgroup label=\"ชั่วโมงอบรม\">\r\n                <option value=\"training_passed\">✓ ชม.อบรมครบ (ผ่าน)</option>\r\n                <option value=\"training_failed\">✗ ชม.อบรมไม่ครบ</option>\r\n              </optgroup>\r\n              <optgroup label=\"CV\">\r\n                <option value=\"cv_passed\">✓ CV ผ่าน</option>\r\n                <option value=\"cv_failed\">✗ CV ไม่ผ่าน/ยังไม่ทำ</option>\r\n              </optgroup>\r\n              <optgroup label=\"Checklist\">\r\n                <option value=\"checklist_passed\">✓ Checklist ผ่าน</option>\r\n                <option value=\"checklist_failed\">✗ Checklist ยังไม่ผ่าน</option>\r\n              </optgroup>\r\n              <optgroup label=\"ฝึกงาน\">\r\n                <option value=\"placement_approved\">✓ อนุมัติฝึกงานแล้ว</option>\r\n                <option value=\"placement_pending\">✗ ยังไม่อนุมัติฝึกงาน</option>\r\n              </optgroup>\r\n            </select>\r\n          </div>\r\n\r\n          <!-- Soft/Hard Skill -->\r\n          <div class=\"flex items-center gap-1 shrink-0\">\r\n            <label>Skill</label>\r\n            <select id=\"skill-filter\" class=\"filter-select\" style=\"width: 165px;\">\r\n              <option value=\"\">ทุกประเภท</option>\r\n              <option value=\"lack_soft\">ขาด Soft skill</option>\r\n              <option value=\"lack_hard\">ขาด Hard skill</option>\r\n              <option value=\"lack_both\">ขาดทั้ง Soft + Hard</option>\r\n            </select>\r\n          </div>\r\n\r\n          <div class=\"filter-divider hidden sm:block\"></div>\r\n\r\n          <!-- ป้ายกรอง + ล้างตัวกรอง -->\r\n          <div class=\"flex items-center gap-2 flex-wrap\">\r\n            <span id=\"active-filter-badge\" class=\"text-xs bg-purple-100 text-purple-700 px-2.5 py-1 rounded-full font-medium\" style=\"display:none;\"></span>\r\n            <button onclick=\"clearAllFilters()\" id=\"btn-clear-filter\" class=\"text-xs text-gray-600 bg-red-100 hover:bg-red-200 px-2.5 py-1 rounded-full inline-flex items-center gap-1 transition-colors\" style=\"display:none; box-shadow:none; border:none; cursor:pointer;\">\r\n              <span class=\"material-icons\" style=\"font-size:12px;\">close</span>\r\n              ล้างทั้งหมด\r\n            </button>\r\n          </div>\r\n        </div>\r\n\r\n        <!-- Action Button -->\r\n        <div class=\"flex items-center gap-2 mb-4\">\r\n          <button class=\"btn btn-primary btn-sm\" onclick=\"openSetStatusModal()\">\r\n            <span class=\"material-icons text-sm\">settings</span> ตั้งสถานะนิสิต\r\n          </button>\r\n        </div>\r\n\r\n        <!-- Table -->\r\n        <div class=\"overflow-x-auto\">\r\n          <table class=\"data-table text-[13px]\" style=\"table-layout: fixed; width: 100%; min-width: 950px;\">\r\n            <thead>\r\n              <tr>\r\n                <th style=\"width: 14%;\">Student ID</th>\r\n                <th style=\"width: 22%;\">ชื่อ-นามสกุล</th>\r\n                <th style=\"width: 20%;\">อาจารย์ที่ปรึกษา</th>\r\n                <th style=\"width: 34%;\">สถานะ</th>\r\n                <th style=\"width: 10%; min-width: 90px;\" class=\"text-center\">\r\n                  <label style=\"display:inline-flex;align-items:center;gap:4px;cursor:pointer;white-space:nowrap;\" title=\"เลือกนักศึกษาทั้งหมดในหน้านี้\">\r\n                    <span style=\"font-size:12px;\">เลือกทั้งหมด</span>\r\n                    <input type=\"checkbox\" id=\"select-all-students\" style=\"width:16px;height:16px;cursor:pointer;\" />\r\n                  </label>\r\n                </th>\r\n              </tr>\r\n            </thead>\r\n            <tbody id=\"students-tbody\">\r\n              <tr><td colspan=\"5\" class=\"text-center py-8 text-gray-400\">กำลังโหลดข้อมูล...</td></tr>\r\n            </tbody>\r\n          </table>\r\n        </div>\r\n\r\n        <!-- Pagination & Export -->\r\n        <div class=\"flex flex-col sm:flex-row items-center justify-between mt-4 gap-3\">\r\n          <span class=\"text-sm text-gray-500\" id=\"pagination-info\">-</span>\r\n          <div class=\"flex items-center gap-1\" id=\"pagination-controls\"></div>\r\n          <button class=\"btn btn-tonal btn-sm\" onclick=\"openExportModal()\" title=\"ส่งออกข้อมูลนิสิต (CSV / Excel)\">\r\n            <span class=\"material-icons text-sm\">download</span> export\r\n          </button>\r\n        </div>\r\n\r\n      </div>\r\n    </div>\r\n\r\n    <!-- ===== Section 2: รายงานสรุป (กราฟ - ด้านล่าง) ===== -->\r\n    <div class=\"card !mt-6\">\r\n      <div class=\"card-header\">\r\n        <span class=\"material-icons header-icon\">bar_chart</span>\r\n        <h2 class=\"card-title\">รายงานสรุปสถานะ</h2>\r\n      </div>\r\n      <div class=\"card-body p-6\">\r\n        <div class=\"flex flex-col lg:flex-row gap-8 items-center justify-around\">\r\n\r\n          <!-- Donut Chart 1: Checklist Status -->\r\n          <div id=\"chart-checklist\" class=\"w-full lg:w-1/2 flex items-center justify-center min-h-[140px]\">\r\n            <span class=\"text-gray-400 text-sm\">กำลังโหลดข้อมูล Checklist...</span>\r\n          </div>\r\n\r\n          <!-- Divider on large screen -->\r\n          <div class=\"hidden lg:block w-px h-36 bg-gray-200\"></div>\r\n\r\n          <!-- Donut Chart 2: Readiness Status -->\r\n          <div id=\"chart-readiness\" class=\"w-full lg:w-1/2 flex items-center justify-center min-h-[140px]\">\r\n            <span class=\"text-gray-400 text-sm\">กำลังโหลดข้อมูลความพร้อม...</span>\r\n          </div>\r\n\r\n        </div>\r\n      </div>\r\n    </div>\r\n\r\n  </main><!-- /main-content -->\r\n\r\n  <!-- Modal: ตั้งสถานะนิสิต (Batch) -->\r\n  <div id=\"modal-set-status\" class=\"hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center backdrop-blur-xs p-4\">\r\n    <div class=\"bg-white rounded-2xl shadow-xl max-w-md w-full p-6 space-y-4\">\r\n      <div class=\"flex items-center justify-between border-b pb-3\">\r\n        <h3 class=\"text-lg font-bold text-gray-800 flex items-center gap-2\">\r\n          <span class=\"material-icons text-blue-600\">settings</span> ตั้งสถานะนิสิต\r\n        </h3>\r\n        <button onclick=\"closeSetStatusModal()\" class=\"text-gray-400 hover:text-gray-600 border-none bg-transparent cursor-pointer\">\r\n          <span class=\"material-icons\">close</span>\r\n        </button>\r\n      </div>\r\n\r\n      <p class=\"text-sm text-gray-600\">\r\n        นิสิตที่เลือก: <strong id=\"modal-selected-count\" class=\"text-blue-600 font-bold\">0</strong> คน\r\n      </p>\r\n\r\n      <div>\r\n        <label class=\"block text-sm font-semibold text-gray-700 mb-1\">ประเภทสถานะ</label>\r\n        <select id=\"batch-status-type\" onchange=\"onBatchTypeChange()\" class=\"w-full border border-gray-300 rounded-xl p-2.5 text-sm focus:outline-none focus:border-blue-500\">\r\n          <option value=\"\">-- เลือกประเภทสถานะ --</option>\r\n          <option value=\"checklist\">Checklist (ตรวจสอบความพร้อมแหล่งฝึกงาน)</option>\r\n          <option value=\"placement\">ข้อมูลบริษัทที่เข้าฝึกงาน (อนุมัติที่ฝึกงาน)</option>\r\n        </select>\r\n      </div>\r\n\r\n      <div>\r\n        <label class=\"block text-sm font-semibold text-gray-700 mb-1\">สถานะ</label>\r\n        <select id=\"batch-status-select\" class=\"w-full border border-gray-300 rounded-xl p-2.5 text-sm focus:outline-none focus:border-blue-500\">\r\n          <option value=\"\">-- กรุณาเลือกประเภทสถานะก่อน --</option>\r\n        </select>\r\n      </div>\r\n\r\n      <div>\r\n        <label class=\"block text-sm font-semibold text-gray-700 mb-1\">หมายเหตุ / คอมเมนต์ (ถ้ามี)</label>\r\n        <textarea id=\"batch-status-note\" rows=\"3\" class=\"w-full border border-gray-300 rounded-xl p-2.5 text-sm focus:outline-none focus:border-blue-500\" placeholder=\"ใส่ข้อความหมายเหตุ...\"></textarea>\r\n      </div>\r\n\r\n      <div class=\"flex justify-end gap-3 pt-2\">\r\n        <button onclick=\"closeSetStatusModal()\" class=\"px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-xl cursor-pointer border-none\">\r\n          ยกเลิก\r\n        </button>\r\n        <button onclick=\"submitBatchStatus()\" class=\"px-5 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-medium cursor-pointer border-none shadow\">\r\n          บันทึกสถานะ\r\n        </button>\r\n      </div>\r\n    </div>\r\n  </div>\r\n\r\n  <!-- ===== Modal: ส่งออกข้อมูลนิสิต (Export) ===== -->\r\n  <div id=\"export-modal\" style=\"display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:1000; justify-content:center; align-items:center; backdrop-filter:blur(2px);\">\r\n    <div style=\"background:white; border-radius:16px; padding:24px 28px; width:480px; max-width:92%; box-shadow:0 10px 30px rgba(0,0,0,0.2);\">\r\n      \r\n      <!-- Header -->\r\n      <div style=\"display:flex; justify-content:space-between; align-items:center; margin-bottom:18px;\">\r\n        <h3 style=\"font-size:18px; font-weight:700; color:#1e293b; display:flex; align-items:center; gap:8px; margin:0;\">\r\n          <span class=\"material-icons\" style=\"color:#1541D2;\">file_download</span>\r\n          ส่งออกข้อมูลนิสิต (Export Data)\r\n        </h3>\r\n        <button type=\"button\" onclick=\"closeExportModal()\" style=\"background:none; border:none; cursor:pointer; padding:4px; display:flex; align-items:center; border-radius:6px;\">\r\n          <span class=\"material-icons\" style=\"color:#94a3b8;\">close</span>\r\n        </button>\r\n      </div>\r\n\r\n      <!-- Scope Selection -->\r\n      <div style=\"margin-bottom:16px;\">\r\n        <label style=\"font-size:13px; font-weight:600; color:#475569; display:block; margin-bottom:10px;\">\r\n          เลือกขอบเขตข้อมูลที่ต้องการส่งออก\r\n        </label>\r\n\r\n        <div style=\"display:flex; flex-direction:column; gap:10px;\">\r\n          <!-- Option 1: Filtered / Search results -->\r\n          <label id=\"export-opt-filtered-label\" style=\"display:flex; align-items:flex-start; gap:10px; padding:12px 14px; border:1.5px solid #1541D2; background:#F0F5FF; border-radius:12px; cursor:pointer; transition:all 0.15s;\">\r\n            <input type=\"radio\" name=\"export-scope\" id=\"export-scope-filtered\" value=\"filtered\" style=\"margin-top:3px; cursor:pointer; accent-color:#1541D2;\" checked onchange=\"updateExportSummary()\">\r\n            <div style=\"flex:1;\">\r\n              <div style=\"font-size:14px; font-weight:600; color:#1e293b; display:flex; align-items:center; justify-content:space-between;\">\r\n                <span>ตามตัวกรอง / ผลการค้นหา</span>\r\n                <span id=\"export-count-filtered\" style=\"font-size:11px; background:#eff6ff; color:#1d4ed8; padding:2px 8px; border-radius:9999px; font-weight:700;\">0 รายการ</span>\r\n              </div>\r\n              <div style=\"font-size:12px; color:#64748b; margin-top:2px;\" id=\"export-filtered-desc\">\r\n                ส่งออกเฉพาะนิสิตที่ตรงกับเงื่อนไขที่กำลังแสดงในตาราง\r\n              </div>\r\n            </div>\r\n          </label>\r\n\r\n          <!-- Option 2: Selected only -->\r\n          <label id=\"export-opt-selected-label\" style=\"display:flex; align-items:flex-start; gap:10px; padding:12px 14px; border:1.5px solid #E2E8F0; background:#fff; border-radius:12px; cursor:pointer; transition:all 0.15s;\">\r\n            <input type=\"radio\" name=\"export-scope\" id=\"export-scope-selected\" value=\"selected\" style=\"margin-top:3px; cursor:pointer; accent-color:#1541D2;\" onchange=\"updateExportSummary()\">\r\n            <div style=\"flex:1;\">\r\n              <div style=\"font-size:14px; font-weight:600; color:#1e293b; display:flex; align-items:center; justify-content:space-between;\">\r\n                <span>เฉพาะนิสิตที่เลือก (Checkbox)</span>\r\n                <span id=\"export-count-selected\" style=\"font-size:11px; background:#f5f3ff; color:#6d28d9; padding:2px 8px; border-radius:9999px; font-weight:700;\">0 รายการ</span>\r\n              </div>\r\n              <div style=\"font-size:12px; color:#64748b; margin-top:2px;\" id=\"export-selected-desc\">\r\n                ส่งออกเฉพาะนิสิตที่มีการติ๊กเลือกในตาราง\r\n              </div>\r\n            </div>\r\n          </label>\r\n\r\n          <!-- Option 3: All data -->\r\n          <label id=\"export-opt-all-label\" style=\"display:flex; align-items:flex-start; gap:10px; padding:12px 14px; border:1.5px solid #E2E8F0; background:#fff; border-radius:12px; cursor:pointer; transition:all 0.15s;\">\r\n            <input type=\"radio\" name=\"export-scope\" id=\"export-scope-all\" value=\"all\" style=\"margin-top:3px; cursor:pointer; accent-color:#1541D2;\" onchange=\"updateExportSummary()\">\r\n            <div style=\"flex:1;\">\r\n              <div style=\"font-size:14px; font-weight:600; color:#1e293b; display:flex; align-items:center; justify-content:space-between;\">\r\n                <span id=\"export-all-title\">นิสิตในความดูแลทั้งหมด</span>\r\n                <span id=\"export-count-all\" style=\"font-size:11px; background:#f1f5f9; color:#334155; padding:2px 8px; border-radius:9999px; font-weight:700;\">0 รายการ</span>\r\n              </div>\r\n              <div style=\"font-size:12px; color:#64748b; margin-top:2px;\">\r\n                ส่งออกข้อมูลนิสิตทั้งหมดที่อาจารย์ดูแลโดยไม่สนใจตัวกรอง\r\n              </div>\r\n            </div>\r\n          </label>\r\n        </div>\r\n      </div>\r\n\r\n      <!-- File format info -->\r\n      <div style=\"background:#F8FAFC; border:1px solid #E2E8F0; border-radius:10px; padding:10px 14px; margin-bottom:14px; display:flex; align-items:center; justify-content:space-between;\">\r\n        <div style=\"display:flex; align-items:center; gap:8px;\">\r\n          <span class=\"material-icons\" style=\"color:#059669; font-size:20px;\">table_view</span>\r\n          <div>\r\n            <div style=\"font-size:13px; font-weight:600; color:#334155;\">รูปแบบไฟล์: CSV (Excel Compatible)</div>\r\n            <div style=\"font-size:11px; color:#64748b;\">UTF-8 with BOM รองรับภาษาไทยใน Microsoft Excel สมบูรณ์</div>\r\n          </div>\r\n        </div>\r\n        <span style=\"font-size:11px; font-weight:700; background:#d1fae5; color:#065f46; padding:2px 8px; border-radius:6px;\">.CSV</span>\r\n      </div>\r\n\r\n      <!-- Summary banner -->\r\n      <div id=\"export-summary-box\" style=\"background:#EFF6FF; border:1px solid #DBEAFE; border-radius:10px; padding:10px 14px; margin-bottom:20px; font-size:13px; color:#1E40AF; display:flex; align-items:center; gap:8px;\">\r\n        <span class=\"material-icons\" style=\"font-size:18px; color:#3B82F6;\">info</span>\r\n        <span id=\"export-summary-text\">เตรียมส่งออกข้อมูลนิสิต 0 รายการ (18 คอลัมน์)</span>\r\n      </div>\r\n\r\n      <!-- Footer Buttons -->\r\n      <div style=\"display:flex; justify-content:flex-end; gap:10px;\">\r\n        <button type=\"button\" onclick=\"closeExportModal()\" class=\"btn btn-tonal btn-md\" style=\"cursor:pointer; min-width:90px;\">\r\n          ยกเลิก\r\n        </button>\r\n        <button type=\"button\" id=\"btn-confirm-export\" onclick=\"confirmExport()\" class=\"btn btn-primary btn-md\" style=\"display:inline-flex; align-items:center; gap:6px; cursor:pointer;\">\r\n          <span class=\"material-icons\" style=\"font-size:18px;\">download</span>\r\n          <span>ดาวน์โหลดไฟล์</span>\r\n        </button>\r\n      </div>\r\n\r\n    </div>\r\n  </div>";
+const PAGE_BODY_HTML = `
+  <!-- Header Bar -->
+  <div id="header-placeholder"></div>
+
+  <!-- Main Content -->
+  <main class="main-content">
+
+    <!-- [REQ-10 & REQ-06] Top Role Header + Notification Alert Banner -->
+    <section class="card" style="margin-bottom: 20px;">
+      <div class="card-header" style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <span class="material-icons header-icon">notifications_active</span>
+          <div>
+            <h2 class="card-title" id="advisor-dashboard-main-title" style="margin:0;">ระบบติดตามดูแลนิสิตฝึกงาน (เฉพาะนิสิตในความรับผิดชอบ)</h2>
+            <p id="advisor-dashboard-subtitle" style="margin:2px 0 0 0; font-size:12px; color:#E0E7FF;">
+              แจ้งเตือนสถานะ Checklist 3 บริษัท และการตรวจสอบความตรงกันของสถานที่ฝึกงานจริง
+            </p>
+          </div>
+        </div>
+
+        <!-- Mode Switcher: อาจารย์ที่ปรึกษา vs อาจารย์นิเทศก์ -->
+        <div id="advisor-mode-switcher" style="display:none; background:rgba(255,255,255,0.14); padding:4px; border-radius:12px; border:1px solid rgba(255,255,255,0.22); gap:4px;">
+          <button type="button" id="btn-mode-advisor" onclick="switchAdvisorViewMode('ADVISOR')"
+            style="padding:6px 14px; border-radius:9px; font-size:12px; font-weight:700; border:none; cursor:pointer; background:#FFFFFF; color:#1E1B4B; display:inline-flex; align-items:center; gap:5px;">
+            <span class="material-icons" style="font-size:15px;">supervisor_account</span>
+            <span>นิสิตในที่ปรึกษา (Advisees)</span>
+          </button>
+          <button type="button" id="btn-mode-supervisor" onclick="switchAdvisorViewMode('SUPERVISOR')"
+            style="padding:6px 14px; border-radius:9px; font-size:12px; font-weight:600; border:none; cursor:pointer; background:transparent; color:#FFFFFF; display:inline-flex; align-items:center; gap:5px;">
+            <span class="material-icons" style="font-size:15px;">explore</span>
+            <span>นิสิตในการนิเทศ (Supervised)</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="card-body" style="padding:18px 24px !important;">
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(240px, 1fr)); gap:14px;" id="advisor-notification-cards">
+          <!-- Card 1: Total Advisees -->
+          <div style="background:#F8FAFC; border:1px solid #E2E8F0; border-radius:16px; padding:14px 18px; display:flex; align-items:center; justify-content:space-between;">
+            <div>
+              <div style="font-size:12px; font-weight:600; color:#64748B;">นิสิตในความดูแลทั้งหมด</div>
+              <div style="font-size:26px; font-weight:800; color:#0F172A; margin-top:2px;" id="notif-total-advisees">0</div>
+              <div style="font-size:11px; color:#64748B;">คน (เฉพาะที่รับผิดชอบ)</div>
+            </div>
+            <div style="width:44px; height:44px; border-radius:12px; background:#EEF2FF; color:#4338CA; display:flex; align-items:center; justify-content:center;">
+              <span class="material-icons">groups</span>
+            </div>
+          </div>
+
+          <!-- Card 2: Pending Checklist Review -->
+          <div onclick="filterByAdvisorNotification('checklist_pending')" style="cursor:pointer; background:#FFFBEB; border:1px solid #FDE68A; border-radius:16px; padding:14px 18px; display:flex; align-items:center; justify-content:space-between; transition:transform 0.15s ease;" title="คลิกเพื่อกรองนิสิตที่รอตรวจ Checklist">
+            <div>
+              <div style="font-size:12px; font-weight:700; color:#92400E;">รอตรวจ Checklist (3 บริษัท)</div>
+              <div style="font-size:26px; font-weight:800; color:#D97706; margin-top:2px;" id="notif-pending-checklist">0</div>
+              <div style="font-size:11px; color:#B45309;">คลิกเพื่อกรองรายการที่รอตรวจ</div>
+            </div>
+            <div style="width:44px; height:44px; border-radius:12px; background:#FEF3C7; color:#D97706; display:flex; align-items:center; justify-content:center;">
+              <span class="material-icons">fact_check</span>
+            </div>
+          </div>
+
+          <!-- Card 3: Pending Placement Approval -->
+          <div onclick="filterByAdvisorNotification('placement_pending')" style="cursor:pointer; background:#EFF6FF; border:1px solid #BFDBFE; border-radius:16px; padding:14px 18px; display:flex; align-items:center; justify-content:space-between; transition:transform 0.15s ease;" title="คลิกเพื่อกรองนิสิตที่รออนุมัติที่ฝึกงาน">
+            <div>
+              <div style="font-size:12px; font-weight:700; color:#1E40AF;">รออนุมัติสถานที่ฝึกงานจริง</div>
+              <div style="font-size:26px; font-weight:800; color:#2563EB; margin-top:2px;" id="notif-pending-placement">0</div>
+              <div style="font-size:11px; color:#1D4ED8;">นิสิตผ่านสัมภาษณ์และยื่นบริษัทแล้ว</div>
+            </div>
+            <div style="width:44px; height:44px; border-radius:12px; background:#DBEAFE; color:#2563EB; display:flex; align-items:center; justify-content:center;">
+              <span class="material-icons">business</span>
+            </div>
+          </div>
+
+          <!-- Card 4: [REQ-06] Mismatched Company Warning -->
+          <div style="background:#FEF2F2; border:1px solid #FECACA; border-radius:16px; padding:14px 18px; display:flex; align-items:center; justify-content:space-between;" title="นิสิตยื่นบริษัทฝึกงานไม่ตรงกับใน Checklist 3 บริษัทที่อนุมัติ">
+            <div>
+              <div style="font-size:12px; font-weight:700; color:#991B1B;">⚠️ บริษัทไม่ตรง Checklist [REQ-06]</div>
+              <div style="font-size:26px; font-weight:800; color:#DC2626; margin-top:2px;" id="notif-mismatch-placement">0</div>
+              <div style="font-size:11px; color:#B91C1C;">ต้องตรวจสอบก่อนอนุมัติ</div>
+            </div>
+            <div style="width:44px; height:44px; border-radius:12px; background:#FEE2E2; color:#DC2626; display:flex; align-items:center; justify-content:center;">
+              <span class="material-icons">warning_amber</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 1. สถานะภาพรวมทั้งหมดของนิสิตในที่ปรึกษา (2 กราฟวงกลม) -->
+    <section class="card">
+      <div class="card-header">
+        <span class="material-icons header-icon">donut_large</span>
+        <h2 class="card-title">สถานะภาพรวมทั้งหมดของนิสิตในความดูแล</h2>
+      </div>
+      <div class="card-body">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch">
+          <div id="chart-checklist" class="flex flex-col items-center justify-center bg-slate-50/70 border border-slate-200/80 rounded-2xl p-4"></div>
+          <div id="chart-readiness" class="flex flex-col items-center justify-center bg-slate-50/70 border border-slate-200/80 rounded-2xl p-4"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. รายชื่อนิสิต -->
+    <section class="card">
+      <div class="card-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+        <div style="display:flex; align-items:center; gap:8px;">
+          <span class="material-icons header-icon">people</span>
+          <h2 class="card-title" id="advisor-table-title">รายชื่อนิสิตในที่ปรึกษา</h2>
+          <span id="active-filter-badge" style="display:none; background:#FEF3C7; color:#B45309; font-size:12px; padding:2px 10px; border-radius:999px; font-weight:600;"></span>
+        </div>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <button class="btn btn-sm" onclick="openBatchStatusModal()" style="background:rgba(255,255,255,0.18); color:white; border:1px solid rgba(255,255,255,0.3); font-size:12px; padding:6px 14px; border-radius:10px; cursor:pointer; display:inline-flex; align-items:center; gap:4px;">
+            <span class="material-icons" style="font-size:15px;">edit_note</span> ตั้งสถานะนิสิต
+          </button>
+          <button class="btn btn-sm" onclick="exportStudents()" style="background:rgba(255,255,255,0.18); color:white; border:1px solid rgba(255,255,255,0.3); font-size:12px; padding:6px 14px; border-radius:10px; cursor:pointer; display:inline-flex; align-items:center; gap:4px;">
+            <span class="material-icons" style="font-size:15px;">download</span> Export Excel/CSV
+          </button>
+        </div>
+      </div>
+      <div class="card-body">
+
+        <!-- Filter & Search Bar -->
+        <div class="filter-bar" style="display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-bottom:16px;">
+          <div style="position:relative; flex:1; min-width:200px; max-width:280px;">
+            <span class="material-icons" style="position:absolute; left:10px; top:50%; transform:translateY(-50%); color:#94A3B8; font-size:18px;">search</span>
+            <input type="text" class="input-field" id="student-search" placeholder="ค้นหารหัสนิสิต หรือ ชื่อ..." style="padding-left:34px !important; width:100%; font-size:13px;" />
+          </div>
+
+          <select id="year-filter" class="input-field" style="width:auto; min-width:120px; font-size:13px; padding:7px 12px; cursor:pointer;">
+            <option value="">ทุกชั้นปี</option>
+          </select>
+
+          <select id="status-filter" class="input-field" style="width:auto; min-width:155px; font-size:13px; padding:7px 12px; cursor:pointer;">
+            <option value="">ทุกสถานะ Checklist</option>
+            <option value="checklist_approved">✓ อาจารย์รีวิวแล้ว</option>
+            <option value="checklist_pending">⏳ รอผลตรวจ Checklist</option>
+            <option value="checklist_rejected">✗ ไม่ผ่าน / ทำเพิ่ม</option>
+            <option value="training_passed">✓ อบรมครบ 30 ชม.</option>
+            <option value="training_incomplete">⏳ อบรมยังไม่ครบ</option>
+            <option value="cv_approved">✓ ตรวจ CV ผ่าน</option>
+            <option value="placement_approved">✓ อนุมัติที่ฝึกงานแล้ว</option>
+          </select>
+
+          <select id="skill-filter" class="input-field" style="width:auto; min-width:160px; font-size:13px; padding:7px 12px; cursor:pointer;">
+            <option value="">ทุกสถานะชั่วโมงอบรม</option>
+            <option value="pass_all">✓ ผ่านเกณฑ์ครบ (Soft+Hard)</option>
+            <option value="lack_soft">⚠️ ขาด Soft Skill (&lt; 12 ชม.)</option>
+            <option value="lack_hard">⚠️ ขาด Hard Skill (&lt; 18 ชม.)</option>
+            <option value="lack_both">⚠️ ขาดทั้ง Soft &amp; Hard</option>
+          </select>
+
+          <button id="btn-clear-filter" onclick="clearAllFilters()" style="display:none; background:#EF4444; color:white; border:none; font-size:12px; padding:7px 12px; border-radius:10px; cursor:pointer; align-items:center; gap:4px; font-weight:600;">
+            <span class="material-icons" style="font-size:14px;">close</span> ล้างตัวกรอง
+          </button>
+        </div>
+
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th style="width: 14%;">รหัสนิสิต</th>
+              <th style="width: 24%;">ชื่อ-นามสกุล</th>
+              <th style="width: 20%;">อาจารย์ที่ปรึกษา</th>
+              <th style="width: 30%;">สถานะ Checklist &amp; การตรวจสอบ [REQ-06]</th>
+              <th style="width: 12%; min-width: 100px;" class="text-center">
+                <label style="display:inline-flex;align-items:center;gap:4px;cursor:pointer;white-space:nowrap;" title="เลือกนิสิตทั้งหมดในหน้านี้">
+                  <span style="font-size:12px;">เลือกทั้งหมด</span>
+                  <input type="checkbox" id="select-all-students" style="width:16px;height:16px;cursor:pointer;" />
+                </label>
+              </th>
+            </tr>
+          </thead>
+          <tbody id="students-tbody">
+            <tr><td colspan="5" class="text-center py-8 text-gray-400">กำลังโหลดข้อมูล...</td></tr>
+          </tbody>
+        </table>
+
+        <!-- Pagination -->
+        <div class="flex justify-between items-center mt-4 text-xs text-gray-500">
+          <span id="pagination-info">Showing 1-12 from 0 data</span>
+          <div class="flex gap-1" id="pagination-controls"></div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- Modal: ตั้งสถานะนิสิต (อาจารย์ที่ปรึกษา) -->
+    <div id="batch-status-modal" style="display:none; position:fixed; inset:0; background:rgba(15,23,42,0.55); z-index:1000; justify-content:center; align-items:center; backdrop-filter:blur(4px);">
+      <div style="background:white; border-radius:20px; padding:24px 28px; width:440px; max-width:92%; box-shadow:0 20px 50px rgba(15,23,42,0.25);">
+        <h3 style="font-size:17px; font-weight:700; margin-bottom:16px; color:#1E293B;">ตั้งสถานะนิสิต (อาจารย์ที่ปรึกษา)</h3>
+        <div style="margin-bottom:12px;">
+          <label style="font-size:13px; font-weight:600; color:#475569;">ประเภทสถานะ</label>
+          <select id="batch-status-type" class="input-field" style="margin-top:4px;" onchange="onBatchTypeChange()">
+            <option value="checklist">สถานะ Checklist</option>
+            <option value="placement">สถานะอนุมัติที่ฝึกงาน</option>
+          </select>
+        </div>
+        <div style="margin-bottom:12px;">
+          <label style="font-size:13px; font-weight:600; color:#475569;">ค่าสถานะ</label>
+          <select id="batch-status-select" class="input-field" style="margin-top:4px;">
+            <option value="APPROVED">✓ อาจารย์รีวิวแล้ว (ผ่าน)</option>
+            <option value="PENDING">☐ รอผล</option>
+            <option value="REJECTED">✗ ไม่ผ่าน / ทำ checklist เพิ่ม</option>
+          </select>
+        </div>
+        <div style="margin-bottom:16px;">
+          <label style="font-size:13px; font-weight:600; color:#475569;">หมายเหตุ (ถ้ามี)</label>
+          <input type="text" id="batch-status-note" class="input-field" placeholder="หมายเหตุ..." style="margin-top:4px;" />
+        </div>
+        <div style="display:flex; justify-content:flex-end; gap:8px;">
+          <button class="btn btn-outline btn-sm" onclick="closeBatchStatusModal()">ยกเลิก</button>
+          <button class="btn btn-primary btn-sm" onclick="submitAdvisorBatchStatus()">ยืนยัน</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal: เลือกรูปแบบการ Export Excel/CSV -->
+    <div id="export-modal" style="display:none; position:fixed; inset:0; background:rgba(15,23,42,0.55); z-index:1000; justify-content:center; align-items:center; backdrop-filter:blur(4px);">
+      <div style="background:white; border-radius:20px; width:480px; max-width:92%; box-shadow:0 20px 50px rgba(15,23,42,0.25); overflow:hidden;">
+        <div style="background:linear-gradient(135deg, #1E1B4B 0%, #4338CA 100%); padding:18px 24px; color:white; display:flex; align-items:center; justify-content:space-between;">
+          <div style="display:flex; align-items:center; gap:10px;">
+            <span class="material-icons" style="font-size:22px;">file_download</span>
+            <h3 style="font-size:16px; font-weight:700; margin:0;">ส่งออกข้อมูลนิสิต (Export CSV / Excel)</h3>
+          </div>
+          <button onclick="closeExportModal()" style="background:none; border:none; color:white; cursor:pointer; display:flex; align-items:center; opacity:0.85;">
+            <span class="material-icons" style="font-size:20px;">close</span>
+          </button>
+        </div>
+
+        <div style="padding:20px 24px;">
+          <p style="font-size:13px; color:#475569; margin-bottom:14px; font-weight:500;">กรุณาเลือกขอบเขตข้อมูลนิสิตที่ต้องการส่งออก:</p>
+
+          <div style="display:flex; flex-direction:column; gap:10px;">
+            <label id="export-opt-filtered-label" style="display:flex; align-items:flex-start; gap:12px; padding:12px 14px; border:2px solid #4338CA; background:#EEF2FF; border-radius:12px; cursor:pointer; transition:all 0.15s;">
+              <input type="radio" name="export-scope" value="filtered" id="export-scope-filtered" checked onchange="updateExportSummary()" style="margin-top:3px; width:16px; height:16px; accent-color:#4338CA; cursor:pointer;" />
+              <div style="flex:1;">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                  <span style="font-size:13.5px; font-weight:700; color:#1E293B;">ตามตัวกรองปัจจุบัน (Filtered)</span>
+                  <span id="export-count-filtered" style="font-size:11px; font-weight:700; background:#DBEAFE; color:#1D4ED8; padding:2px 8px; border-radius:999px;">0 รายการ</span>
+                </div>
+                <p style="font-size:12px; color:#64748B; margin:3px 0 0 0;">ส่งออกเฉพาะรายชื่อที่ตรงกับตัวกรอง ชั้นปี สถานะ หรือคำค้นหาปัจจุบัน</p>
+              </div>
+            </label>
+
+            <label id="export-opt-selected-label" style="display:flex; align-items:flex-start; gap:12px; padding:12px 14px; border:2px solid #E2E8F0; background:#FFFFFF; border-radius:12px; cursor:pointer; transition:all 0.15s;">
+              <input type="radio" name="export-scope" value="selected" id="export-scope-selected" onchange="updateExportSummary()" style="margin-top:3px; width:16px; height:16px; accent-color:#4338CA; cursor:pointer;" />
+              <div style="flex:1;">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                  <span style="font-size:13.5px; font-weight:700; color:#1E293B;">เฉพาะนิสิตที่ติ๊กเลือก (Selected)</span>
+                  <span id="export-count-selected" style="font-size:11px; font-weight:700; background:#F1F5F9; color:#475569; padding:2px 8px; border-radius:999px;">0 รายการ</span>
+                </div>
+                <p id="export-selected-desc" style="font-size:12px; color:#64748B; margin:3px 0 0 0;">ส่งออกเฉพาะรายชื่อที่คุณติ๊กถูกในช่อง Checkbox ของตาราง</p>
+              </div>
+            </label>
+
+            <label id="export-opt-all-label" style="display:flex; align-items:flex-start; gap:12px; padding:12px 14px; border:2px solid #E2E8F0; background:#FFFFFF; border-radius:12px; cursor:pointer; transition:all 0.15s;">
+              <input type="radio" name="export-scope" value="all" id="export-scope-all" onchange="updateExportSummary()" style="margin-top:3px; width:16px; height:16px; accent-color:#4338CA; cursor:pointer;" />
+              <div style="flex:1;">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                  <span style="font-size:13.5px; font-weight:700; color:#1E293B;">นิสิตในความดูแลทั้งหมด (All Advisees)</span>
+                  <span id="export-count-all" style="font-size:11px; font-weight:700; background:#F1F5F9; color:#475569; padding:2px 8px; border-radius:999px;">0 รายการ</span>
+                </div>
+                <p style="font-size:12px; color:#64748B; margin:3px 0 0 0;">ส่งออกข้อมูลนิสิตในที่ปรึกษาทั้งหมดโดยไม่สนใจตัวกรอง</p>
+              </div>
+            </label>
+          </div>
+
+          <div style="margin-top:14px; padding:10px 14px; background:#F8FAFC; border:1px solid #E2E8F0; border-radius:10px; display:flex; align-items:center; gap:8px;">
+            <span class="material-icons" style="font-size:18px; color:#4338CA;">info</span>
+            <span id="export-summary-text" style="font-size:12px; color:#334155; font-weight:500;">เตรียมส่งออกข้อมูลนิสิต 0 รายการ</span>
+          </div>
+        </div>
+
+        <div style="padding:14px 24px; background:#F8FAFC; border-top:1px solid #E2E8F0; display:flex; justify-content:flex-end; gap:8px;">
+          <button class="btn btn-outline btn-sm" onclick="closeExportModal()" style="border-radius:10px;">ยกเลิก</button>
+          <button id="btn-confirm-export" class="btn btn-primary btn-sm" onclick="confirmExport()" style="border-radius:10px; display:inline-flex; align-items:center; gap:6px; padding:8px 16px;">
+            <span class="material-icons" style="font-size:16px;">download</span> ดาวน์โหลดไฟล์ CSV
+          </button>
+        </div>
+      </div>
+    </div>
+
+  </main>
+`;
 
 export default function AdvisorDashboardPage() {
   return (

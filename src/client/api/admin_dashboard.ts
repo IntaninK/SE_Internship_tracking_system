@@ -20,6 +20,22 @@ async function initAdminDashboard() {
     const meData = await meRes.json();
     if (meData.authenticated) {
       currentUserRole = meData.user.role;
+      const user = meData.user;
+      const majorSelect = document.getElementById('major-filter');
+      const scopeTitle = document.getElementById('admin-scope-banner-title');
+      const scopeSub = document.getElementById('admin-scope-banner-sub');
+      const isCentral = Boolean(user.role === 'ADMIN' || user.role === 'STAFF' || user.isStaff || !user.department);
+      if (!isCentral && user.department) {
+        if (majorSelect) {
+          majorSelect.value = user.department;
+          majorSelect.disabled = true;
+          majorSelect.title = `คุณดูแลเฉพาะสาขาวิชา${user.department}`;
+        }
+        if (scopeTitle) scopeTitle.textContent = `ระบบบริหารจัดการการฝึกงาน — สาขาวิชา${user.department}`;
+        if (scopeSub) scopeSub.textContent = `มุมมองอาจารย์ประจำวิชา (ดูแลเฉพาะนิสิตสาขาวิชา${user.department})`;
+      } else {
+        if (scopeTitle) scopeTitle.textContent = 'ระบบบริหารจัดการการฝึกงานและสหกิจศึกษา คณะ ICT มหาวิทยาลัยพะเยา (ทั้ง 8 สาขาวิชา)';
+      }
     }
   } catch (err) {
     console.error('Failed to fetch user role:', err);
@@ -62,7 +78,12 @@ function applyStaffRestrictions() {
 // ==========================================
 async function loadDashboardSummary() {
   try {
-    const res = await fetch('/api/admin/dashboard-summary');
+    const majorFilter = document.getElementById('major-filter');
+    const selectedMajor = majorFilter ? majorFilter.value : 'ALL';
+    const summaryUrl = selectedMajor && selectedMajor !== 'ALL'
+      ? `/api/admin/dashboard-summary?major=${encodeURIComponent(selectedMajor)}`
+      : '/api/admin/dashboard-summary';
+    const res = await fetch(summaryUrl);
     const data = await res.json();
     if (!data.success) return;
 
@@ -332,6 +353,8 @@ async function loadStudents() {
     if (statusFilter && statusFilter.value) url += `&statusFilter=${encodeURIComponent(statusFilter.value)}`;
     if (advisorFilter && advisorFilter.value) url += `&advisorFilter=${encodeURIComponent(advisorFilter.value)}`;
     if (skillFilter && skillFilter.value) url += `&skillFilter=${encodeURIComponent(skillFilter.value)}`;
+    const majorFilter = document.getElementById('major-filter');
+    if (majorFilter && majorFilter.value && majorFilter.value !== 'ALL') url += `&major=${encodeURIComponent(majorFilter.value)}`;
 
     const res = await fetch(url);
     const data = await res.json();
@@ -455,6 +478,8 @@ function renderStudentTable(students, total, page, totalPages) {
         <td>
           <div class="flex flex-col items-start gap-1 py-0.5">
             <span class="inline-block px-2.5 py-0.5 text-xs font-semibold rounded-full ${statusColor}">${displayStatus}</span>
+            ${s.isMatchedWithChecklist === false ? `<span class="inline-flex items-center gap-1 px-2.5 py-0.5 text-[11px] font-bold rounded-md bg-red-50 text-red-700 border border-red-300">🚨 [REQ-06] บริษัทไม่ตรง Checklist (${s.placementCompanyName || '-'})</span>` : ''}
+            ${s.isMatchedWithChecklist === true && s.placementCompanyName ? `<span class="inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200">✅ ตรงกับ Checklist (${s.placementCompanyName})</span>` : ''}
             ${alertTags.join('')}
           </div>
         </td>
@@ -1113,7 +1138,7 @@ if (yearFilterEl) {
 }
 
 // Dropdown filter events (สถานะ, อาจารย์, Skill)
-['status-filter', 'advisor-filter', 'skill-filter'].forEach(id => {
+['status-filter', 'advisor-filter', 'skill-filter', 'major-filter'].forEach(id => {
   const el = document.getElementById(id);
   if (el) {
     el.addEventListener('change', () => {
@@ -1380,6 +1405,32 @@ async function processImportFile(file) {
     if (acadYearEl) acadYearEl.textContent = data.summary.academicYear || '-';
     if (previewCountEl) previewCountEl.textContent = currentImportStudents.length;
 
+    const newCountEl = document.getElementById('import-stat-new');
+    const updatedCountEl = document.getElementById('import-stat-updated');
+    const unchangedCountEl = document.getElementById('import-stat-unchanged');
+    if (newCountEl) newCountEl.textContent = data.summary.newCount ?? currentImportStudents.length;
+    if (updatedCountEl) updatedCountEl.textContent = data.summary.updateCount ?? 0;
+    if (unchangedCountEl) unchangedCountEl.textContent = data.summary.unchangedCount ?? 0;
+
+    // [REQ-03] Render Update Detection Box
+    const updateBox = document.getElementById('import-update-detection-box');
+    const updateListEl = document.getElementById('import-update-detection-list');
+    const updatePreviewList = data.updatePreview || [];
+    if (updateBox && updateListEl) {
+      if (updatePreviewList.length > 0) {
+        updateBox.style.display = 'block';
+        updateListEl.innerHTML = updatePreviewList.slice(0, 15).map(u => `
+          <div style="display:flex; justify-content:space-between; gap:8px; padding:3px 0; border-bottom:1px dashed #FDE68A;">
+            <span><strong>${u.studentCode}</strong> ${u.nameTh || ''}</span>
+            <span style="color:#B45309; font-weight:600;">${(u.changes || []).join(', ')}</span>
+          </div>
+        `).join('');
+      } else {
+        updateBox.style.display = 'none';
+        updateListEl.innerHTML = '';
+      }
+    }
+
     // Render Preview Table Rows
     if (tbody) {
       if (currentImportStudents.length === 0) {
@@ -1390,9 +1441,10 @@ async function processImportFile(file) {
           <tr style="border-bottom:1px solid #F1F5F9;">
             <td style="padding:6px 10px; font-weight:600; color:#1E293B;">${s.studentCode}</td>
             <td style="padding:6px 10px; color:#334155;">${s.nameTh || '-'}</td>
-            <td style="padding:6px 10px; text-align:center;"><span style="background:#E0E7FF; color:#3730A3; padding:2px 8px; border-radius:9999px; font-size:11px; font-weight:600;">ปี ${s.year}</span></td>
-            <td style="padding:6px 10px; color:#475569;">${typeof s.gpa === 'number' ? s.gpa.toFixed(2) : '-'}</td>
-            <td style="padding:6px 10px; color:#2563EB; font-family:monospace;">${s.email}</td>
+            <td style="padding:6px 10px; color:#4338CA; font-weight:600;">${s.major || 'วิศวกรรมซอฟต์แวร์'}</td>
+            <td style="padding:6px 10px; text-align:center;"><span style="background:#E0E7FF; color:#3730A3; padding:2px 8px; border-radius:9999px; font-size:11px; font-weight:600;">ปี ${s.year}</span> • ${typeof s.gpa === 'number' ? s.gpa.toFixed(2) : '-'}</td>
+            <td style="padding:6px 10px; color:#059669; font-weight:600;">${(data.updatePreview || []).some(u => u.studentCode === s.studentCode) ? '<span style="color:#D97706;">🔄 อัปเดตข้อมูลเดิม</span>' : '✨ นิสิตใหม่ / คงเดิม'}</td>
+
           </tr>
         `).join('');
       }
@@ -1436,7 +1488,10 @@ window.confirmImport = async function() {
 
     const data = await res.json();
     if (data.success) {
-      alert(`✅ นำเข้ารายชื่อนิสิตสำเร็จ ${data.importedCount} คน` + (data.failedCount > 0 ? ` (ไม่สำเร็จ ${data.failedCount} คน)` : ''));
+      const updateSummaryMsg = data.updatedCount > 0
+        ? `\n🔄 [REQ-03] อัปเดตข้อมูลนิสิตเดิม ${data.updatedCount} คน (นิสิตใหม่ ${data.newCount || 0} คน, ข้อมูลคงเดิม ${data.unchangedCount || 0} คน)`
+        : '';
+      alert(`✅ นำเข้ารายชื่อนิสิตสำเร็จ ${data.importedCount} คน` + updateSummaryMsg + (data.failedCount > 0 ? ` (ไม่สำเร็จ ${data.failedCount} คน)` : ''));
       closeImportModal();
       loadStudents();
       initAdminDashboard();
@@ -1458,3 +1513,1426 @@ window.confirmImport = async function() {
     }
   }
 };
+
+
+// =========================================================================
+// Modal: ตั้งอาจารย์นิเทศก์ (Batch Supervisor Assignment)
+// =========================================================================
+window.openSetSupervisorModal = async function() {
+  if (selectedStudentIds.size === 0) {
+    alert('กรุณาเลือก checkbox นิสิตอย่างน้อย 1 คน');
+    return;
+  }
+
+  try {
+    const res = await fetch('/api/admin/staff');
+    const data = await res.json();
+    const select = document.getElementById('supervisor-select');
+    if (select && data.success) {
+      select.innerHTML = '<option value="">-- เลือกอาจารย์นิเทศก์ --</option>';
+      (data.staff || [])
+        .filter(st => st.isSupervisor || st.isAdvisor)
+        .forEach(st => {
+          select.innerHTML += `<option value="${st.id}">${st.name} (${st.department ? `สาขา${st.department}` : 'คณะ ICT'} • นิเทศ ${st.supervisedCount || 0} คน)</option>`;
+        });
+    }
+  } catch (err) {
+    console.error('Load supervisors error:', err);
+  }
+
+  const modal = document.getElementById('supervisor-modal');
+  if (modal) modal.style.display = 'flex';
+};
+
+window.closeSetSupervisorModal = function() {
+  const modal = document.getElementById('supervisor-modal');
+  if (modal) modal.style.display = 'none';
+};
+
+window.submitBatchSupervisor = async function() {
+  const supervisorId = document.getElementById('supervisor-select')?.value;
+  if (!supervisorId) {
+    alert('กรุณาเลือกอาจารย์นิเทศก์');
+    return;
+  }
+
+  try {
+    const res = await fetch('/api/admin/students/batch-supervisor', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        studentIds: Array.from(selectedStudentIds),
+        supervisorId: parseInt(supervisorId, 10),
+      }),
+    });
+    const data = await res.json();
+    if (data.success) {
+      alert(`✅ ตั้งอาจารย์นิเทศก์สำเร็จ (${data.updatedCount} คน)`);
+      selectedStudentIds.clear();
+      closeSetSupervisorModal();
+      loadDashboardSummary();
+      loadStudents();
+    } else {
+      alert('เกิดข้อผิดพลาด: ' + (data.message || 'ไม่สามารถบันทึกได้'));
+    }
+  } catch (err) {
+    console.error(err);
+    alert('เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์');
+  }
+};
+
+// =========================================================================
+// Modal: จัดการสิทธิ์อาจารย์และบุคลากรคณะ (Multi-Role Staff Management)
+// =========================================================================
+const ICT_MAJORS_LIST = [
+  'วิศวกรรมซอฟต์แวร์',
+  'ธุรกิจดิจิทัล',
+  'วิทยาการคอมพิวเตอร์',
+  'เทคโนโลยีสารสนเทศ',
+  'วิศวกรรมคอมพิวเตอร์',
+  'คอมพิวเตอร์กราฟิกและมัลติมีเดีย',
+  'ภูมิสารสนเทศศาสตร์',
+  'วิทยาการข้อมูลและการประยุกต์',
+];
+
+window.openStaffRolesModal = async function() {
+  const modal = document.getElementById('staff-roles-modal');
+  const tbody = document.getElementById('staff-roles-tbody');
+  if (!modal || !tbody) return;
+
+  modal.style.display = 'flex';
+  tbody.innerHTML = '<tr><td colspan="7" class="text-center py-6 text-gray-400">กำลังโหลดข้อมูลบุคลากร...</td></tr>';
+
+  try {
+    const res = await fetch('/api/admin/staff');
+    const data = await res.json();
+    if (!data.success || !Array.isArray(data.staff)) {
+      tbody.innerHTML = '<tr><td colspan="7" class="text-center py-6 text-red-500">ไม่สามารถโหลดข้อมูลบุคลากรได้</td></tr>';
+      return;
+    }
+
+    if (data.staff.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="7" class="text-center py-6 text-gray-400">ยังไม่มีข้อมูลอาจารย์/บุคลากรในระบบ</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = data.staff.map(st => {
+      const deptOptions = `<option value="">ส่วนกลางทั้งคณะ ICT (8 สาขา)</option>` +
+        ICT_MAJORS_LIST.map(m => `<option value="${m}" ${st.department === m ? 'selected' : ''}>สาขา${m}</option>`).join('');
+
+      return `
+        <tr id="staff-row-${st.id}">
+          <td>
+            <div style="font-weight:700; color:#0F172A;">${st.name}</div>
+            <div style="font-size:11.5px; color:#64748B;">${st.email}</div>
+          </td>
+          <td>
+            <select id="staff-dept-${st.id}" class="input-field" style="font-size:12px; padding:6px 10px !important; min-width:170px;">
+              ${deptOptions}
+            </select>
+          </td>
+          <td class="text-center">
+            <input type="checkbox" id="staff-adv-${st.id}" ${st.isAdvisor ? 'checked' : ''} style="width:17px; height:17px; accent-color:#2563EB; cursor:pointer;" />
+          </td>
+          <td class="text-center">
+            <input type="checkbox" id="staff-sup-${st.id}" ${st.isSupervisor ? 'checked' : ''} style="width:17px; height:17px; accent-color:#0284C7; cursor:pointer;" />
+          </td>
+          <td class="text-center">
+            <input type="checkbox" id="staff-course-${st.id}" ${st.isCourseAdmin ? 'checked' : ''} style="width:17px; height:17px; accent-color:#7C3AED; cursor:pointer;" />
+          </td>
+          <td class="text-center">
+            <input type="checkbox" id="staff-fac-${st.id}" ${st.isStaff ? 'checked' : ''} style="width:17px; height:17px; accent-color:#D97706; cursor:pointer;" />
+          </td>
+          <td class="text-center">
+            <button type="button" class="btn btn-primary btn-sm" onclick="saveStaffRoleRow(${st.id})" style="font-size:12px; padding:5px 12px; border-radius:8px;">
+              บันทึก
+            </button>
+          </td>
+        </tr>
+      `;
+    }).join('');
+  } catch (err) {
+    console.error('Load staff roles error:', err);
+    tbody.innerHTML = '<tr><td colspan="7" class="text-center py-6 text-red-500">เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์</td></tr>';
+  }
+};
+
+window.closeStaffRolesModal = function() {
+  const modal = document.getElementById('staff-roles-modal');
+  if (modal) modal.style.display = 'none';
+};
+
+window.saveStaffRoleRow = async function(staffId) {
+  const department = document.getElementById(`staff-dept-${staffId}`)?.value || null;
+  const isAdvisor = Boolean(document.getElementById(`staff-adv-${staffId}`)?.checked);
+  const isSupervisor = Boolean(document.getElementById(`staff-sup-${staffId}`)?.checked);
+  const isCourseAdmin = Boolean(document.getElementById(`staff-course-${staffId}`)?.checked);
+  const isStaff = Boolean(document.getElementById(`staff-fac-${staffId}`)?.checked);
+
+  try {
+    const res = await fetch(`/api/admin/staff/${staffId}/roles`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        department,
+        isAdvisor,
+        isSupervisor,
+        isCourseAdmin,
+        isStaff,
+      }),
+    });
+    const data = await res.json();
+    if (data.success) {
+      alert(`✅ บันทึกสิทธิ์ของ ${data.staff?.name || 'บุคลากร'} เรียบร้อยแล้ว`);
+    } else {
+      alert('เกิดข้อผิดพลาด: ' + (data.message || 'ไม่สามารถบันทึกได้'));
+    }
+  } catch (err) {
+    console.error('Save staff role error:', err);
+    alert('เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์');
+  }
+};
+
+
+// =========================================================================
+// SUPER ADMIN (พี่จอม - เจ้าหน้าที่คณะ) COMMAND CENTER — 6 WORKSPACE MODULES
+// =========================================================================
+let superAdminData = {
+  academicConfig: {
+    currentAcademicYear: '2568',
+    currentSemester: '2',
+    defaultDocPrefix: 'อว 7316/',
+    deanSignatory: 'ผู้ช่วยศาสตราจารย์ ดร.พรเทพ โรจนวสุ',
+    deanPosition: 'คณบดีคณะเทคโนโลยีสารสนเทศและการสื่อสาร',
+  },
+  majorUnlockRules: [],
+  trainingEvents: [],
+  companyMasterData: [],
+  pendingMasterCompaniesCount: 0,
+  documentQueue: [],
+  companyGroups: [],
+  archivedApplications: [],
+};
+
+let currentWorkspace = 'overview';
+
+window.switchAdminWorkspace = function(wsKey) {
+  currentWorkspace = wsKey;
+  const workspaces = ['overview', 'unlock', 'events', 'companies', 'documents', 'coop'];
+  workspaces.forEach(k => {
+    const panel = document.getElementById(`workspace-${k}`);
+    const tabBtn = document.getElementById(`ws-tab-${k}`);
+    if (panel) {
+      panel.style.display = k === wsKey ? 'block' : 'none';
+    }
+    if (tabBtn) {
+      if (k === wsKey) {
+        tabBtn.style.border = '1px solid #4338CA';
+        tabBtn.style.background = '#EEF2FF';
+        tabBtn.style.color = '#312E81';
+        tabBtn.style.fontWeight = '700';
+      } else {
+        tabBtn.style.border = '1px solid #E2E8F0';
+        tabBtn.style.background = '#F8FAFC';
+        tabBtn.style.color = '#475569';
+        tabBtn.style.fontWeight = '600';
+      }
+    }
+  });
+};
+
+window.loadSuperAdminOverview = async function() {
+  try {
+    // เปิดปุ่มจัดการให้ Super Admin (พี่จอม - STAFF) ใช้งานได้ครบ
+    ['btn-set-status', 'btn-set-advisor', 'btn-drop-student', 'btn-restore-student'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.style.display = 'inline-flex';
+    });
+
+    const res = await fetch('/api/admin/super-admin/overview');
+    const data = await res.json();
+    if (!data.success) return;
+
+    superAdminData = data;
+
+    // Update top tab badges
+    const unlockedCount = (data.majorUnlockRules || []).filter(r => r.isUnlocked).length;
+    const totalMajors = (data.majorUnlockRules || []).length || 8;
+    const badgeUnlocked = document.getElementById('badge-unlocked-majors');
+    if (badgeUnlocked) badgeUnlocked.textContent = `${unlockedCount}/${totalMajors} เปิด`;
+
+    const badgeEvents = document.getElementById('badge-events-count');
+    if (badgeEvents) badgeEvents.textContent = `${(data.trainingEvents || []).length} กิจกรรม`;
+
+    const badgePendingComp = document.getElementById('badge-pending-companies');
+    if (badgePendingComp) {
+      const cnt = data.pendingMasterCompaniesCount || 0;
+      badgePendingComp.textContent = `${cnt} รอยืนยัน`;
+      badgePendingComp.style.background = cnt > 0 ? '#FEF3C7' : '#E2E8F0';
+      badgePendingComp.style.color = cnt > 0 ? '#B45309' : '#475569';
+    }
+
+    const docQueueCount = (data.documentQueue || []).filter(
+      d => d.companyName !== 'ยังไม่ยื่นบริษัท' && !d.dispatchLetterIssued
+    ).length;
+    const badgeDocQueue = document.getElementById('badge-doc-queue');
+    if (badgeDocQueue) {
+      badgeDocQueue.textContent = `${docQueueCount} คิวงาน`;
+    }
+
+    // Populate Academic Config inputs
+    if (data.academicConfig) {
+      const ayEl = document.getElementById('cfg-academic-year');
+      const semEl = document.getElementById('cfg-semester');
+      const prefEl = document.getElementById('cfg-doc-prefix');
+      const deanEl = document.getElementById('cfg-dean-name');
+      if (ayEl) ayEl.value = data.academicConfig.currentAcademicYear || '2568';
+      if (semEl) semEl.value = data.academicConfig.currentSemester || '2';
+      if (prefEl) prefEl.value = data.academicConfig.defaultDocPrefix || 'อว 7316/';
+      if (deanEl) deanEl.value = data.academicConfig.deanSignatory || '';
+    }
+
+    // Set default date for new event if empty
+    const evtDateEl = document.getElementById('evt-date');
+    if (evtDateEl && !evtDateEl.value) {
+      evtDateEl.value = new Date().toISOString().slice(0, 10);
+    }
+
+    renderMajorUnlockTable();
+    renderEventsDropdownAndCheckins();
+    renderPendingCompaniesTable();
+    renderMasterCompanyTable();
+    renderCompanyGroups();
+    renderDocumentQueueTable();
+    renderArchiveHistoryTable();
+    renderCoop01PreviewTable();
+  } catch (err) {
+    console.error('loadSuperAdminOverview error:', err);
+  }
+};
+
+// =========================================================================
+// WORKSPACE 2: รอบปีการศึกษา & การปลดล็อก (Unlock) แยกตาม 8 สาขาวิชา
+// =========================================================================
+window.saveAcademicConfig = async function() {
+  const currentAcademicYear = document.getElementById('cfg-academic-year')?.value || '2568';
+  const currentSemester = document.getElementById('cfg-semester')?.value || '2';
+  const defaultDocPrefix = document.getElementById('cfg-doc-prefix')?.value || 'อว 7316/';
+  const deanSignatory = document.getElementById('cfg-dean-name')?.value || '';
+
+  try {
+    const res = await fetch('/api/admin/super-admin/academic-config', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        currentAcademicYear,
+        currentSemester,
+        defaultDocPrefix,
+        deanSignatory,
+      }),
+    });
+    const data = await res.json();
+    if (data.success) {
+      alert('✅ ' + data.message);
+      await window.loadSuperAdminOverview();
+    } else {
+      alert('เกิดข้อผิดพลาด: ' + (data.message || 'ไม่สามารถบันทึกได้'));
+    }
+  } catch (err) {
+    console.error(err);
+    alert('เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์');
+  }
+};
+
+function renderMajorUnlockTable() {
+  const tbody = document.getElementById('major-unlock-tbody');
+  if (!tbody) return;
+  const rules = superAdminData.majorUnlockRules || [];
+  if (rules.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="6" class="text-center py-6 text-gray-400">ไม่พบข้อมูลสาขาวิชา</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = rules.map(r => {
+    const statusBadge = r.isUnlocked
+      ? `<span style="display:inline-flex; align-items:center; gap:5px; background:#DCFCE7; color:#166534; border:1px solid #86EFAC; padding:4px 10px; border-radius:999px; font-size:12px; font-weight:700;">
+           <span class="material-icons" style="font-size:14px;">lock_open</span> เปิดยื่นฝึกงาน (Unlocked)
+         </span>`
+      : `<span style="display:inline-flex; align-items:center; gap:5px; background:#FEE2E2; color:#991B1B; border:1px solid #FCA5A5; padding:4px 10px; border-radius:999px; font-size:12px; font-weight:700;">
+           <span class="material-icons" style="font-size:14px;">lock</span> ล็อกชั่วคราว (Locked)
+         </span>`;
+
+    return `
+      <tr>
+        <td>
+          <div style="font-weight:800; color:#1E1B4B; font-size:13.5px;">สาขาวิชา${r.majorName} (${r.code})</div>
+          <div style="font-size:11.5px; color:#64748B; margin-top:2px;">นิสิตในระบบ: <strong>${r.studentCount || 0}</strong> คน</div>
+        </td>
+        <td>
+          <div style="font-size:12px; color:#334155;"><strong>เตรียมความพร้อม:</strong> ${r.prepSchedule}</div>
+          <div style="font-size:11.5px; color:#4338CA; font-weight:600; margin-top:2px;"><strong>ออกฝึกงาน:</strong> ${r.internSchedule}</div>
+        </td>
+        <td>
+          <input type="text" id="major-term-${r.code}" class="input-field" value="${r.targetTerm || '2/2568'}" style="font-size:12px; padding:5px 8px !important; width:95px; font-weight:700;" />
+        </td>
+        <td>
+          <div style="display:flex; align-items:center; gap:4px; font-size:11.5px;">
+            <input type="date" id="major-open-${r.code}" class="input-field" value="${r.openDate || ''}" style="font-size:11.5px; padding:4px 6px !important;" />
+            <span>ถึง</span>
+            <input type="date" id="major-close-${r.code}" class="input-field" value="${r.closeDate || ''}" style="font-size:11.5px; padding:4px 6px !important;" />
+          </div>
+          <input type="text" id="major-note-${r.code}" class="input-field" value="${r.note || ''}" placeholder="หมายเหตุแจ้งนิสิต..." style="font-size:11.5px; padding:4px 8px !important; margin-top:4px; width:100%;" />
+        </td>
+        <td>${statusBadge}</td>
+        <td class="text-center">
+          <div style="display:flex; flex-direction:column; gap:5px; align-items:center;">
+            <button type="button" onclick="toggleMajorUnlock('${r.code}', ${!r.isUnlocked})"
+              style="width:100%; border:none; padding:6px 10px; border-radius:8px; font-size:11.5px; font-weight:700; cursor:pointer; color:white; background:${r.isUnlocked ? '#EF4444' : '#10B981'};">
+              ${r.isUnlocked ? '🔒 กดล็อกสาขา' : '🔓 กดปลดล็อกสาขา'}
+            </button>
+            <button type="button" onclick="saveMajorRuleDetails('${r.code}', ${r.isUnlocked})"
+              style="width:100%; border:1px solid #CBD5E1; background:white; color:#334155; padding:4px 8px; border-radius:8px; font-size:11px; font-weight:600; cursor:pointer;">
+              บันทึกรอบ/วันที่
+            </button>
+          </div>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+window.toggleMajorUnlock = async function(code, nextUnlocked) {
+  await window.saveMajorRuleDetails(code, nextUnlocked);
+};
+
+window.saveMajorRuleDetails = async function(code, isUnlocked) {
+  const targetTerm = document.getElementById(`major-term-${code}`)?.value || '2/2568';
+  const openDate = document.getElementById(`major-open-${code}`)?.value || '';
+  const closeDate = document.getElementById(`major-close-${code}`)?.value || '';
+  const note = document.getElementById(`major-note-${code}`)?.value || '';
+
+  try {
+    const res = await fetch('/api/admin/super-admin/major-unlock', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code, isUnlocked, targetTerm, openDate, closeDate, note }),
+    });
+    const data = await res.json();
+    if (data.success) {
+      await window.loadSuperAdminOverview();
+    } else {
+      alert('เกิดข้อผิดพลาด: ' + (data.message || 'ไม่สามารถอัปเดตได้'));
+    }
+  } catch (err) {
+    console.error(err);
+    alert('เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์');
+  }
+};
+
+window.bulkToggleMajors = async function(bulkAction) {
+  try {
+    const res = await fetch('/api/admin/super-admin/major-unlock', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ bulkAction }),
+    });
+    const data = await res.json();
+    if (data.success) {
+      alert('✅ ' + data.message);
+      await window.loadSuperAdminOverview();
+    }
+  } catch (err) {
+    console.error(err);
+  }
+};
+
+// =========================================================================
+// WORKSPACE 3: สร้างกิจกรรมอบรมภายใน (สูงสุด 6 ชม./วัน) & Check-in รหัสนิสิต
+// =========================================================================
+window.previewEventHours = function() {
+  const start = document.getElementById('evt-start-time')?.value || '09:00';
+  const end = document.getElementById('evt-end-time')?.value || '16:00';
+  const [sh, sm] = start.split(':').map(n => parseInt(n, 10) || 0);
+  const [eh, em] = end.split(':').map(n => parseInt(n, 10) || 0);
+  const raw = Math.max(1, Math.round(((eh * 60 + em) - (sh * 60 + sm)) / 60));
+  const credited = Math.min(6, raw);
+
+  const badgeEl = document.getElementById('evt-credited-hours-badge');
+  const noteEl = document.getElementById('evt-hours-note');
+  if (badgeEl) badgeEl.textContent = String(credited);
+  if (noteEl) {
+    noteEl.textContent = raw > 6
+      ? `ระยะเวลาจริง ${raw} ชม. (จำกัดเพดานสูงสุดไม่เกิน 6 ชม./วัน ตามเกณฑ์คณะ)`
+      : `คำนวณตามเวลาจริง ${raw} ชม. (ไม่เกินเพดาน 6 ชม./วัน)`;
+  }
+};
+
+window.createTrainingEvent = async function() {
+  const title = document.getElementById('evt-title')?.value?.trim();
+  const skillType = document.getElementById('evt-skill-type')?.value || 'SOFT';
+  const eventDate = document.getElementById('evt-date')?.value || new Date().toISOString().slice(0, 10);
+  const startTime = document.getElementById('evt-start-time')?.value || '09:00';
+  const endTime = document.getElementById('evt-end-time')?.value || '16:00';
+  const targetMajor = document.getElementById('evt-target-major')?.value || 'ALL';
+  const location = document.getElementById('evt-location')?.value || '';
+
+  if (!title) {
+    alert('กรุณากรอกชื่อกิจกรรมอบรม');
+    return;
+  }
+
+  try {
+    const res = await fetch('/api/admin/super-admin/events', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        title,
+        skillType,
+        eventDate,
+        startTime,
+        endTime,
+        targetMajor,
+        location,
+      }),
+    });
+    const data = await res.json();
+    if (data.success) {
+      alert('✅ ' + data.message);
+      const titleEl = document.getElementById('evt-title');
+      if (titleEl) titleEl.value = '';
+      await window.loadSuperAdminOverview();
+      const selectEl = document.getElementById('checkin-event-select');
+      if (selectEl && data.event?.id) {
+        selectEl.value = data.event.id;
+        window.renderSelectedEventCheckins();
+      }
+    } else {
+      alert('เกิดข้อผิดพลาด: ' + (data.message || 'ไม่สามารถสร้างกิจกรรมได้'));
+    }
+  } catch (err) {
+    console.error(err);
+    alert('เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์');
+  }
+};
+
+function renderEventsDropdownAndCheckins() {
+  const selectEl = document.getElementById('checkin-event-select');
+  if (!selectEl) return;
+  const currentVal = selectEl.value;
+  const events = superAdminData.trainingEvents || [];
+
+  if (events.length === 0) {
+    selectEl.innerHTML = '<option value="">-- ยังไม่มีกิจกรรมอบรม กรุณาสร้างกิจกรรมทางด้านซ้าย --</option>';
+    window.renderSelectedEventCheckins();
+    return;
+  }
+
+  selectEl.innerHTML = events.map(e => `
+    <option value="${e.id}">
+      [${e.skillType} Skill +${e.creditedHours} ชม.] ${e.title} (${e.eventDate} • Check-in แล้ว ${(e.checkIns || []).length} คน)
+    </option>
+  `).join('');
+
+  if (currentVal && events.some(e => e.id === currentVal)) {
+    selectEl.value = currentVal;
+  }
+  window.renderSelectedEventCheckins();
+}
+
+window.renderSelectedEventCheckins = function() {
+  const selectEl = document.getElementById('checkin-event-select');
+  const metaEl = document.getElementById('checkin-selected-event-meta');
+  const countEl = document.getElementById('checkin-list-count');
+  const tbody = document.getElementById('checkin-history-tbody');
+  if (!selectEl || !tbody) return;
+
+  const eventId = selectEl.value;
+  const event = (superAdminData.trainingEvents || []).find(e => e.id === eventId);
+  if (!event) {
+    if (metaEl) metaEl.textContent = '';
+    if (countEl) countEl.textContent = '0';
+    tbody.innerHTML = '<tr><td colspan="5" class="text-center py-6 text-gray-400">กรุณาเลือกกิจกรรมอบรม</td></tr>';
+    return;
+  }
+
+  if (metaEl) {
+    metaEl.innerHTML = `
+      <span style="display:inline-flex; align-items:center; gap:6px; flex-wrap:wrap;">
+        <span style="background:#DBEAFE; color:#1E40AF; padding:2px 8px; border-radius:999px; font-weight:700;">${event.skillType} SKILL (+${event.creditedHours} ชม.)</span>
+        <span>📅 วันที่ ${event.eventDate} (${event.startTime} - ${event.endTime} น.)</span>
+        <span>📍 ${event.location}</span>
+      </span>
+    `;
+  }
+
+  const checkIns = event.checkIns || [];
+  if (countEl) countEl.textContent = String(checkIns.length);
+
+  if (checkIns.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="5" class="text-center py-6 text-gray-400">ยังไม่มีรายชื่อนิสิตที่ Check-in ในกิจกรรมนี้ — สามารถกรอกหรือวางรหัสนิสิตด้านบนเพื่อบันทึกได้ทันที</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = checkIns.map(c => `
+    <tr>
+      <td style="font-weight:700; color:#1E1B4B;">${c.studentCode}</td>
+      <td>${c.nameTh}</td>
+      <td>${c.major}</td>
+      <td class="text-center">
+        <span style="background:#DCFCE7; color:#166534; padding:2px 9px; border-radius:999px; font-size:11.5px; font-weight:700;">
+          +${event.creditedHours} ชม. (${event.skillType})
+        </span>
+      </td>
+      <td style="font-size:11.5px; color:#64748B;">${new Date(c.checkedInAt).toLocaleString('th-TH')}</td>
+    </tr>
+  `).join('');
+};
+
+window.submitEventCheckIn = async function() {
+  const selectEl = document.getElementById('checkin-event-select');
+  const codesEl = document.getElementById('checkin-student-codes');
+  const bannerEl = document.getElementById('checkin-result-banner');
+
+  const eventId = selectEl?.value;
+  const studentCodesInput = codesEl?.value?.trim();
+
+  if (!eventId) {
+    alert('กรุณาเลือกกิจกรรมอบรมก่อน');
+    return;
+  }
+  if (!studentCodesInput) {
+    alert('กรุณากรอกหรือวางรหัสนิสิตอย่างน้อย 1 รหัส');
+    return;
+  }
+
+  try {
+    const res = await fetch(`/api/admin/super-admin/events/${encodeURIComponent(eventId)}/checkin`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ studentCodesInput }),
+    });
+    const data = await res.json();
+    if (data.success) {
+      if (codesEl) codesEl.value = '';
+      if (bannerEl) {
+        bannerEl.style.display = 'block';
+        bannerEl.style.background = '#DCFCE7';
+        bannerEl.style.border = '1px solid #86EFAC';
+        bannerEl.style.color = '#166534';
+        let extra = '';
+        if (data.duplicateCount > 0) extra += ` (ซ้ำ ${data.duplicateCount} คน)`;
+        if (data.notFoundCodes && data.notFoundCodes.length > 0) {
+          extra += ` | ⚠️ ไม่พบรหัสนิสิตในฐานข้อมูล: ${data.notFoundCodes.join(', ')}`;
+        }
+        bannerEl.textContent = `✅ ${data.message}${extra}`;
+      }
+      await window.loadSuperAdminOverview();
+      await loadDashboardSummary();
+      await loadStudents();
+      if (selectEl) {
+        selectEl.value = eventId;
+        window.renderSelectedEventCheckins();
+      }
+    } else {
+      alert('เกิดข้อผิดพลาด: ' + (data.message || 'บันทึก Check-in ไม่สำเร็จ'));
+    }
+  } catch (err) {
+    console.error(err);
+    alert('เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์');
+  }
+};
+
+// =========================================================================
+// WORKSPACE 4: ฐานข้อมูลสถานประกอบการกลาง (Company Master Data)
+// =========================================================================
+function renderPendingCompaniesTable() {
+  const tbody = document.getElementById('pending-companies-tbody');
+  if (!tbody) return;
+  const allCompanies = superAdminData.companyMasterData || [];
+  const pendingList = allCompanies.filter(c => c.status === 'PENDING_REVIEW');
+  const verifiedList = allCompanies.filter(c => c.status === 'VERIFIED' || c.status === 'PARTNER');
+
+  if (pendingList.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="4" class="text-center py-6 text-emerald-700 font-semibold">✅ ไม่มีรายการบริษัทใหม่ค้างตรวจสอบ (บริษัททั้งหมดในระบบได้รับการยืนยันเข้า Master Data แล้ว)</td></tr>';
+    return;
+  }
+
+  const mergeOptions = `<option value="">-- หรือเลือกยุบรวมเข้ากับบริษัทเดิมที่มีอยู่แล้ว --</option>` +
+    verifiedList.map(v => `<option value="${v.id}">${v.nameTh} (${v.province})</option>`).join('');
+
+  tbody.innerHTML = pendingList.map(c => `
+    <tr>
+      <td>
+        <div style="font-weight:800; color:#92400E; font-size:13.5px;">${c.nameTh}</div>
+        <div style="font-size:11px; color:#64748B;">รหัสอ้างอิง: ${c.id}</div>
+      </td>
+      <td>
+        <div style="font-weight:700; color:#1E293B;">${c.submittedByStudentName || 'นิสิตในระบบ'}</div>
+        <div style="font-size:11.5px; color:#64748B;">รหัส ${c.submittedByStudentCode || '-'}</div>
+      </td>
+      <td>
+        <input type="text" id="std-name-${c.id}" class="input-field" value="${c.nameTh}" placeholder="ปรับชื่อบริษัทให้เป็นมาตรฐาน..." style="font-size:12px; padding:6px 10px !important; margin-bottom:6px; font-weight:700;" />
+        <select id="merge-into-${c.id}" class="input-field" style="font-size:11.5px; padding:5px 8px !important;">
+          ${mergeOptions}
+        </select>
+      </td>
+      <td class="text-center">
+        <div style="display:flex; gap:6px; justify-content:center; flex-wrap:wrap;">
+          <button type="button" onclick="confirmPendingCompany('${c.id}')"
+            style="background:#10B981; color:white; border:none; padding:7px 12px; border-radius:8px; font-size:12px; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:4px;">
+            <span class="material-icons" style="font-size:15px;">check_circle</span> ยืนยันเข้า Master Data
+          </button>
+          <button type="button" onclick="mergePendingCompany('${c.id}')"
+            style="background:#4338CA; color:white; border:none; padding:7px 12px; border-radius:8px; font-size:12px; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:4px;">
+            <span class="material-icons" style="font-size:15px;">merge_type</span> ยุบรวมชื่อซ้ำ
+          </button>
+        </div>
+      </td>
+    </tr>
+  `).join('');
+}
+
+window.confirmPendingCompany = async function(id) {
+  const standardizedNameTh = document.getElementById(`std-name-${id}`)?.value?.trim();
+  try {
+    const res = await fetch(`/api/admin/super-admin/companies/${encodeURIComponent(id)}/confirm`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ standardizedNameTh, status: 'VERIFIED' }),
+    });
+    const data = await res.json();
+    if (data.success) {
+      alert('✅ ' + data.message);
+      await window.loadSuperAdminOverview();
+    } else {
+      alert('เกิดข้อผิดพลาด: ' + (data.message || 'ไม่สามารถยืนยันได้'));
+    }
+  } catch (err) {
+    console.error(err);
+  }
+};
+
+window.mergePendingCompany = async function(id) {
+  const mergeIntoCompanyId = document.getElementById(`merge-into-${id}`)?.value;
+  if (!mergeIntoCompanyId) {
+    alert('กรุณาเลือกบริษัทหลักใน Dropdown ที่ต้องการยุบรวมชื่อเข้าด้วยกัน');
+    return;
+  }
+  try {
+    const res = await fetch(`/api/admin/super-admin/companies/${encodeURIComponent(id)}/confirm`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mergeIntoCompanyId }),
+    });
+    const data = await res.json();
+    if (data.success) {
+      alert('✅ ' + data.message);
+      await window.loadSuperAdminOverview();
+    } else {
+      alert('เกิดข้อผิดพลาด: ' + (data.message || 'ไม่สามารถยุบรวมได้'));
+    }
+  } catch (err) {
+    console.error(err);
+  }
+};
+
+window.renderMasterCompanyTable = function() {
+  const tbody = document.getElementById('master-companies-tbody');
+  if (!tbody) return;
+  const searchVal = (document.getElementById('master-company-search')?.value || '').trim().toLowerCase();
+
+  let list = (superAdminData.companyMasterData || []).filter(c => c.status !== 'PENDING_REVIEW');
+  if (searchVal) {
+    list = list.filter(c =>
+      `${c.nameTh} ${c.nameEn} ${c.province} ${c.recommendedPositions}`.toLowerCase().includes(searchVal)
+    );
+  }
+
+  if (list.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="5" class="text-center py-6 text-gray-400">ไม่พบรายการสถานประกอบการที่ค้นหา</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = list.map(c => {
+    let badge = `<span style="background:#DCFCE7; color:#166534; padding:3px 10px; border-radius:999px; font-size:11.5px; font-weight:700;">✅ ยืนยันแล้ว (Master)</span>`;
+    if (c.status === 'PARTNER') {
+      badge = `<span style="background:#EEF2FF; color:#3730A3; border:1px solid #C7D2FE; padding:3px 10px; border-radius:999px; font-size:11.5px; font-weight:700;">⭐ พันธมิตรคณะ ICT</span>`;
+    } else if (c.status === 'BLACKLIST') {
+      badge = `<span style="background:#FEE2E2; color:#991B1B; padding:3px 10px; border-radius:999px; font-size:11.5px; font-weight:700;">⛔ งดส่งนิสิต (Blacklist)</span>`;
+    }
+
+    return `
+      <tr>
+        <td>
+          <div style="font-weight:800; color:#1E1B4B; font-size:13.5px;">${c.nameTh}</div>
+          <div style="font-size:11.5px; color:#64748B;">${c.nameEn || '-'}</div>
+          <div style="font-size:11px; color:#94A3B8; margin-top:2px;">${c.address || ''}</div>
+        </td>
+        <td style="font-weight:600; color:#334155;">${c.province || '-'}</td>
+        <td>
+          <div style="font-size:12.5px; font-weight:600; color:#1E293B;">${c.hrContactName || '-'}</div>
+          <div style="font-size:11.5px; color:#64748B;">📞 ${c.hrPhone || '-'} | ✉️ ${c.hrEmail || '-'}</div>
+        </td>
+        <td style="font-size:12px; color:#475569;">${c.recommendedPositions || '-'}</td>
+        <td class="text-center">${badge}</td>
+      </tr>
+    `;
+  }).join('');
+};
+
+window.openAddMasterCompanyModal = function() {
+  const modal = document.getElementById('add-master-company-modal');
+  if (modal) modal.style.display = 'flex';
+};
+
+window.closeAddMasterCompanyModal = function() {
+  const modal = document.getElementById('add-master-company-modal');
+  if (modal) modal.style.display = 'none';
+};
+
+window.submitNewMasterCompany = async function() {
+  const nameTh = document.getElementById('mc-name-th')?.value?.trim();
+  const nameEn = document.getElementById('mc-name-en')?.value?.trim();
+  const province = document.getElementById('mc-province')?.value?.trim();
+  const address = document.getElementById('mc-address')?.value?.trim();
+  const hrContactName = document.getElementById('mc-hr-name')?.value?.trim();
+  const hrPhone = document.getElementById('mc-hr-phone')?.value?.trim();
+  const recommendedPositions = document.getElementById('mc-positions')?.value?.trim();
+
+  if (!nameTh) {
+    alert('กรุณากรอกชื่อสถานประกอบการ');
+    return;
+  }
+
+  try {
+    const res = await fetch('/api/admin/super-admin/companies', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        nameTh,
+        nameEn,
+        province,
+        address,
+        hrContactName,
+        hrPhone,
+        recommendedPositions,
+        status: 'VERIFIED',
+      }),
+    });
+    const data = await res.json();
+    if (data.success) {
+      alert('✅ ' + data.message);
+      window.closeAddMasterCompanyModal();
+      await window.loadSuperAdminOverview();
+    } else {
+      alert('เกิดข้อผิดพลาด: ' + (data.message || 'ไม่สามารถบันทึกได้'));
+    }
+  } catch (err) {
+    console.error(err);
+  }
+};
+
+// =========================================================================
+// WORKSPACE 5: ออกเอกสารราชการอัตโนมัติ (หนังสือขอความอนุเคราะห์ + ใบตอบรับ & หนังสือส่งตัว)
+// =========================================================================
+function renderCompanyGroups() {
+  const container = document.getElementById('company-groups-container');
+  if (!container) return;
+  const groups = superAdminData.companyGroups || [];
+
+  if (groups.length === 0) {
+    container.innerHTML = `<div style="grid-column:1/-1; padding:18px; text-align:center; color:#64748B; background:#F8FAFC; border-radius:12px;">ยังไม่มีกลุ่มนิสิตที่ยื่นสถานประกอบการในขณะนี้</div>`;
+    return;
+  }
+
+  container.innerHTML = groups.map(g => {
+    const studentIdsJson = JSON.stringify(g.students.map(s => s.studentId));
+    const escapedComp = (g.companyName || '').replace(/'/g, "\\'");
+    const allIssued = g.students.every(s => s.requestLetterIssued);
+
+    return `
+      <div style="border:1px solid #E2E8F0; border-radius:14px; padding:14px 16px; background:#FFFFFF; box-shadow:0 2px 8px rgba(15,23,42,0.04); display:flex; flex-direction:column; justify-content:space-between; gap:10px;">
+        <div>
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px;">
+            <div style="font-weight:800; color:#1E1B4B; font-size:13.5px;">🏢 ${g.companyName}</div>
+            <span style="background:#EEF2FF; color:#4338CA; font-size:11px; font-weight:700; padding:2px 8px; border-radius:999px; white-space:nowrap;">
+              ${g.students.length} คน
+            </span>
+          </div>
+          <div style="margin-top:8px; display:flex; flex-direction:column; gap:4px;">
+            ${g.students.map((st, idx) => `
+              <div style="font-size:12px; color:#334155; display:flex; justify-content:space-between;">
+                <span>${idx + 1}. <strong>${st.studentCode}</strong> ${st.nameTh}</span>
+                <span style="font-size:11px; color:${st.requestLetterIssued ? '#059669' : '#D97706'}; font-weight:600;">
+                  ${st.requestLetterIssued ? '✓ ออกหนังสือแล้ว' : 'รอออกหนังสือ'}
+                </span>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+        <div style="display:flex; gap:6px; padding-top:8px; border-top:1px solid #F1F5F9;">
+          <button type="button" onclick='issueGroupRequestLetter(${studentIdsJson}, "${escapedComp}")'
+            style="flex:1; background:${allIssued ? '#475569' : '#4338CA'}; color:white; border:none; padding:7px 10px; border-radius:8px; font-size:11.5px; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; gap:4px;">
+            <span class="material-icons" style="font-size:14px;">description</span>
+            <span>${g.students.length > 1 ? `ออกหนังสือรวมกลุ่ม (${g.students.length} คน)` : 'ออกหนังสือขอความอนุเคราะห์'}</span>
+          </button>
+          <button type="button" onclick='openOfficialLetterPreview("REQUEST", ${studentIdsJson}, "${escapedComp}")'
+            style="background:#EEF2FF; color:#312E81; border:1px solid #C7D2FE; padding:7px 10px; border-radius:8px; font-size:11.5px; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:4px;">
+            <span class="material-icons" style="font-size:14px;">visibility</span> พรีวิว PDF
+          </button>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+window.renderDocumentQueueTable = function() {
+  const tbody = document.getElementById('doc-workflow-tbody');
+  if (!tbody) return;
+  const filterVal = document.getElementById('doc-queue-filter')?.value || 'ALL';
+
+  let list = superAdminData.documentQueue || [];
+  if (filterVal === 'READY_FOR_REQ') {
+    list = list.filter(d => d.companyName !== 'ยังไม่ยื่นบริษัท' && !d.requestLetterIssued);
+  } else if (filterVal === 'WAITING_RESPONSE') {
+    list = list.filter(d => d.requestLetterIssued && d.companyResponseStatus === 'WAITING_RESPONSE');
+  } else if (filterVal === 'ACCEPTED') {
+    list = list.filter(d => d.companyResponseStatus === 'ACCEPTED' && !d.dispatchLetterIssued);
+  } else if (filterVal === 'DISPATCHED') {
+    list = list.filter(d => d.dispatchLetterIssued);
+  }
+
+  if (list.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="6" class="text-center py-6 text-gray-400">ไม่มีรายการนิสิตในตัวกรองนี้</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = list.map(d => {
+    const escapedComp = (d.companyName || '').replace(/'/g, "\\'");
+    const checklistBadge = d.checklistStatus === 'APPROVED'
+      ? `<span style="background:#DCFCE7; color:#166534; padding:2px 8px; border-radius:999px; font-size:11px; font-weight:700;">✓ ที่ปรึกษาอนุมัติ</span>`
+      : d.checklistStatus === 'PENDING'
+      ? `<span style="background:#FEF3C7; color:#B45309; padding:2px 8px; border-radius:999px; font-size:11px; font-weight:700;">⏳ รอที่ปรึกษาตรวจ</span>`
+      : `<span style="background:#F1F5F9; color:#64748B; padding:2px 8px; border-radius:999px; font-size:11px;">ยังไม่ยื่น</span>`;
+
+    // คอลัมน์ 1: หนังสือขอความอนุเคราะห์ (+แบบฟอร์มใบตอบรับ)
+    let reqColHtml = '';
+    if (d.companyName === 'ยังไม่ยื่นบริษัท') {
+      reqColHtml = `<span style="font-size:11.5px; color:#94A3B8;">รอนิสิตยื่นบริษัท</span>`;
+    } else if (d.requestLetterIssued) {
+      reqColHtml = `
+        <div style="font-size:11.5px; font-weight:700; color:#059669;">✓ ออกหนังสือแล้ว (${d.requestLetterDocNo})</div>
+        <div style="font-size:11px; color:#64748B;">นัดสัมภาษณ์: ${d.interviewDate || '-'}</div>
+        <div style="display:flex; gap:4px; margin-top:4px; flex-wrap:wrap;">
+          <button type="button" onclick='openOfficialLetterPreview("REQUEST", [${d.studentId}], "${escapedComp}")'
+            style="background:#EEF2FF; color:#312E81; border:1px solid #C7D2FE; padding:3px 8px; border-radius:6px; font-size:11px; font-weight:700; cursor:pointer;">
+            📄 เปิด PDF (+ใบตอบรับ)
+          </button>
+          <button type="button" onclick="toggleDocumentLockOverride(${d.studentId})"
+            style="background:#F8FAFC; color:#475569; border:1px solid #CBD5E1; padding:3px 7px; border-radius:6px; font-size:10.5px; cursor:pointer;" title="ปลดล็อกกรณีฉุกเฉินโดย Super Admin">
+            ${d.isLocked ? '🔒 ล็อกอยู่' : '🔓 ปลดล็อกแล้ว'}
+          </button>
+        </div>
+      `;
+    } else {
+      reqColHtml = `
+        <div style="margin-bottom:4px;">
+          <label style="font-size:10.5px; color:#64748B;">วันสัมภาษณ์:</label>
+          <input type="date" id="interview-date-${d.studentId}" value="${d.interviewDate || '2026-02-15'}" class="input-field" style="font-size:11px; padding:3px 6px !important; width:125px;" />
+        </div>
+        <button type="button" onclick='issueSingleRequestLetter(${d.studentId}, "${escapedComp}")'
+          style="background:#4338CA; color:white; border:none; padding:6px 10px; border-radius:8px; font-size:11.5px; font-weight:700; cursor:pointer; width:100%;">
+          ออกหนังสือขอความอนุเคราะห์ (+ใบตอบรับ)
+        </button>
+      `;
+    }
+
+    // คอลัมน์ 2: ผลใบตอบรับจากสถานประกอบการ (รับเข้าฝึกงาน vs ปฏิเสธ)
+    let respColHtml = '';
+    if (!d.requestLetterIssued && d.companyResponseStatus === 'NOT_SENT') {
+      respColHtml = `<span style="font-size:11.5px; color:#94A3B8;">รอออกหนังสือขอความอนุเคราะห์ก่อน</span>`;
+    } else if (d.companyResponseStatus === 'ACCEPTED') {
+      respColHtml = `
+        <div style="font-size:12px; font-weight:700; color:#166534;">✅ บริษัทตอบรับเข้าฝึกงานแล้ว</div>
+        <div style="font-size:11px; color:#64748B;">ไฟล์: ${d.companyResponseFileName || 'ใบตอบรับ_ประทับตรา.pdf'}</div>
+      `;
+    } else {
+      respColHtml = `
+        <div style="font-size:11.5px; color:#B45309; font-weight:600; margin-bottom:5px;">⏳ รอผลใบตอบรับจากบริษัท</div>
+        <div style="display:flex; gap:5px; flex-wrap:wrap;">
+          <button type="button" onclick="recordCompanyResponseAction(${d.studentId}, 'ACCEPTED')"
+            style="background:#10B981; color:white; border:none; padding:5px 9px; border-radius:7px; font-size:11px; font-weight:700; cursor:pointer;">
+            ✓ บริษัทตอบรับ
+          </button>
+          <button type="button" onclick="recordCompanyResponseAction(${d.studentId}, 'REJECTED')"
+            style="background:#EF4444; color:white; border:none; padding:5px 9px; border-radius:7px; font-size:11px; font-weight:700; cursor:pointer;">
+            ✗ ปฏิเสธ (ปลดล็อก+Archive)
+          </button>
+        </div>
+      `;
+    }
+
+    // คอลัมน์ 3: หนังสือส่งตัวนิสิตเข้าฝึกงาน
+    let dispColHtml = '';
+    if (d.dispatchLetterIssued) {
+      dispColHtml = `
+        <div style="font-size:12px; font-weight:700; color:#1E40AF;">✓ ออกหนังสือส่งตัวแล้ว</div>
+        <div style="font-size:11px; color:#64748B;">เลขที่ ${d.dispatchLetterDocNo || 'อว 7316/ว 0512'}</div>
+        <button type="button" onclick='openOfficialLetterPreview("DISPATCH", [${d.studentId}], "${escapedComp}")'
+          style="margin-top:4px; background:#DBEAFE; color:#1E40AF; border:1px solid #93C5FD; padding:4px 9px; border-radius:6px; font-size:11px; font-weight:700; cursor:pointer;">
+          📄 พิมพ์หนังสือส่งตัว (PDF)
+        </button>
+      `;
+    } else if (d.companyResponseStatus === 'ACCEPTED') {
+      dispColHtml = `
+        <button type="button" onclick="issueDispatchLetterForStudent(${d.studentId})"
+          style="background:#059669; color:white; border:none; padding:7px 12px; border-radius:8px; font-size:11.5px; font-weight:700; cursor:pointer; width:100%; box-shadow:0 2px 6px rgba(5,150,105,0.25);">
+          🚀 อนุมัติ &amp; ออกหนังสือส่งตัว
+        </button>
+      `;
+    } else {
+      dispColHtml = `<span style="font-size:11.5px; color:#94A3B8;">รอผลตอบรับ "รับเข้าฝึกงาน"</span>`;
+    }
+
+    return `
+      <tr>
+        <td>
+          <div style="font-weight:800; color:#1E1B4B;">${d.studentCode}</div>
+          <div style="font-size:12.5px; color:#334155; font-weight:600;">${d.nameTh}</div>
+          <div style="font-size:11px; color:#64748B;">สาขา${d.major}</div>
+        </td>
+        <td>
+          <div style="font-weight:700; color:#1E293B;">${d.companyName}</div>
+          <div style="font-size:11.5px; color:#64748B;">ตำแหน่ง: ${d.position}</div>
+          ${d.archiveCount > 0 ? `<div style="font-size:10.5px; color:#D97706; font-weight:600;">(มีประวัติใน Archive ${d.archiveCount} แห่ง)</div>` : ''}
+        </td>
+        <td>${checklistBadge}</td>
+        <td>${reqColHtml}</td>
+        <td>${respColHtml}</td>
+        <td>${dispColHtml}</td>
+      </tr>
+    `;
+  }).join('');
+};
+
+window.issueSingleRequestLetter = async function(studentId, companyName) {
+  const interviewDate = document.getElementById(`interview-date-${studentId}`)?.value || '2026-02-15';
+  await window.issueGroupRequestLetter([studentId], companyName, interviewDate);
+};
+
+window.issueGroupRequestLetter = async function(studentIds, companyName, interviewDate) {
+  const defaultPrefix = superAdminData.academicConfig?.defaultDocPrefix || 'อว 7316/';
+  const suggestedNo = `${defaultPrefix}ว ${Math.floor(100 + Math.random() * 899)}`;
+  const docNo = prompt(
+    `ระบุเลขที่หนังสือขอความอนุเคราะห์ สำหรับ "${companyName}" (${studentIds.length} คน):\n(ระบบจะแนบแบบฟอร์มใบตอบรับของสถานประกอบการไปพร้อมหนังสือฉบับนี้)`,
+    suggestedNo
+  );
+  if (!docNo) return;
+
+  try {
+    const res = await fetch('/api/admin/super-admin/documents/issue-request-letter', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        studentIds,
+        docNo,
+        companyName,
+        interviewDate: interviewDate || '2026-02-15',
+      }),
+    });
+    const data = await res.json();
+    if (data.success) {
+      alert('✅ ' + data.message);
+      await window.loadSuperAdminOverview();
+      window.openOfficialLetterPreview('REQUEST', studentIds, companyName);
+    } else {
+      alert('เกิดข้อผิดพลาด: ' + (data.message || 'ไม่สามารถออกหนังสือได้'));
+    }
+  } catch (err) {
+    console.error(err);
+  }
+};
+
+window.recordCompanyResponseAction = async function(studentId, responseStatus) {
+  if (responseStatus === 'REJECTED') {
+    const reason = prompt(
+      'ระบุสาเหตุที่สถานประกอบการปฏิเสธ (ระบบจะเก็บประวัติบริษัทนี้ไว้ใน Archive และปลดล็อกให้นิสิตยื่น Checklist บริษัทแห่งใหม่ได้ทันที):',
+      'สถานประกอบการแจ้งเต็มอัตรา / ไม่ผ่านการคัดเลือก'
+    );
+    if (reason === null) return;
+    try {
+      const res = await fetch('/api/admin/super-admin/documents/record-company-response', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ studentId, responseStatus: 'REJECTED', note: reason }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert('🔓 ' + data.message);
+        await window.loadSuperAdminOverview();
+        await loadDashboardSummary();
+        await loadStudents();
+      }
+    } catch (err) {
+      console.error(err);
+    }
+    return;
+  }
+
+  try {
+    const res = await fetch('/api/admin/super-admin/documents/record-company-response', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        studentId,
+        responseStatus: 'ACCEPTED',
+        note: 'ตรวจสอบไฟล์สแกนใบตอบรับแล้ว สถานประกอบการตอบรับเข้าฝึกงาน',
+      }),
+    });
+    const data = await res.json();
+    if (data.success) {
+      alert('✅ ' + data.message);
+      await window.loadSuperAdminOverview();
+    }
+  } catch (err) {
+    console.error(err);
+  }
+};
+
+window.issueDispatchLetterForStudent = async function(studentId) {
+  const defaultPrefix = superAdminData.academicConfig?.defaultDocPrefix || 'อว 7316/';
+  const suggestedNo = `${defaultPrefix}ว ${Math.floor(500 + Math.random() * 499)}`;
+  const docNo = prompt('ระบุเลขที่หนังสือส่งตัวนิสิตเข้าฝึกงาน (Dispatch Letter):', suggestedNo);
+  if (!docNo) return;
+
+  try {
+    const res = await fetch('/api/admin/super-admin/documents/issue-dispatch-letter', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ studentIds: [studentId], docNo }),
+    });
+    const data = await res.json();
+    if (data.success) {
+      alert('🎉 ' + data.message);
+      await window.loadSuperAdminOverview();
+      await loadDashboardSummary();
+      await loadStudents();
+      const target = (superAdminData.documentQueue || []).find(d => d.studentId === studentId);
+      window.openOfficialLetterPreview('DISPATCH', [studentId], target?.companyName || 'สถานประกอบการ');
+    }
+  } catch (err) {
+    console.error(err);
+  }
+};
+
+window.toggleDocumentLockOverride = async function(studentId) {
+  try {
+    const res = await fetch('/api/admin/super-admin/documents/toggle-lock', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ studentId }),
+    });
+    const data = await res.json();
+    if (data.success) {
+      alert('🔔 ' + data.message);
+      await window.loadSuperAdminOverview();
+    }
+  } catch (err) {
+    console.error(err);
+  }
+};
+
+function renderArchiveHistoryTable() {
+  const tbody = document.getElementById('archive-history-tbody');
+  if (!tbody) return;
+  const list = superAdminData.archivedApplications || [];
+  if (list.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="7" class="text-center py-6 text-gray-400">ยังไม่มีประวัติบริษัทเดิมที่ถูกปฏิเสธใน Archive</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = list.map(a => `
+    <tr>
+      <td style="font-weight:700; color:#1E1B4B;">${a.studentCode}</td>
+      <td>${a.studentName}</td>
+      <td>${a.major}</td>
+      <td style="font-weight:700; color:#991B1B;">${a.companyName}</td>
+      <td>
+        <span style="background:#FEE2E2; color:#991B1B; padding:2px 8px; border-radius:999px; font-size:11px; font-weight:700;">
+          ${a.reason === 'COMPANY_REJECTED' ? 'บริษัทปฏิเสธในใบตอบรับ' : 'ที่ปรึกษาไม่อนุมัติ Checklist'}
+        </span>
+      </td>
+      <td style="font-size:12px; color:#475569;">${a.note || '-'}</td>
+      <td style="font-size:11.5px; color:#64748B;">${new Date(a.archivedAt).toLocaleDateString('th-TH')}</td>
+    </tr>
+  `).join('');
+}
+
+// พรีวิวและพิมพ์หนังสือราชการ PDF (หนังสือขอความอนุเคราะห์ + แบบฟอร์มใบตอบรับ หรือ หนังสือส่งตัว)
+window.openOfficialLetterPreview = function(type, studentIds, companyName) {
+  const modal = document.getElementById('official-letter-modal');
+  const titleEl = document.getElementById('official-letter-modal-title');
+  const areaEl = document.getElementById('official-letter-print-area');
+  if (!modal || !areaEl) return;
+
+  const students = (superAdminData.documentQueue || []).filter(d => studentIds.includes(d.studentId));
+  const first = students[0] || {
+    studentCode: '67023110',
+    nameTh: 'นายกรวิชญ์ สิทธิศักดิ์',
+    major: 'วิศวกรรมซอฟต์แวร์',
+    position: 'Software Developer Intern',
+    requestLetterDocNo: 'อว 7316/ว 0142',
+    dispatchLetterDocNo: 'อว 7316/ว 0512',
+    interviewDate: '2026-02-15',
+  };
+
+  const cfg = superAdminData.academicConfig || {};
+  const docNo = type === 'DISPATCH'
+    ? (first.dispatchLetterDocNo || `${cfg.defaultDocPrefix || 'อว 7316/'}ว 0512`)
+    : (first.requestLetterDocNo || `${cfg.defaultDocPrefix || 'อว 7316/'}ว 0142`);
+  const thaiDate = new Date().toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' });
+  const subjectText = type === 'DISPATCH'
+    ? 'ขอส่งตัวนิสิตเข้าฝึกงานวิชาชีพ / สหกิจศึกษา'
+    : 'ขอความอนุเคราะห์รับนิสิตเข้าฝึกงานวิชาชีพ / สหกิจศึกษา และนัดหมายสัมภาษณ์';
+
+  if (titleEl) {
+    titleEl.textContent = type === 'DISPATCH'
+      ? `พรีวิวหนังสือส่งตัวนิสิตเข้าฝึกงาน (${docNo})`
+      : `พรีวิวหนังสือขอความอนุเคราะห์ฝึกงาน + แบบฟอร์มใบตอบรับ (${docNo})`;
+  }
+
+  const studentRowsHtml = students.map((s, idx) => `
+    <tr>
+      <td style="border:1px solid #334155; padding:6px 10px; text-align:center;">${idx + 1}</td>
+      <td style="border:1px solid #334155; padding:6px 10px; text-align:center;">${s.studentCode}</td>
+      <td style="border:1px solid #334155; padding:6px 10px;">${s.nameTh}</td>
+      <td style="border:1px solid #334155; padding:6px 10px;">วท.บ. (${s.major})</td>
+      <td style="border:1px solid #334155; padding:6px 10px;">${s.position || 'นิสิตฝึกงาน'}</td>
+      <td style="border:1px solid #334155; padding:6px 10px; text-align:center;">${s.phone || '-'}</td>
+    </tr>
+  `).join('');
+
+  const acceptanceFormHtml = type === 'REQUEST' ? `
+    <div style="margin-top:32px; padding-top:24px; border-top:2px dashed #64748B;">
+      <div style="text-align:center; font-weight:800; font-size:16px; margin-bottom:8px;">
+        แบบฟอร์มใบตอบรับการเข้าฝึกงานวิชาชีพ / สหกิจศึกษา (สิ่งที่ส่งมาด้วย)
+      </div>
+      <div style="font-size:13.5px; margin-bottom:12px;">
+        <strong>เรียน</strong> คณบดีคณะเทคโนโลยีสารสนเทศและการสื่อสาร มหาวิทยาลัยพะเยา<br/>
+        <strong>สถานประกอบการ / หน่วยงาน:</strong> ${companyName || first.companyName}
+      </div>
+      <div style="border:1px solid #334155; border-radius:8px; padding:14px 18px; font-size:13.5px; margin-bottom:14px;">
+        <div style="font-weight:700; margin-bottom:8px;">ผลการพิจารณาของสถานประกอบการ (กรุณาทำเครื่องหมาย ✓ ในช่องที่ต้องการ):</div>
+        <div style="margin-bottom:6px;">☐ <strong>ยินดีรับนิสิตเข้าฝึกงาน / สหกิจศึกษา</strong> ตามรายชื่อที่แนบมาพร้อมหนังสือฉบับนี้</div>
+        <div>☐ <strong>ไม่สามารถรับนิสิตเข้าฝึกงานได้ในรอบนี้</strong> เนื่องจาก .........................................................................................</div>
+      </div>
+      <div style="display:flex; justify-content:space-between; font-size:13px; margin-top:20px;">
+        <div>ประทับตราสถานประกอบการ (ถ้ามี)</div>
+        <div style="text-align:center;">
+          ลงชื่อ ............................................................ ผู้มีอำนาจลงนาม / ฝ่ายทรัพยากรบุคคล<br/>
+          (............................................................)<br/>
+          ตำแหน่ง ............................................................ วันที่ ........../........../..........
+        </div>
+      </div>
+    </div>
+  ` : '';
+
+  areaEl.innerHTML = `
+    <div style="max-width:720px; margin:0 auto; font-size:14px; color:#0F172A;">
+      <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:16px;">
+        <div>
+          <div style="font-weight:700;">ที่ ${docNo}</div>
+        </div>
+        <div style="text-align:center;">
+          <div style="font-size:17px; font-weight:800; color:#1E1B4B;">คณะเทคโนโลยีสารสนเทศและการสื่อสาร</div>
+          <div style="font-size:14px; font-weight:700;">มหาวิทยาลัยพะเยา จ.พะเยา 56000</div>
+        </div>
+        <div style="text-align:right;">
+          <div>วันที่ ${thaiDate}</div>
+        </div>
+      </div>
+
+      <div style="margin-bottom:10px;"><strong>เรื่อง</strong> &nbsp;&nbsp;${subjectText}</div>
+      <div style="margin-bottom:10px;"><strong>เรียน</strong> &nbsp;&nbsp;ผู้จัดการฝ่ายทรัพยากรบุคคล / ผู้บริหาร <strong>${companyName || first.companyName}</strong></div>
+      ${type === 'REQUEST' ? `<div style="margin-bottom:14px;"><strong>สิ่งที่ส่งมาด้วย</strong> &nbsp;&nbsp;1. แบบฟอร์มใบตอบรับการเข้าฝึกงานวิชาชีพ และประวัติย่อ (CV) จำนวน ${students.length} ชุด</div>` : ''}
+
+      <p style="text-indent:40px; margin-bottom:12px; text-align:justify;">
+        ด้วย คณะเทคโนโลยีสารสนเทศและการสื่อสาร มหาวิทยาลัยพะเยา ได้กำหนดให้นิสิตระดับปริญญาตรี ชั้นปีที่ 3-4 เข้ารับการฝึกงานวิชาชีพและสหกิจศึกษาในสถานประกอบการ เพื่อให้นิสิตได้เพิ่มพูนทักษะและประสบการณ์การทำงานจริงในสายวิชาชีพเทคโนโลยีสารสนเทศ พิจารณาแล้วเห็นว่าหน่วยงานของท่านมีความเหมาะสมและมีมาตรฐานทางวิชาชีพเป็นอย่างดียิ่ง
+      </p>
+
+      <p style="text-indent:40px; margin-bottom:14px;">
+        ในการนี้ คณะเทคโนโลยีสารสนเทศและการสื่อสาร จึงใคร่<strong>${type === 'DISPATCH' ? 'ขอส่งตัวนิสิตเข้าปฏิบัติงานสหกิจศึกษา/ฝึกงาน' : 'ขอความอนุเคราะห์รับนิสิตเข้าฝึกงานวิชาชีพ/สหกิจศึกษา'}</strong> ประจำปีการศึกษา ${cfg.currentAcademicYear || '2568'} จำนวน ${students.length} คน ดังรายชื่อต่อไปนี้:
+      </p>
+
+      <table style="width:100%; border-collapse:collapse; margin-bottom:18px; font-size:13px;">
+        <thead>
+          <tr style="background:#F1F5F9;">
+            <th style="border:1px solid #334155; padding:6px 10px;">ลำดับ</th>
+            <th style="border:1px solid #334155; padding:6px 10px;">รหัสนิสิต</th>
+            <th style="border:1px solid #334155; padding:6px 10px;">ชื่อ - นามสกุล</th>
+            <th style="border:1px solid #334155; padding:6px 10px;">หลักสูตร/สาขาวิชา</th>
+            <th style="border:1px solid #334155; padding:6px 10px;">ตำแหน่งที่ยื่นฝึกงาน</th>
+            <th style="border:1px solid #334155; padding:6px 10px;">เบอร์โทรศัพท์</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${studentRowsHtml}
+        </tbody>
+      </table>
+
+      <p style="text-indent:40px; margin-bottom:24px;">
+        จึงเรียนมาเพื่อโปรดพิจารณาให้ความอนุเคราะห์ และขอขอบพระคุณในความร่วมมือด้วยดีเสมอมา ณ โอกาสนี้
+      </p>
+
+      <div style="text-align:center; margin-left:240px; margin-bottom:20px;">
+        <div>ขอแสดงความนับถือ</div>
+        <div style="margin-top:28px; font-weight:700;">(${cfg.deanSignatory || 'ผู้ช่วยศาสตราจารย์ ดร.พรเทพ โรจนวสุ'})</div>
+        <div>${cfg.deanPosition || 'คณบดีคณะเทคโนโลยีสารสนเทศและการสื่อสาร'}</div>
+        <div>มหาวิทยาลัยพะเยา</div>
+      </div>
+
+      ${acceptanceFormHtml}
+    </div>
+  `;
+
+  modal.style.display = 'flex';
+};
+
+window.closeOfficialLetterModal = function() {
+  const modal = document.getElementById('official-letter-modal');
+  if (modal) modal.style.display = 'none';
+};
+
+window.printOfficialLetter = function() {
+  const areaEl = document.getElementById('official-letter-print-area');
+  if (!areaEl) return;
+  const win = window.open('', '_blank', 'width=900,height=750');
+  if (!win) {
+    window.print();
+    return;
+  }
+  win.document.write(`
+    <!DOCTYPE html>
+    <html lang="th">
+      <head>
+        <meta charset="utf-8" />
+        <title>หนังสือราชการ คณะ ICT มหาวิทยาลัยพะเยา</title>
+        <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700;800&display=swap" rel="stylesheet" />
+        <style>
+          body { font-family: 'Sarabun', sans-serif; padding: 24px 36px; color: #0F172A; line-height: 1.65; }
+          @media print { body { padding: 0; } }
+        </style>
+      </head>
+      <body>
+        ${areaEl.innerHTML}
+        <script>window.onload = function() { window.print(); };<\/script>
+      </body>
+    </html>
+  `);
+  win.document.close();
+};
+
+// =========================================================================
+// WORKSPACE 6: ส่งออกข้อมูลเชื่อมโยงระบบ Co-op ICT ของพี่แดง (Co-op 01)
+// =========================================================================
+function renderCoop01PreviewTable() {
+  const tbody = document.getElementById('coop-preview-tbody');
+  if (!tbody) return;
+  const list = superAdminData.documentQueue || [];
+
+  if (list.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="8" class="text-center py-6 text-gray-400">ไม่มีข้อมูลนิสิตสำหรับส่งออก</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = list.map(s => {
+    const statusBadge = s.dispatchLetterIssued
+      ? `<span style="background:#DCFCE7; color:#166534; padding:2px 8px; border-radius:999px; font-size:11px; font-weight:700;">✓ ออกหนังสือส่งตัวแล้ว (${s.dispatchLetterDocNo})</span>`
+      : s.companyResponseStatus === 'ACCEPTED'
+      ? `<span style="background:#DBEAFE; color:#1E40AF; padding:2px 8px; border-radius:999px; font-size:11px; font-weight:700;">✓ บริษัทตอบรับแล้ว</span>`
+      : `<span style="background:#F1F5F9; color:#64748B; padding:2px 8px; border-radius:999px; font-size:11px;">อยู่ระหว่างดำเนินการ</span>`;
+
+    return `
+      <tr>
+        <td style="font-weight:800; color:#1E1B4B;">${s.studentCode}</td>
+        <td>${s.nameTh}</td>
+        <td>${s.major}</td>
+        <td style="font-weight:700;">${s.gpa ?? '-'}</td>
+        <td style="font-weight:700; color:#1E293B;">${s.companyName}</td>
+        <td>${s.position}</td>
+        <td>
+          <div style="font-size:12px;">ที่ปรึกษา: ${s.advisorName}</div>
+          <div style="font-size:11.5px; color:#64748B;">นิเทศก์: ${s.supervisorName}</div>
+        </td>
+        <td>${statusBadge}</td>
+      </tr>
+    `;
+  }).join('');
+}
+
+window.downloadCoop01Csv = function(mode) {
+  let list = superAdminData.documentQueue || [];
+  if (mode === 'APPROVED_ONLY') {
+    const approved = list.filter(s => s.companyResponseStatus === 'ACCEPTED' || s.dispatchLetterIssued);
+    if (approved.length > 0) {
+      list = approved;
+    }
+  }
+
+  const headers = [
+    'รหัสนิสิต (Student_ID)',
+    'ชื่อ-นามสกุล (Full_Name)',
+    'สาขาวิชา (Major)',
+    'ชั้นปี (Year)',
+    'เกรดเฉลี่ยสะสม (GPAX)',
+    'เบอร์โทรศัพท์นิสิต (Phone)',
+    'อีเมลมหาวิทยาลัย (Email)',
+    'ชื่อสถานประกอบการ (Company_Name_TH)',
+    'ตำแหน่งงานสหกิจ/ฝึกงาน (Position)',
+    'ที่อยู่สถานประกอบการ (Company_Address)',
+    'จังหวัด (Province)',
+    'ชื่อผู้ประสานงาน/HR (HR_Contact)',
+    'เบอร์โทรศัพท์บริษัท (Company_Phone)',
+    'อาจารย์ที่ปรึกษา (Advisor)',
+    'อาจารย์นิเทศก์ (Supervisor)',
+    'เลขที่หนังสือขอความอนุเคราะห์ (Request_Doc_No)',
+    'เลขที่หนังสือส่งตัว (Dispatch_Doc_No)',
+    'สถานะส่งต่อ Co-op 01',
+  ];
+
+  const rows = list.map(s => [
+    s.studentCode,
+    s.nameTh,
+    s.major,
+    s.year,
+    s.gpa ?? '',
+    s.phone,
+    s.email,
+    s.companyName,
+    s.position,
+    s.companyAddress,
+    s.companyProvince,
+    s.contactPersonName,
+    s.contactPersonPhone,
+    s.advisorName,
+    s.supervisorName,
+    s.requestLetterDocNo || '-',
+    s.dispatchLetterDocNo || '-',
+    s.dispatchLetterIssued ? 'พร้อมส่งต่อ Co-op 01' : 'รอดำเนินการ',
+  ].map(v => `"${String(v ?? '').replace(/"/g, '""')}"`).join(','));
+
+  const csvContent = '\uFEFF' + [headers.map(h => `"${h}"`).join(','), ...rows].join('\n');
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `Coop01_ICT_UP_Export_${mode}_${new Date().toISOString().slice(0, 10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+};
+
+// เรียกโหลดข้อมูล Super Admin ทันทีเมื่อเปิดหน้า
+window.loadSuperAdminOverview();
+window.addEventListener('app:data-updated', () => {
+  window.loadSuperAdminOverview();
+});

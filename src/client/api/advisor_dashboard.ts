@@ -6,11 +6,92 @@ let selectedStudentIds = new Set();
 let openDropdownStudentId = null;
 let totalAdvisorStudents = 0;
 let currentFilteredCount = 0;
+let currentRoleMode = new URLSearchParams(window.location.search).get('roleMode') === 'SUPERVISOR' ? 'SUPERVISOR' : 'ADVISOR';
+
+function updateAdvisorModeButtonsUI() {
+  const btnAdv = document.getElementById('btn-mode-advisor');
+  const btnSup = document.getElementById('btn-mode-supervisor');
+  const mainTitle = document.getElementById('advisor-dashboard-main-title');
+  const tableTitle = document.getElementById('advisor-table-title');
+
+  if (currentRoleMode === 'SUPERVISOR') {
+    if (btnAdv) {
+      btnAdv.style.background = 'transparent';
+      btnAdv.style.color = '#FFFFFF';
+    }
+    if (btnSup) {
+      btnSup.style.background = '#FFFFFF';
+      btnSup.style.color = '#1E1B4B';
+    }
+    if (mainTitle) mainTitle.textContent = 'ระบบติดตามดูแลนิสิตฝึกงาน (ในฐานะอาจารย์นิเทศก์)';
+    if (tableTitle) tableTitle.textContent = 'รายชื่อนิสิตในการนิเทศ';
+  } else {
+    if (btnAdv) {
+      btnAdv.style.background = '#FFFFFF';
+      btnAdv.style.color = '#1E1B4B';
+    }
+    if (btnSup) {
+      btnSup.style.background = 'transparent';
+      btnSup.style.color = '#FFFFFF';
+    }
+    if (mainTitle) mainTitle.textContent = 'ระบบติดตามดูแลนิสิตฝึกงาน (เฉพาะนิสิตในความรับผิดชอบ)';
+    if (tableTitle) tableTitle.textContent = 'รายชื่อนิสิตในที่ปรึกษา';
+  }
+}
+
+window.switchAdvisorViewMode = async function(mode) {
+  currentRoleMode = mode === 'SUPERVISOR' ? 'SUPERVISOR' : 'ADVISOR';
+  try {
+    await fetch('/auth/switch-role', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ roleMode: currentRoleMode })
+    });
+  } catch (_) {}
+  const url = new URL(window.location.href);
+  url.searchParams.set('roleMode', currentRoleMode);
+  window.history.replaceState({}, '', url.toString());
+  updateAdvisorModeButtonsUI();
+  currentPage = 1;
+  await loadDashboardSummary();
+  await loadStudents();
+};
+
+window.filterByAdvisorNotification = function(filterType) {
+  const statusEl = document.getElementById('status-filter');
+  if (filterType === 'checklist_pending' && statusEl) {
+    statusEl.value = 'checklist_pending';
+    currentFilter = null;
+    currentPage = 1;
+    updateFilterUI();
+    loadStudents();
+  } else if (filterType === 'placement_pending') {
+    currentFilter = null;
+    if (statusEl) statusEl.value = '';
+    currentPage = 1;
+    updateFilterUI();
+    loadStudents();
+  }
+};
 
 // ==========================================
 // เริ่มต้นโหลดข้อมูล
 // ==========================================
 async function initAdvisorDashboard() {
+  try {
+    const meRes = await fetch('/auth/me');
+    const meData = await meRes.json();
+    if (meData.authenticated && meData.user) {
+      const switcher = document.getElementById('advisor-mode-switcher');
+      if (switcher && meData.user.isSupervisor) {
+        switcher.style.display = 'inline-flex';
+      }
+      if (!new URLSearchParams(window.location.search).get('roleMode') && meData.user.activeRoleMode === 'SUPERVISOR') {
+        currentRoleMode = 'SUPERVISOR';
+      }
+      updateAdvisorModeButtonsUI();
+    }
+  } catch (_) {}
   await loadDashboardSummary();
   // เติม dropdown ชั้นปีก่อน เพื่อให้ค่า default (นิสิตปี 3 ปัจจุบัน) มีผลตั้งแต่โหลดตารางครั้งแรก
   await populateYearFilter('/api/advisor/students');
@@ -23,10 +104,18 @@ async function initAdvisorDashboard() {
 // ==========================================
 async function loadDashboardSummary() {
   try {
-    const res = await fetch('/api/advisor/dashboard-summary');
+    const res = await fetch(`/api/advisor/dashboard-summary?roleMode=${currentRoleMode}`);
     const data = await res.json();
     if (!data.success) return;
     totalAdvisorStudents = data.totalStudents ?? 0;
+    const totalEl = document.getElementById('notif-total-advisees');
+    const pendChkEl = document.getElementById('notif-pending-checklist');
+    const pendPlcEl = document.getElementById('notif-pending-placement');
+    const mismatchEl = document.getElementById('notif-mismatch-placement');
+    if (totalEl) totalEl.textContent = data.totalStudents ?? 0;
+    if (pendChkEl) pendChkEl.textContent = data.notifications?.pendingChecklistCount ?? (data.checklistStats?.pending ?? 0);
+    if (pendPlcEl) pendPlcEl.textContent = data.notifications?.pendingPlacementCount ?? 0;
+    if (mismatchEl) mismatchEl.textContent = data.notifications?.mismatchedPlacementCount ?? 0;
     renderDashboardCharts(data.checklistStats, data.readinessStats, data.totalStudents);
   } catch (err) {
     console.error('Load advisor dashboard summary error:', err);
@@ -155,7 +244,7 @@ async function loadStudents() {
     const searchInput = document.getElementById('student-search');
     const searchVal = searchInput ? searchInput.value.trim() : '';
 
-    let url = `/api/advisor/students?page=${currentPage}&limit=${pageLimit}`;
+    let url = `/api/advisor/students?page=${currentPage}&limit=${pageLimit}&roleMode=${currentRoleMode}`;
     if (searchVal) url += `&search=${encodeURIComponent(searchVal)}`;
     if (currentFilter) {
       url += `&chartType=${encodeURIComponent(currentFilter.chartType)}&chartKey=${encodeURIComponent(currentFilter.chartKey)}`;
@@ -255,6 +344,17 @@ function renderStudentTable(students, total, page, totalPages) {
           ⚠️ ขาด Hard (${hardHours}/18 ชม.)
         </span>`);
       }
+    }
+
+    // [REQ-06] ตรวจสอบความตรงกันของสถานที่ฝึกงานกับ Checklist 3 บริษัท
+    if (s.isMatchedWithChecklist === false) {
+      alertTags.push(`<span class="inline-flex items-center gap-1 px-2.5 py-0.5 text-[11px] font-bold rounded-md bg-red-50 text-red-700 border border-red-300" title="นิสิตยื่นขอฝึกงานบริษัท '${s.placementCompanyName || '-'}' ซึ่งไม่ตรงกับบริษัทที่ผ่านการอนุมัติใน Checklist">
+        🚨 [REQ-06] บริษัทไม่ตรง Checklist (${s.placementCompanyName || '-'})
+      </span>`);
+    } else if (s.isMatchedWithChecklist === true && s.placementCompanyName) {
+      alertTags.push(`<span class="inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200">
+        ✅ ตรงกับ Checklist (${s.placementCompanyName})
+      </span>`);
     }
 
     const tr = document.createElement('tr');

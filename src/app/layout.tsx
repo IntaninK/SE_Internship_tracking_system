@@ -2,8 +2,8 @@ import React from "react";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "ระบบติดตามการเตรียมฝึกงานของนิสิต SE",
-  description: "ระบบติดตามการเตรียมความพร้อมเข้าฝึกงานของนิสิต คณะเทคโนโลยีสารสนเทศและการสื่อสาร มหาวิทยาลัยพะเยา",
+  title: "ระบบบริหารจัดการการฝึกงานและสหกิจศึกษา - คณะ ICT มหาวิทยาลัยพะเยา",
+  description: "ระบบบริหารจัดการการฝึกงานและสหกิจศึกษา คณะเทคโนโลยีสารสนเทศและการสื่อสาร มหาวิทยาลัยพะเยา (ICT UP)",
 };
 
 export default function RootLayout({
@@ -28,6 +28,7 @@ export default function RootLayout({
         />
         <link rel="stylesheet" href="/css/main.css" />
         <link rel="stylesheet" href="/css/main-output.css" />
+        <link rel="stylesheet" href="/css/modern-ict.css" />
       </head>
       <body>{children}</body>
     </html>

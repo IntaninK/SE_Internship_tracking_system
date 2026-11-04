@@ -45,6 +45,11 @@ async function initStudentDetail() {
     renderPlacement(data.placement);
     renderDocumentSummary(data);
 
+    const addTrainingBox = document.getElementById('admin-add-training-box');
+    if (addTrainingBox) {
+      addTrainingBox.style.display = (currentUserFlags.isCourseAdmin || currentUserFlags.isStaff) ? 'block' : 'none';
+    }
+
     if (!currentUserFlags.isCourseAdmin) {
       const trainingApproval = document.getElementById('training-approval-area');
       const trainingSave = document.getElementById('training-save-area');
@@ -505,6 +510,8 @@ function renderPlacement(placement) {
   body.innerHTML = `
     <div style="margin-bottom:16px; padding:12px 18px; border-radius:8px; background:#f8fafc; border:1px solid #e2e8f0; display:flex; align-items:center; gap:10px;">
       <strong>สถานะปัจจุบัน:</strong> ${statusBadge}
+      ${placement.isMatchedWithChecklist === false ? `<span style="background:#FEE2E2; color:#B91C1C; border:1px solid #FCA5A5; padding:3px 10px; border-radius:999px; font-size:12px; font-weight:700;">🚨 [REQ-06] บริษัทไม่ตรงกับ Checklist เดิม!</span>` : ''}
+      ${placement.isMatchedWithChecklist === true ? `<span style="background:#DCFCE7; color:#15803D; border:1px solid #86EFAC; padding:3px 10px; border-radius:999px; font-size:12px; font-weight:700;">✅ [REQ-06] ตรงกับ Checklist ที่อนุมัติ</span>` : ''}
       ${placement.note ? `<span style="color:#64748b; font-size:13px;">หมายเหตุ: ${placement.note}</span>` : ''}
     </div>
     <div class="form-grid">
@@ -612,3 +619,56 @@ initStudentDetail();
 window.addEventListener('app:data-updated', () => {
   initStudentDetail();
 });
+
+
+// =========================================================================
+// อาจารย์ประจำวิชา / เจ้าหน้าที่คณะ: เพิ่มชั่วโมงกิจกรรมเตรียมความพร้อม (Hackathon, Project Day, Co-op)
+// =========================================================================
+window.fillPresetTraining = function(title, skillType, hours) {
+  const titleEl = document.getElementById('admin-new-training-title');
+  const typeEl = document.getElementById('admin-new-training-type');
+  const hoursEl = document.getElementById('admin-new-training-hours');
+  if (titleEl) titleEl.value = title;
+  if (typeEl) typeEl.value = skillType;
+  if (hoursEl) hoursEl.value = hours;
+};
+
+window.submitAdminAddTraining = async function() {
+  const titleEl = document.getElementById('admin-new-training-title');
+  const typeEl = document.getElementById('admin-new-training-type');
+  const hoursEl = document.getElementById('admin-new-training-hours');
+
+  const title = titleEl ? titleEl.value.trim() : '';
+  const skillType = typeEl ? typeEl.value : 'HARD';
+  const hours = hoursEl ? Number(hoursEl.value) : 0;
+
+  if (!title) {
+    alert('กรุณาระบุชื่อกิจกรรมอบรม / โครงการของคณะ');
+    if (titleEl) titleEl.focus();
+    return;
+  }
+  if (!hours || hours <= 0) {
+    alert('กรุณาระบุจำนวนชั่วโมงอบรมที่มากกว่า 0');
+    if (hoursEl) hoursEl.focus();
+    return;
+  }
+
+  try {
+    const res = await fetch(`/api/admin/students/${studentId}/trainings`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title, skillType, hours, status: 'APPROVED' }),
+    });
+    const data = await res.json();
+    if (data.success) {
+      alert(`✅ บันทึกชั่วโมงกิจกรรม "${title}" (${hours} ชม.) สำเร็จ`);
+      if (titleEl) titleEl.value = '';
+      initStudentDetail();
+    } else {
+      alert('เกิดข้อผิดพลาด: ' + (data.message || 'ไม่สามารถเพิ่มชั่วโมงได้'));
+    }
+  } catch (err) {
+    console.error('Add training error:', err);
+    alert('เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์');
+  }
+};

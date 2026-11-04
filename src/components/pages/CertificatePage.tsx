@@ -3,13 +3,109 @@
 import React from "react";
 import PageShell from "./PageShell";
 
-const PAGE_TITLE = "อัปโหลด Certificate Soft/Hard skill";
+const PAGE_TITLE = "อัปโหลดหลักฐานชั่วโมงเตรียมความพร้อม (Hard / Soft Skill) - คณะ ICT ม.พะเยา";
 const PAGE_STYLES: string[] = [];
 const PAGE_SCRIPTS: string[] = [
   "../components/header.js",
   "../api/certificate.js"
 ];
-const PAGE_BODY_HTML = "<!-- ==================== HEADER BAR ==================== -->\r\n    <div id=\"header-placeholder\"></div>\r\n\r\n    <!-- ==================== MAIN CONTENT ==================== -->\r\n    <main class=\"main-content\">\r\n\r\n        <!-- ===== CARD ===== -->\r\n        <div class=\"card\">\r\n\r\n            <!-- Card Header -->\r\n            <div class=\"card-header\">\r\n                <span class=\"material-icons header-icon\">assignment</span>\r\n                <h1 class=\"card-title\">อัปโหลด Certificate Soft/Hard skill</h1>\r\n            </div>\r\n\r\n            <!-- Card Body -->\r\n            <div class=\"card-body flex flex-col items-center gap-4\">\r\n\r\n                <!-- Upload Zone -->\r\n                <div class=\"upload-zone upload-zone--file w-full max-w-[820px]\" id=\"dropZone\" style=\"position: relative; min-height: 160px; display: flex; flex-direction: column; align-items: center; justify-content: center; border: 2px dashed #999; border-radius: 12px; padding: 14px;\">\r\n                    \r\n                    <!-- Default upload content -->\r\n                    <div id=\"upload-prompt\" class=\"flex flex-col items-center gap-1\">\r\n                        <span class=\"material-icons text-3xl text-gray-500\">cloud_upload</span>\r\n                        <p class=\"text-center text-gray-600 text-sm\">\r\n                            Drag and drop files here, or click to browse<br />\r\n                            PDF, JPG, PNG up to 10MB each\r\n                        </p>\r\n                    </div>\r\n\r\n                    <!-- Preview Container (ภาพที่ 4) -->\r\n                    <div id=\"cert-preview-box\" style=\"display: none; width: 100%; max-height: 200px; justify-content: center; align-items: center; overflow: hidden; margin-bottom: 10px;\">\r\n                        <img id=\"cert-preview-img\" src=\"\" alt=\"Certificate Preview\" style=\"max-width: 100%; max-height: 180px; object-fit: contain; border-radius: 1px; border: 1px solid #ccc;\" />\r\n                        <div id=\"cert-preview-pdf\" style=\"display: none; align-items: center; gap: 8px; font-weight: 500; color: #d32f2f;\">\r\n                            <span class=\"material-icons text-4xl\">picture_as_pdf</span>\r\n                            <span id=\"cert-pdf-name\">file.pdf</span>\r\n                        </div>\r\n                    </div>\r\n\r\n                    <label class=\"inline-flex items-center justify-center gap-2 px-5 py-2 rounded-full bg-blue-600 text-white font-medium text-sm cursor-pointer hover:bg-blue-700 transition mt-1\">\r\n                        Browse Files\r\n                        <input type=\"file\" id=\"cert-file\" accept=\"image/*,.pdf\" class=\"hidden\" />\r\n                    </label>\r\n                </div>\r\n\r\n                <!-- Form Row: ประเภท + จำนวน -->\r\n                <div class=\"flex flex-wrap items-center justify-center gap-x-6 gap-y-3 w-full mt-1\">\r\n\r\n                    <!-- หัวข้ออบรม (optional) -->\r\n                    <div class=\"flex items-center gap-2\">\r\n                        <label class=\"text-[#323639] text-xl font-normal whitespace-nowrap\">หัวข้ออบรม</label>\r\n                        <input type=\"text\" id=\"cert-title\" placeholder=\"เช่น อบรม Java Dev (ไม่ระบุก็ได้)\" class=\"input-field w-[280px] text-base\" />\r\n                    </div>\r\n\r\n                    <!-- ประเภทของใบอบรม -->\r\n                    <div class=\"flex items-center gap-2\">\r\n                        <label class=\"text-[#323639] text-xl font-normal whitespace-nowrap\">ประเภทของใบอบรม</label>\r\n                        <select id=\"cert-skill-type\" class=\"input-field w-[160px] text-sm\">\r\n                            <option value=\"soft\">Soft skill</option>\r\n                            <option value=\"hard\">Hard skill</option>\r\n                        </select>\r\n                    </div>\r\n\r\n                    <!-- จำนวนชั่วโมง -->\r\n                    <div class=\"flex items-center gap-3\">\r\n                        <label class=\"text-[#323639] text-xl font-normal whitespace-nowrap\">จำนวน</label>\r\n                        <input type=\"number\" id=\"cert-hours\" min=\"1\" value=\"8\" class=\"input-field w-[80px] text-center text-base\" />\r\n                        <span class=\"text-[#323639] text-base font-normal\">ชั่วโมง</span>\r\n                    </div>\r\n                </div>\r\n\r\n                <!-- ปุ่มเพิ่มข้อมูล -->\r\n                <button type=\"button\" id=\"add-cert-btn\"\r\n                    class=\"inline-flex items-center justify-center gap-2 px-4 py-2 rounded-full bg-green-500 text-white font-medium text-sm border-none cursor-pointer hover:bg-green-600 transition mt-1\">\r\n                    <span class=\"material-icons text-lg\">add_circle</span>\r\n                    เพิ่มข้อมูล\r\n                </button>\r\n\r\n            </div><!-- /card-body -->\r\n        </div><!-- /card -->\r\n\r\n        <!-- ===== ปุ่มยืนยันและกลับหน้าหลัก ===== -->\r\n        <div class=\"flex justify-center mt-5 mb-6\">\r\n            <button type=\"button\" id=\"submit-and-return-btn\"\r\n                class=\"inline-flex items-center justify-center gap-2 px-8 py-4 rounded-full bg-[#00C853] text-white font-bold text-lg shadow-lg border-2 border-gray-400 cursor-pointer hover:bg-[#00B248] transition\">\r\n                ยืนยันและกลับหน้าหลัก\r\n            </button>\r\n        </div>\r\n\r\n    </main>";
+const PAGE_BODY_HTML = `
+  <!-- ==================== HEADER BAR ==================== -->
+  <div id="header-placeholder"></div>
+
+  <!-- ==================== MAIN CONTENT ==================== -->
+  <main class="main-content">
+
+    <div class="card">
+      <!-- Card Header -->
+      <div class="card-header" style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <span class="material-icons header-icon">workspace_premium</span>
+          <div>
+            <h1 class="card-title" style="margin:0;">อัปโหลดหลักฐานการอบรมเตรียมความพร้อม (Soft Skill / Hard Skill)</h1>
+            <p style="margin:2px 0 0 0; font-size:11.5px; color:#E0E7FF;">เกณฑ์ขั้นต่ำก่อนออกฝึกงาน: Soft Skill ≥ 12 ชม. และ Hard Skill ≥ 18 ชม. (รวม ≥ 30 ชม.)</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card Body -->
+      <div class="card-body flex flex-col items-center gap-5">
+
+        <!-- Upload Zone -->
+        <div class="upload-zone upload-zone--file w-full max-w-[820px]" id="dropZone" style="position: relative; min-height: 170px; display: flex; flex-direction: column; align-items: center; justify-content: center; border: 2px dashed #94A3B8; border-radius: 16px; padding: 20px; background:#F8FAFC;">
+
+          <!-- Default upload content -->
+          <div id="upload-prompt" class="flex flex-col items-center gap-1">
+            <span class="material-icons text-4xl text-indigo-600">cloud_upload</span>
+            <p class="text-center text-slate-600 text-sm font-medium">
+              ลากไฟล์ใบเกียรติบัตร (Certificate) มาวางที่นี่ หรือคลิกปุ่มด้านล่าง<br />
+              <span class="text-xs text-slate-400">รองรับ PDF, JPG, PNG ขนาดไม่เกิน 10MB</span>
+            </p>
+          </div>
+
+          <!-- Preview Container -->
+          <div id="cert-preview-box" style="display: none; width: 100%; max-height: 200px; justify-content: center; align-items: center; overflow: hidden; margin-bottom: 10px;">
+            <img id="cert-preview-img" src="" alt="Certificate Preview" style="max-width: 100%; max-height: 180px; object-fit: contain; border-radius: 8px; border: 1px solid #CBD5E1;" />
+            <div id="cert-preview-pdf" style="display: none; align-items: center; gap: 8px; font-weight: 600; color: #DC2626;">
+              <span class="material-icons text-4xl">picture_as_pdf</span>
+              <span id="cert-pdf-name">file.pdf</span>
+            </div>
+          </div>
+
+          <label class="btn btn-primary inline-flex items-center justify-center gap-2 px-5 py-2 rounded-full text-white font-semibold text-xs cursor-pointer transition mt-2">
+            <span class="material-icons" style="font-size:16px;">folder_open</span>
+            <span>เลือกไฟล์หลักฐาน (Browse Files)</span>
+            <input type="file" id="cert-file" accept="image/*,.pdf" class="hidden" />
+          </label>
+        </div>
+
+        <!-- Form Row: ประเภท + จำนวน -->
+        <div class="flex flex-wrap items-center justify-center gap-x-6 gap-y-3 w-full mt-1">
+
+          <!-- หัวข้ออบรม -->
+          <div class="flex items-center gap-2">
+            <label class="text-slate-700 text-sm font-bold whitespace-nowrap">หัวข้อการอบรม / กิจกรรม</label>
+            <input type="text" id="cert-title" placeholder="เช่น อบรม Software Testing / Hackathon" class="input-field w-[280px]" />
+          </div>
+
+          <!-- ประเภทของใบอบรม -->
+          <div class="flex items-center gap-2">
+            <label class="text-slate-700 text-sm font-bold whitespace-nowrap">ประเภททักษะ</label>
+            <select id="cert-skill-type" class="input-field w-[160px]">
+              <option value="soft">Soft Skill</option>
+              <option value="hard">Hard Skill</option>
+            </select>
+          </div>
+
+          <!-- จำนวนชั่วโมง -->
+          <div class="flex items-center gap-2">
+            <label class="text-slate-700 text-sm font-bold whitespace-nowrap">จำนวน</label>
+            <input type="number" id="cert-hours" min="1" value="6" class="input-field w-[85px] text-center font-bold" />
+            <span class="text-slate-600 text-sm font-semibold">ชั่วโมง</span>
+          </div>
+        </div>
+
+        <!-- ปุ่มเพิ่มข้อมูล -->
+        <button type="button" id="add-cert-btn"
+          class="btn btn-success inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-full text-white font-semibold text-sm border-none cursor-pointer transition mt-1">
+          <span class="material-icons text-lg">add_circle</span>
+          <span>บันทึกและเพิ่มรายการอบรม</span>
+        </button>
+
+      </div>
+    </div>
+
+    <!-- ปุ่มยืนยันและกลับหน้าหลัก -->
+    <div class="flex justify-center mt-5 mb-6">
+      <button type="button" id="submit-and-return-btn"
+        class="btn btn-primary inline-flex items-center justify-center gap-2 px-8 py-3.5 rounded-full text-white font-bold text-base shadow-lg border-none cursor-pointer transition">
+        <span class="material-icons">arrow_back</span>
+        <span>เสร็จสิ้นและกลับหน้าจัดการข้อมูลฝึกงาน</span>
+      </button>
+    </div>
+
+  </main>
+`;
 
 export default function CertificatePage() {
   return (

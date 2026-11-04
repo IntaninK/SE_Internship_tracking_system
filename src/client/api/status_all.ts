@@ -39,6 +39,17 @@ async function loadProfile() {
         document.getElementById('prof-lineId').value = s.lineId || '';
         document.getElementById('prof-facebook').value = s.facebook || '';
 
+        // [REQ-04] ล็อคข้อมูลทางวิชาการที่ดึงจากระบบทะเบียน REG ห้ามนิสิตแก้ไข
+        ['prof-studentCode', 'prof-nameTh', 'prof-year', 'prof-gpa', 'prof-major', 'prof-email'].forEach(id => {
+          const el = document.getElementById(id);
+          if (el && el.value) {
+            el.readOnly = true;
+            el.style.backgroundColor = '#F8FAFC';
+            el.style.cursor = 'not-allowed';
+            el.title = '[REQ-04] ข้อมูลจากระบบทะเบียน REG ถูกล็อค ไม่สามารถแก้ไขได้';
+          }
+        });
+
         if (s.profileImageUrl) {
           const preview = document.getElementById('profile-photo-preview');
           preview.src = s.profileImageUrl;
@@ -476,6 +487,12 @@ async function loadPlacement() {
 
       if (badgeContainer && badgeEl) {
         badgeContainer.style.display = 'flex';
+        badgeContainer.style.flexWrap = 'wrap';
+        const matchTag = p.isMatchedWithChecklist === false
+          ? ' • ⚠️ [REQ-06] บริษัทที่ยื่นไม่ตรงกับ Checklist เดิม (อาจารย์ที่ปรึกษาจะตรวจสอบเพิ่มเติม)'
+          : p.isMatchedWithChecklist === true
+            ? ' • ✅ [REQ-06] ตรงกับบริษัทที่ผ่านการอนุมัติใน Checklist'
+            : '';
         // สถานะ: รอผล & อนุมัติที่ฝึกงาน & ไม่อนุมัติที่ฝึกงาน / เปลี่ยนที่ฝึกงาน
         if (p.status === 'APPROVED') {
           badgeEl.textContent = 'สถานะ: ✓ อนุมัติที่ฝึกงาน';
@@ -483,11 +500,11 @@ async function loadPlacement() {
         } else if (p.status === 'REJECTED') {
           badgeEl.textContent = 'สถานะ: ✗ ไม่อนุมัติที่ฝึกงาน / เปลี่ยนที่ฝึกงาน';
           badgeEl.className = 'status-fail';
-          if (noteEl) noteEl.textContent = p.note ? `หมายเหตุ: ${p.note}` : '';
+          if (noteEl) noteEl.textContent = (p.note ? `หมายเหตุ: ${p.note}` : '') + matchTag;
         } else {
           badgeEl.textContent = 'สถานะ: ☐ รอผล (รออาจารย์อนุมัติ)';
           badgeEl.className = 'status-wait';
-          if (noteEl) noteEl.textContent = '';
+          if (noteEl) noteEl.textContent = matchTag.replace(/^ • /, '');
         }
       }
     } else {

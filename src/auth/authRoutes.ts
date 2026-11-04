@@ -121,7 +121,7 @@ router.get("/redirect", async (req: Request, res: Response) => {
       redirectUrl = "/pages/dashboard_ที่ปรึกษา.html";
     }
 
-    res.redirect(redirectUrl);
+    res.redirect(encodeURI(redirectUrl));
   } catch (err) {
     console.error("MSAL acquireTokenByCode error:", err);
     res.status(500).send("login ไม่สำเร็จ ลองใหม่อีกครั้ง");
@@ -213,6 +213,7 @@ router.get("/me", async (req: Request, res: Response) => {
         id: user.id,
         email: user.email,
         username: user.username,
+        name: user.staff?.name || user.student?.nameTh || user.username || user.email,
         role: user.role,
         isAdvisor,
         isCourseAdmin,
@@ -220,6 +221,7 @@ router.get("/me", async (req: Request, res: Response) => {
         isStaff,
         department: user.staff?.department || null,
         activeRole,
+        activeRoleMode: activeRole === "COURSE_ADMIN" ? "COURSE_INSTRUCTOR" : activeRole === "STAFF" ? "FACULTY_STAFF" : activeRole,
       },
       student: user.student,
       staff: user.staff,
@@ -237,7 +239,17 @@ router.post("/switch-role", async (req: Request, res: Response) => {
   }
 
   try {
-    const { activeRole } = req.body;
+    const rawRole = req.body.activeRole || req.body.roleMode;
+    const normalizedMap: Record<string, string> = {
+      COURSE_INSTRUCTOR: "COURSE_ADMIN",
+      FACULTY_STAFF: "STAFF",
+      COURSE_ADMIN: "COURSE_ADMIN",
+      ADMIN: "ADMIN",
+      STAFF: "STAFF",
+      ADVISOR: "ADVISOR",
+      SUPERVISOR: "SUPERVISOR",
+    };
+    const activeRole = normalizedMap[rawRole] || rawRole;
     const user = await prisma.user.findUnique({
       where: { id: req.session.user.id },
       include: { staff: true },
