@@ -115,9 +115,6 @@
   .absolute {
     position: absolute;
   }
-  .fixed {
-    position: fixed;
-  }
   .relative {
     position: relative;
   }
@@ -268,9 +265,6 @@
   .h-7 {
     height: calc(var(--spacing) * 7);
   }
-  .h-100 {
-    height: calc(var(--spacing) * 100);
-  }
   .h-\[90px\] {
     height: 90px;
   }
@@ -328,17 +322,11 @@
   .w-\[90px\] {
     width: 90px;
   }
-  .w-\[100px\] {
-    width: 100px;
-  }
   .w-\[120px\] {
     width: 120px;
   }
   .w-\[160px\] {
     width: 160px;
-  }
-  .w-\[200px\] {
-    width: 200px;
   }
   .w-\[220px\] {
     width: 220px;
@@ -360,9 +348,6 @@
   }
   .w-px {
     width: 1px;
-  }
-  .max-w-\[50\%\] {
-    max-width: 50%;
   }
   .max-w-\[80\%\] {
     max-width: 80%;
@@ -928,6 +913,9 @@
   }
   .text-\[11px\] {
     font-size: 11px;
+  }
+  .text-\[12px\] {
+    font-size: 12px;
   }
   .text-\[18px\] {
     font-size: 18px;

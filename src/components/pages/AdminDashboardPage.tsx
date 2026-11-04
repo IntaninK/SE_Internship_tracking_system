@@ -26,6 +26,14 @@ const PAGE_STYLES: string[] = [`
     margin: 0;
   }
 
+  #admin-dashboard .admin-layout.no-sidebar {
+    grid-template-columns: 1fr !important;
+  }
+
+  #admin-dashboard .admin-layout.no-sidebar .admin-sidebar {
+    display: none !important;
+  }
+
   #admin-dashboard .admin-sidebar {
     position: sticky;
     top: 70px;
@@ -574,8 +582,8 @@ const PAGE_SCRIPTS: string[] = [
 const PAGE_BODY_HTML = `
   <div id="header-placeholder"></div>
   <div id="admin-dashboard">
-    <div class="admin-layout">
-      <aside class="admin-sidebar" aria-label="เมนูผู้ดูแลระบบ">
+    <div class="admin-layout" id="admin-layout">
+      <aside class="admin-sidebar" id="admin-sidebar" aria-label="เมนูผู้ดูแลระบบ">
         <div class="admin-brand">
           <div class="admin-brand-mark" aria-hidden="true">ICT</div>
           <div>
@@ -672,13 +680,19 @@ const PAGE_BODY_HTML = `
             <button id="btn-import-student" class="btn btn-sm" onclick="openImportModal()" style="background:#047857; color:white; border:1px solid #047857; font-size:12px; padding:7px 13px; border-radius:8px; cursor:pointer; display:inline-flex; align-items:center; gap:4px; font-weight:600;">
               <span class="material-icons" style="font-size:15px;">upload_file</span> นำเข้ารายชื่อ (Excel)
             </button>
+            <button id="btn-set-advisor" class="btn btn-sm" onclick="openSetAdvisorModal()" style="background:#FFFFFF; color:#1E40AF; border:1px solid #BFDBFE; font-size:12px; padding:7px 12px; border-radius:8px; cursor:pointer; display:inline-flex; align-items:center; gap:4px; font-weight:600;">
+              <span class="material-icons" style="font-size:15px;">person_add</span> ตั้งอาจารย์ที่ปรึกษา
+            </button>
+            <button id="btn-set-status" class="btn btn-sm" onclick="openSetStatusModal()" style="background:#FFFFFF; color:#334155; border:1px solid #CBD5E1; font-size:12px; padding:7px 12px; border-radius:8px; cursor:pointer; display:inline-flex; align-items:center; gap:4px;">
+              <span class="material-icons" style="font-size:15px;">edit_note</span> ตั้งสถานะนิสิต
+            </button>
             <button id="btn-set-supervisor" class="btn btn-sm" onclick="openSetSupervisorModal()" style="background:#FFFFFF; color:#334155; border:1px solid #CBD5E1; font-size:12px; padding:7px 12px; border-radius:8px; cursor:pointer; display:inline-flex; align-items:center; gap:4px;">
               <span class="material-icons" style="font-size:14px;">explore</span> ตั้งอาจารย์นิเทศก์
             </button>
             <button id="btn-drop-student" class="btn btn-sm" onclick="openDropStudentModal()" style="background:#FFFFFF; color:#BE123C; border:1px solid #FDA4AF; font-size:12px; padding:7px 12px; border-radius:8px; cursor:pointer; display:inline-flex; align-items:center; gap:4px;">
               <span class="material-icons" style="font-size:14px;">person_remove</span> ดรอปนิสิต
             </button>
-            <button class="btn btn-sm" onclick="exportStudents()" style="background:#FFFFFF; color:#334155; border:1px solid #CBD5E1; font-size:12px; padding:7px 12px; border-radius:8px; cursor:pointer;">
+            <button id="btn-export-student" class="btn btn-sm" onclick="exportStudents()" style="background:#FFFFFF; color:#334155; border:1px solid #CBD5E1; font-size:12px; padding:7px 12px; border-radius:8px; cursor:pointer;">
               ส่งออกข้อมูล
             </button>
           </div>

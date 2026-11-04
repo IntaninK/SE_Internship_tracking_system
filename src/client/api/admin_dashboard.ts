@@ -20,14 +20,62 @@ async function initAdminDashboard() {
     if (meData.authenticated) {
       currentUserRole = meData.user.role;
       const user = meData.user;
-      const majorSelect = document.getElementById('major-filter');
+      const isCourseAdminOrStaff = Boolean(user.isCourseAdmin || user.isStaff || user.role === 'STAFF' || user.role === 'ADMIN');
+
+      // ถ้า user เป็น advisor/supervisor อย่างเดียวแต่หลุดมาหน้านี้ ให้พาไป dashboard ที่ปรึกษา
+      if (!isCourseAdminOrStaff && (user.isAdvisor || user.role === 'ADVISOR' || user.isSupervisor)) {
+        window.location.replace('/pages/dashboard_ที่ปรึกษา.html');
+        return;
+      }
+
+      const majorSelect = document.getElementById('major-filter') as HTMLSelectElement | null;
       const isCentral = Boolean(user.role === 'ADMIN' || user.role === 'STAFF' || user.isStaff || !user.department);
-      if (!isCentral && user.department) {
-        if (majorSelect) {
+
+      const urlParams = new URLSearchParams(window.location.search);
+      const urlRoleMode = urlParams.get('roleMode');
+      const activeRoleMode = urlRoleMode || user.activeRoleMode;
+
+      // ตรวจสอบว่าเป็นบทบาทอาจารย์ประจำวิชา (Course Instructor) หรือไม่
+      const isCourseInstructor = activeRoleMode === 'COURSE_INSTRUCTOR' || (!user.isStaff && user.role !== 'STAFF' && Boolean(user.department));
+
+      const adminSidebar = document.getElementById('admin-sidebar');
+      const adminLayout = document.getElementById('admin-layout');
+      const btnSetSupervisor = document.getElementById('btn-set-supervisor');
+      const btnDropStudent = document.getElementById('btn-drop-student');
+      const btnManageStaffRoles = document.getElementById('btn-manage-staff-roles');
+      const btnSetAdvisor = document.getElementById('btn-set-advisor');
+      const btnSetStatus = document.getElementById('btn-set-status');
+
+      if (isCourseInstructor) {
+        // === มุมมองอาจารย์ประจำวิชา (Course Instructor) ประจำสาขา ===
+        if (majorSelect && user.department) {
           majorSelect.value = user.department;
           majorSelect.disabled = true;
           majorSelect.title = `คุณดูแลเฉพาะสาขาวิชา${user.department}`;
         }
+
+        // 1. ซ่อนแถบเมนู Super Admin ด้านซ้าย และปรับ layout ขยายเต็มจอ
+        if (adminSidebar) adminSidebar.style.display = 'none';
+        if (adminLayout) adminLayout.classList.add('no-sidebar');
+
+        // 2. ซ่อนปุ่มเฉพาะงานส่วนกลางของ Super Admin / เจ้าหน้าที่คณะ (พี่จอม)
+        if (btnSetSupervisor) btnSetSupervisor.style.display = 'none';
+        if (btnDropStudent) btnDropStudent.style.display = 'none';
+        if (btnManageStaffRoles) btnManageStaffRoles.style.display = 'none';
+
+        // 3. แสดงปุ่มหน้าที่หลักของอาจารย์ประจำวิชา
+        if (btnSetAdvisor) btnSetAdvisor.style.display = 'inline-flex';
+        if (btnSetStatus) btnSetStatus.style.display = 'inline-flex';
+      } else {
+        // === มุมมอง Super Admin / เจ้าหน้าที่ส่วนกลางทั้งคณะ (พี่จอม) ===
+        if (adminSidebar) adminSidebar.style.display = 'flex';
+        if (adminLayout) adminLayout.classList.remove('no-sidebar');
+
+        if (btnSetSupervisor) btnSetSupervisor.style.display = 'inline-flex';
+        if (btnDropStudent) btnDropStudent.style.display = 'inline-flex';
+        if (btnManageStaffRoles) btnManageStaffRoles.style.display = 'inline-flex';
+        if (btnSetAdvisor) btnSetAdvisor.style.display = 'inline-flex';
+        if (btnSetStatus) btnSetStatus.style.display = 'inline-flex';
       }
     }
   } catch (err) {

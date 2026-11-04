@@ -399,8 +399,10 @@
       "requestLetterIssued": true,
       "requestLetterDocNo": "อว 7316/ว 438",
       "requestLetterDate": "2026-11-04",
-      "requestLetterBatchId": "REQ-BATCH-767318",
-      "companyResponseStatus": "WAITING_RESPONSE",
+      "companyResponseStatus": "ACCEPTED",
+      "companyResponseFileName": "ใบตอบรับ_67024999.pdf",
+      "companyResponseUploadedAt": "2026-11-04T08:32:46.002Z",
+      "companyResponseNote": "ตรวจสอบไฟล์สแกนใบตอบรับแล้ว สถานประกอบการตอบรับเข้าฝึกงาน",
       "dispatchLetterIssued": false,
       "isLocked": true
     }
