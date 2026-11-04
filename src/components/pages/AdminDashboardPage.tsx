@@ -4,150 +4,697 @@ import React from "react";
 import PageShell from "./PageShell";
 
 const PAGE_TITLE = "Super Admin (พี่จอม) & อาจารย์ประจำวิชา - คณะ ICT ม.พะเยา";
-const PAGE_STYLES: string[] = [];
+const PAGE_STYLES: string[] = [`
+  #admin-dashboard {
+    --admin-ink: #0F172A;
+    --admin-muted: #64748B;
+    --admin-border: #E2E8F0;
+    --admin-primary: #3730A3;
+    width: 100%;
+    min-height: calc(100vh - 70px);
+    background: #F4F6FB;
+    color: var(--admin-ink);
+    font-size: 16px;
+    line-height: 1.6;
+  }
+
+  #admin-dashboard .admin-layout {
+    display: grid;
+    width: 100%;
+    grid-template-columns: 280px minmax(0, 1fr);
+    min-height: calc(100vh - 70px);
+    margin: 0;
+  }
+
+  #admin-dashboard .admin-sidebar {
+    position: sticky;
+    top: 70px;
+    display: flex;
+    width: 280px;
+    height: calc(100vh - 70px);
+    min-height: 540px;
+    flex-direction: column;
+    overflow-y: auto;
+    border-right: 1px solid var(--admin-border);
+    background: #FFFFFF;
+    box-sizing: border-box;
+  }
+
+  #admin-dashboard .admin-brand {
+    display: flex;
+    min-height: 76px;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 22px;
+    border-bottom: 1px solid var(--admin-border);
+  }
+
+  #admin-dashboard .admin-brand-mark {
+    display: grid;
+    width: 40px;
+    height: 40px;
+    flex: 0 0 auto;
+    place-items: center;
+    border-radius: 10px;
+    background: var(--admin-primary);
+    color: #FFFFFF;
+    font-size: 13px;
+    font-weight: 800;
+  }
+
+  #admin-dashboard .admin-brand-title {
+    overflow: hidden;
+    color: var(--admin-ink);
+    font-size: 18px;
+    font-weight: 700;
+    line-height: 1.4;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  #admin-dashboard .admin-brand-subtitle {
+    margin-top: 2px;
+    color: var(--admin-muted);
+    font-size: 15px;
+  }
+
+  #admin-dashboard .admin-nav-label {
+    padding: 22px 26px 10px;
+    color: #94A3B8;
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  #admin-dashboard .admin-workspace-nav {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 0 14px 18px;
+  }
+
+  #admin-dashboard .admin-workspace-nav button {
+    display: flex !important;
+    width: 100%;
+    min-height: 50px;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 12px !important;
+    padding: 11px 13px !important;
+    border: 1px solid transparent !important;
+    border-radius: 8px !important;
+    background: transparent !important;
+    color: #64748B !important;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 16px !important;
+    font-weight: 500 !important;
+    text-align: left;
+    transition: background 0.15s ease, color 0.15s ease;
+  }
+
+  #admin-dashboard .admin-workspace-nav button:hover {
+    background: #F8FAFC !important;
+    color: var(--admin-ink) !important;
+  }
+
+  #admin-dashboard .admin-workspace-nav button[aria-current="page"] {
+    border-left: 3px solid var(--admin-primary) !important;
+    background: #EEF2FF !important;
+    color: var(--admin-primary) !important;
+    font-weight: 700 !important;
+  }
+
+  #admin-dashboard .admin-workspace-nav button > .material-icons {
+    flex: 0 0 auto;
+    font-size: 21px !important;
+  }
+
+  #admin-dashboard .admin-workspace-nav button > span:nth-child(2) {
+    flex: 1;
+  }
+
+  #admin-dashboard .admin-nav-badge {
+    flex: 0 0 auto;
+    margin-left: auto;
+    padding: 3px 8px;
+    border: 1px solid var(--admin-border);
+    border-radius: 6px;
+    background: #F1F5F9;
+    color: #475569;
+    font-size: 13px;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+
+  #admin-dashboard #badge-pending-companies,
+  #admin-dashboard #badge-doc-queue {
+    border-color: #FDE68A;
+    background: #FEF3C7;
+    color: #B45309;
+  }
+
+  #admin-dashboard .admin-sidebar-note {
+    margin: auto 16px 16px;
+    padding: 15px;
+    border: 1px solid var(--admin-border);
+    border-radius: 10px;
+    background: #F8FAFC;
+    color: var(--admin-muted);
+    font-size: 15px;
+    line-height: 1.6;
+  }
+
+  #admin-dashboard .admin-sidebar-note strong {
+    display: block;
+    margin-bottom: 3px;
+    color: var(--admin-primary);
+    font-size: 15px;
+  }
+
+  #admin-dashboard .admin-main {
+    display: block;
+    width: 100%;
+    max-width: none !important;
+    min-width: 0;
+    margin: 0 !important;
+    padding: 32px clamp(22px, 3vw, 44px) 52px;
+    box-sizing: border-box;
+  }
+
+  #admin-dashboard .admin-role-button {
+    display: inline-flex;
+    min-height: 44px;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    padding: 9px 15px;
+    border: 1px solid var(--admin-border);
+    border-radius: 9px;
+    background: #FFFFFF;
+    color: #334155;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 16px;
+    font-weight: 600;
+    transition: background 0.15s ease;
+  }
+
+  #admin-dashboard .admin-role-button:hover {
+    background: #F8FAFC;
+  }
+
+  #admin-dashboard .admin-student-tabs {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 20px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid #E2E8F0;
+  }
+
+  #admin-dashboard .admin-student-tabs #btn-manage-staff-roles {
+    margin-left: auto;
+  }
+
+  #admin-dashboard .admin-student-tabs .tab-pill {
+    min-height: 44px;
+    padding: 9px 14px !important;
+    font-size: 15px !important;
+  }
+
+  #admin-dashboard .admin-student-tabs .tab-pill .material-icons {
+    font-size: 20px !important;
+  }
+
+  #admin-dashboard .admin-student-tabs .tab-pill span[class*="text-["] {
+    font-size: 13px !important;
+  }
+
+  #admin-dashboard .admin-main .card {
+    margin-top: 0 !important;
+    margin-bottom: 18px !important;
+    border: 1px solid var(--admin-border) !important;
+    border-radius: 12px !important;
+    background: #FFFFFF !important;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.035) !important;
+  }
+
+  #admin-dashboard .admin-main .card-header {
+    min-height: 68px;
+    padding: 18px 24px !important;
+    border-bottom: 1px solid var(--admin-border) !important;
+    background: #FFFFFF !important;
+  }
+
+  #admin-dashboard .admin-main .card-header .card-title {
+    color: var(--admin-ink) !important;
+    font-size: 20px !important;
+  }
+
+  #admin-dashboard .admin-main .card-header .header-icon {
+    padding: 6px;
+    border-radius: 8px;
+    background: #EEF2FF;
+    color: var(--admin-primary) !important;
+  }
+
+  #admin-dashboard .admin-main .card-body {
+    padding: 24px !important;
+  }
+
+  #admin-dashboard .admin-summary-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 18px;
+    margin-bottom: 24px;
+  }
+
+  #admin-dashboard .admin-summary-card {
+    min-width: 0;
+    padding: 19px 21px 16px;
+    border: 1px solid var(--admin-border);
+    border-radius: 10px;
+    background: #FFFFFF;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.025);
+  }
+
+  #admin-dashboard .admin-summary-label {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    color: var(--admin-muted);
+    font-size: 15px;
+    font-weight: 500;
+  }
+
+  #admin-dashboard .admin-summary-icon {
+    font-size: 18px;
+  }
+
+  #admin-dashboard .admin-summary-value {
+    margin-top: 8px;
+    color: var(--admin-ink);
+    font-size: 36px;
+    font-weight: 700;
+    line-height: 1.2;
+    font-variant-numeric: tabular-nums;
+  }
+
+  #admin-dashboard .admin-summary-footnote {
+    margin-top: 12px;
+    padding-top: 10px;
+    border-top: 1px solid #F1F5F9;
+    color: #94A3B8;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  #admin-dashboard .admin-summary-error {
+    margin: -8px 0 18px;
+    padding: 10px 13px;
+    border: 1px solid #FECACA;
+    border-radius: 8px;
+    background: #FEF2F2;
+    color: #B91C1C;
+    font-size: 15px;
+    line-height: 1.5;
+  }
+
+  #admin-dashboard .admin-summary-card--primary .admin-summary-icon {
+    color: #4F46E5;
+  }
+
+  #admin-dashboard .admin-summary-card--success .admin-summary-icon {
+    color: #059669;
+  }
+
+  #admin-dashboard .admin-summary-card--warning .admin-summary-icon {
+    color: #D97706;
+  }
+
+  #admin-dashboard .admin-summary-card--danger .admin-summary-icon {
+    color: #E11D48;
+  }
+
+  #admin-dashboard .admin-student-table-scroll {
+    overflow-x: auto;
+    border: 1px solid #F1F5F9;
+    border-radius: 8px;
+  }
+
+  #admin-dashboard .admin-student-table {
+    min-width: 980px;
+    font-size: 16px;
+  }
+
+  #admin-dashboard .admin-student-table thead th {
+    background: #F8FAFC !important;
+    color: #64748B !important;
+    font-size: 15px;
+    font-weight: 600 !important;
+    white-space: nowrap;
+    border-bottom: 1px solid var(--admin-border) !important;
+  }
+
+  #admin-dashboard .admin-student-table tbody td {
+    font-size: 16px;
+    padding: 16px 14px !important;
+    border-bottom-color: #F1F5F9 !important;
+  }
+
+  #admin-dashboard .admin-student-table tbody td .text-xs {
+    font-size: 14px !important;
+  }
+
+  #admin-dashboard .admin-student-table tbody td [class*="text-[11px]"] {
+    font-size: 14px !important;
+    line-height: 1.45;
+  }
+
+  #admin-dashboard .admin-student-table tbody tr:hover {
+    background: #F8FAFC !important;
+  }
+
+  #admin-dashboard .admin-main .input-field {
+    min-height: 46px;
+    border-radius: 8px !important;
+    border-color: #CBD5E1 !important;
+    background-color: #FFFFFF;
+    font-size: 16px !important;
+  }
+
+  #admin-dashboard .admin-main .filter-bar {
+    gap: 10px !important;
+  }
+
+  #admin-dashboard .admin-main #active-action-buttons,
+  #admin-dashboard .admin-main #dropped-action-buttons {
+    gap: 9px !important;
+  }
+
+  #admin-dashboard .admin-main #active-action-buttons > button,
+  #admin-dashboard .admin-main #dropped-action-buttons > button {
+    min-height: 44px;
+    padding: 9px 15px !important;
+    border-radius: 8px !important;
+    font-size: 14px !important;
+  }
+
+  #admin-dashboard .admin-main .data-table th {
+    font-size: 15px;
+  }
+
+  #admin-dashboard .admin-main .data-table td {
+    font-size: 16px;
+    padding-top: 15px;
+    padding-bottom: 15px;
+  }
+
+  #admin-dashboard :is(#workspace-unlock, #workspace-events, #workspace-companies, #workspace-documents, #workspace-coop) {
+    font-size: 16px;
+    line-height: 1.6;
+  }
+
+  #admin-dashboard :is(#workspace-unlock, #workspace-events, #workspace-companies, #workspace-documents, #workspace-coop) .card-title {
+    font-size: 20px !important;
+  }
+
+  #admin-dashboard :is(#workspace-unlock, #workspace-events, #workspace-companies, #workspace-documents, #workspace-coop) .data-table th {
+    font-size: 15px !important;
+  }
+
+  #admin-dashboard :is(#workspace-unlock, #workspace-events, #workspace-companies, #workspace-documents, #workspace-coop) .data-table td {
+    font-size: 16px !important;
+    line-height: 1.55;
+  }
+
+  #admin-dashboard :is(#workspace-unlock, #workspace-events, #workspace-companies, #workspace-documents, #workspace-coop) .input-field {
+    font-size: 16px !important;
+  }
+
+  #admin-dashboard :is(#workspace-unlock, #workspace-events, #workspace-companies, #workspace-documents, #workspace-coop) button {
+    font-size: 15px !important;
+  }
+
+  #admin-dashboard :is(#workspace-unlock, #workspace-events, #workspace-companies, #workspace-documents, #workspace-coop)
+    :is(.text-xs, .text-sm, [class*="text-[10px]"], [class*="text-[11px]"], [class*="text-[12px]"]) {
+    font-size: 14px !important;
+    line-height: 1.5;
+  }
+
+  #admin-dashboard :is(#workspace-unlock, #workspace-events, #workspace-companies, #workspace-documents, #workspace-coop)
+    :is(
+      [style*="font-size:10px"]:not(.material-icons),
+      [style*="font-size:11px"]:not(.material-icons),
+      [style*="font-size:11.5px"]:not(.material-icons),
+      [style*="font-size:12px"]:not(.material-icons),
+      [style*="font-size:12.5px"]:not(.material-icons),
+      [style*="font-size:13px"]:not(.material-icons),
+      [style*="font-size:13.5px"]:not(.material-icons),
+      [style*="font-size:14px"]:not(.material-icons)
+    ) {
+    font-size: 15px !important;
+    line-height: 1.5;
+  }
+
+  @media (max-width: 1000px) {
+    #admin-dashboard .admin-layout {
+      grid-template-columns: 250px minmax(0, 1fr);
+    }
+
+    #admin-dashboard .admin-summary-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    #admin-dashboard .admin-sidebar {
+      width: 250px;
+    }
+
+    #admin-dashboard .admin-sidebar-note {
+      margin-right: 12px;
+      margin-left: 12px;
+      padding: 10px;
+    }
+  }
+
+  @media (max-width: 760px) {
+    #admin-dashboard .admin-layout {
+      display: block;
+      min-height: 0;
+    }
+
+    #admin-dashboard .admin-sidebar {
+      position: static;
+      width: 100%;
+      height: auto;
+      min-height: 0;
+      overflow: visible;
+      border-right: 0;
+      border-bottom: 1px solid var(--admin-border);
+    }
+
+    #admin-dashboard .admin-brand {
+      min-height: 62px;
+      padding: 8px 16px;
+    }
+
+    #admin-dashboard .admin-brand-mark {
+      width: 36px;
+      height: 36px;
+    }
+
+    #admin-dashboard .admin-nav-label,
+    #admin-dashboard .admin-sidebar-note {
+      display: none;
+    }
+
+    #admin-dashboard .admin-workspace-nav {
+      flex-direction: row;
+      overflow-x: auto;
+      padding: 8px 12px;
+      scrollbar-width: thin;
+    }
+
+    #admin-dashboard .admin-workspace-nav button {
+      width: auto;
+      min-width: max-content;
+      min-height: 46px;
+    }
+
+    #admin-dashboard .admin-main {
+      padding: 20px 14px 32px;
+    }
+  }
+
+  @media (max-width: 520px) {
+    #admin-dashboard .admin-summary-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    #admin-dashboard .admin-summary-card {
+      padding: 14px;
+    }
+
+    #admin-dashboard .admin-summary-value {
+      font-size: 26px;
+    }
+
+    #admin-dashboard .admin-role-button {
+      width: 100%;
+    }
+
+    #admin-dashboard .admin-student-tabs #btn-manage-staff-roles {
+      width: auto;
+      margin-left: auto;
+    }
+
+    #admin-dashboard .admin-main .card-header {
+      padding: 15px 16px !important;
+    }
+
+    #admin-dashboard .admin-main .card-body {
+      padding: 18px !important;
+    }
+
+    #admin-dashboard .admin-main .card-body {
+      padding: 15px !important;
+    }
+  }
+`];
 const PAGE_SCRIPTS: string[] = [
   "../components/header.js",
   "../api/admin_dashboard.js"
 ];
 const PAGE_BODY_HTML = `
-  <!-- Header Bar -->
   <div id="header-placeholder"></div>
-
-  <!-- Main Content -->
-  <main class="main-content">
-
-    <!-- Top Scope & Super Admin Banner -->
-    <section class="card" style="margin-bottom: 16px;">
-      <div class="card-header" style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;">
-        <div style="display:flex; align-items:center; gap:12px;">
-          <span class="material-icons header-icon" style="font-size:28px;">admin_panel_settings</span>
+  <div id="admin-dashboard">
+    <div class="admin-layout">
+      <aside class="admin-sidebar" aria-label="เมนูผู้ดูแลระบบ">
+        <div class="admin-brand">
+          <div class="admin-brand-mark" aria-hidden="true">ICT</div>
           <div>
-            <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-              <h2 class="card-title" id="admin-scope-banner-title" style="margin:0;">ระบบบริหารจัดการเตรียมความพร้อมฝึกงานและสหกิจศึกษา คณะ ICT ม.พะเยา</h2>
-              <span style="background:rgba(251,191,36,0.22); color:#FDE68A; border:1px solid rgba(251,191,36,0.45); font-size:11px; font-weight:700; padding:2px 10px; border-radius:999px;">Super Admin (พี่จอม) &amp; Course Admin</span>
-            </div>
-            <p id="admin-scope-banner-sub" style="margin:3px 0 0 0; font-size:12px; color:#E0E7FF;">
-              ศูนย์กลางบริหารจัดการระดับคณะ: นำเข้าข้อมูล REG/UP Academy • ปลดล็อกรอบฝึกงาน 8 สาขา • สร้างกิจกรรม Check-in • ฐานข้อมูลบริษัทกลาง • ออกหนังสือราชการ &amp; ส่งต่อระบบ Co-op พี่แดง
-            </p>
+            <div class="admin-brand-title">ระบบเตรียมฝึกงาน</div>
+            <div class="admin-brand-subtitle">Super Admin · ICT UP</div>
           </div>
         </div>
-        <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-          <button id="btn-manage-staff-roles" onclick="openStaffRolesModal()" style="background:rgba(255,255,255,0.16); color:white; border:1px solid rgba(255,255,255,0.3); font-size:12px; font-weight:600; padding:7px 14px; border-radius:10px; cursor:pointer; display:inline-flex; align-items:center; gap:6px;">
-            <span class="material-icons" style="font-size:16px;">manage_accounts</span>
-            <span>จัดการสิทธิ์บุคลากร (Multi-Role)</span>
+        <div class="admin-nav-label">เมนูจัดการ</div>
+        <nav class="admin-workspace-nav" aria-label="ส่วนงานผู้ดูแล">
+          <button type="button" id="ws-tab-overview" aria-current="page" onclick="switchAdminWorkspace('overview')">
+            <span class="material-icons" aria-hidden="true">grid_view</span>
+            <span>ภาพรวม &amp; รายชื่อนิสิต</span>
           </button>
+          <button type="button" id="ws-tab-unlock" aria-current="false" onclick="switchAdminWorkspace('unlock')">
+            <span class="material-icons" aria-hidden="true">lock_open</span>
+            <span>รอบฝึกงาน &amp; ปลดล็อก</span>
+            <span id="badge-unlocked-majors" class="admin-nav-badge">4/8 เปิด</span>
+          </button>
+          <button type="button" id="ws-tab-events" aria-current="false" onclick="switchAdminWorkspace('events')">
+            <span class="material-icons" aria-hidden="true">event_available</span>
+            <span>กิจกรรมอบรม &amp; Check-in</span>
+            <span id="badge-events-count" class="admin-nav-badge">2 กิจกรรม</span>
+          </button>
+          <button type="button" id="ws-tab-companies" aria-current="false" onclick="switchAdminWorkspace('companies')">
+            <span class="material-icons" aria-hidden="true">business</span>
+            <span>ฐานข้อมูลบริษัท</span>
+            <span id="badge-pending-companies" class="admin-nav-badge">0 รอยืนยัน</span>
+          </button>
+          <button type="button" id="ws-tab-documents" aria-current="false" onclick="switchAdminWorkspace('documents')">
+            <span class="material-icons" aria-hidden="true">description</span>
+            <span>ออกหนังสือ &amp; ใบตอบรับ</span>
+            <span id="badge-doc-queue" class="admin-nav-badge">0 รายการ</span>
+          </button>
+          <button type="button" id="ws-tab-coop" aria-current="false" onclick="switchAdminWorkspace('coop')">
+            <span class="material-icons" aria-hidden="true">cloud_upload</span>
+            <span>ส่งต่อระบบ Co-op</span>
+          </button>
+        </nav>
+        <div class="admin-sidebar-note">
+          <strong>ศูนย์กลางคณะ ICT</strong>
+          จัดการข้อมูลการฝึกงานและสหกิจศึกษาครบทั้ง 8 สาขาวิชา
         </div>
-      </div>
-
-      <!-- Super Admin 6-Module Workspace Navigation Bar -->
-      <div style="background:#FFFFFF; padding:12px 20px; border-top:1px solid #E2E8F0; display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-        <button type="button" id="ws-tab-overview" onclick="switchAdminWorkspace('overview')"
-          style="display:inline-flex; align-items:center; gap:6px; padding:8px 14px; border-radius:11px; font-size:12.5px; font-weight:700; cursor:pointer; border:1px solid #4338CA; background:#EEF2FF; color:#312E81; transition:all 0.15s;">
-          <span class="material-icons" style="font-size:17px;">dashboard</span>
-          <span>1. ภาพรวม &amp; รายชื่อนิสิต (REG)</span>
-        </button>
-
-        <button type="button" id="ws-tab-unlock" onclick="switchAdminWorkspace('unlock')"
-          style="display:inline-flex; align-items:center; gap:6px; padding:8px 14px; border-radius:11px; font-size:12.5px; font-weight:600; cursor:pointer; border:1px solid #E2E8F0; background:#F8FAFC; color:#475569; transition:all 0.15s;">
-          <span class="material-icons" style="font-size:17px;">lock_open</span>
-          <span>2. รอบฝึกงาน &amp; ปลดล็อก 8 สาขา</span>
-          <span id="badge-unlocked-majors" style="background:#DBEAFE; color:#1E40AF; font-size:10.5px; font-weight:700; padding:1px 7px; border-radius:999px;">4/8 เปิด</span>
-        </button>
-
-        <button type="button" id="ws-tab-events" onclick="switchAdminWorkspace('events')"
-          style="display:inline-flex; align-items:center; gap:6px; padding:8px 14px; border-radius:11px; font-size:12.5px; font-weight:600; cursor:pointer; border:1px solid #E2E8F0; background:#F8FAFC; color:#475569; transition:all 0.15s;">
-          <span class="material-icons" style="font-size:17px;">qr_code_scanner</span>
-          <span>3. กิจกรรมอบรม &amp; Check-in รหัสนิสิต</span>
-          <span id="badge-events-count" style="background:#D1FAE5; color:#065F46; font-size:10.5px; font-weight:700; padding:1px 7px; border-radius:999px;">2 กิจกรรม</span>
-        </button>
-
-        <button type="button" id="ws-tab-companies" onclick="switchAdminWorkspace('companies')"
-          style="display:inline-flex; align-items:center; gap:6px; padding:8px 14px; border-radius:11px; font-size:12.5px; font-weight:600; cursor:pointer; border:1px solid #E2E8F0; background:#F8FAFC; color:#475569; transition:all 0.15s;">
-          <span class="material-icons" style="font-size:17px;">business</span>
-          <span>4. ฐานข้อมูลบริษัทกลาง (Master Data)</span>
-          <span id="badge-pending-companies" style="background:#FEF3C7; color:#B45309; font-size:10.5px; font-weight:700; padding:1px 7px; border-radius:999px;">0 รอยืนยัน</span>
-        </button>
-
-        <button type="button" id="ws-tab-documents" onclick="switchAdminWorkspace('documents')"
-          style="display:inline-flex; align-items:center; gap:6px; padding:8px 14px; border-radius:11px; font-size:12.5px; font-weight:600; cursor:pointer; border:1px solid #E2E8F0; background:#F8FAFC; color:#475569; transition:all 0.15s;">
-          <span class="material-icons" style="font-size:17px;">description</span>
-          <span>5. ออกหนังสือราชการ &amp; ใบตอบรับ</span>
-          <span id="badge-doc-queue" style="background:#FEE2E2; color:#B91C1C; font-size:10.5px; font-weight:700; padding:1px 7px; border-radius:999px;">0 รายการ</span>
-        </button>
-
-        <button type="button" id="ws-tab-coop" onclick="switchAdminWorkspace('coop')"
-          style="display:inline-flex; align-items:center; gap:6px; padding:8px 14px; border-radius:11px; font-size:12.5px; font-weight:600; cursor:pointer; border:1px solid #E2E8F0; background:#F8FAFC; color:#475569; transition:all 0.15s;">
-          <span class="material-icons" style="font-size:17px;">cloud_upload</span>
-          <span>6. ส่งต่อระบบ Co-op พี่แดง (Co-op 01)</span>
-        </button>
-      </div>
-    </section>
-
+      </aside>
+      <main class="main-content admin-main">
     <!-- =====================================================================
          WORKSPACE 1: ภาพรวม & รายชื่อนิสิต (Overview, REG Import & Student Management)
          ===================================================================== -->
     <div id="workspace-overview">
-      <!-- 1. สถานะภาพรวมทั้งหมดของนิสิต (4 กราฟวงกลม) -->
-      <section class="card">
-        <div class="card-header">
-          <span class="material-icons header-icon">donut_large</span>
-          <h2 class="card-title">สถานะภาพรวมทั้งหมดของนิสิต (คลิกที่รายการเพื่อกรองข้อมูล)</h2>
-        </div>
-        <div class="card-body">
-          <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3 items-stretch">
-            <div id="chart-readiness"></div>
-            <div id="chart-training"></div>
-            <div id="chart-cv"></div>
-            <div id="chart-placement"></div>
+      <section class="admin-summary-grid" aria-label="สรุปภาพรวมนิสิต">
+        <article class="admin-summary-card admin-summary-card--primary">
+          <div class="admin-summary-label">
+            <span>นิสิตทั้งหมด</span>
+            <span class="material-icons admin-summary-icon" aria-hidden="true">school</span>
           </div>
-        </div>
+          <div class="admin-summary-value" id="kpi-total-students">—</div>
+          <div class="admin-summary-footnote">นิสิตที่กำลังศึกษาและฝึกงาน</div>
+        </article>
+        <article class="admin-summary-card admin-summary-card--success">
+          <div class="admin-summary-label">
+            <span>อนุมัติที่ฝึกงานแล้ว</span>
+            <span class="material-icons admin-summary-icon" aria-hidden="true">task_alt</span>
+          </div>
+          <div class="admin-summary-value" id="kpi-placement-approved">—</div>
+          <div class="admin-summary-footnote">นิสิตที่ผ่านการอนุมัติสถานที่ฝึกงาน</div>
+        </article>
+        <article class="admin-summary-card admin-summary-card--warning">
+          <div class="admin-summary-label">
+            <span>รอพิจารณาสถานที่</span>
+            <span class="material-icons admin-summary-icon" aria-hidden="true">schedule</span>
+          </div>
+          <div class="admin-summary-value" id="kpi-placement-pending">—</div>
+          <div class="admin-summary-footnote">รายการที่รออาจารย์ตรวจสอบ</div>
+        </article>
+        <article class="admin-summary-card admin-summary-card--danger">
+          <div class="admin-summary-label">
+            <span>ยังไม่มีอาจารย์ที่ปรึกษา</span>
+            <span class="material-icons admin-summary-icon" aria-hidden="true">person_off</span>
+          </div>
+          <div class="admin-summary-value" id="kpi-students-without-advisor">—</div>
+          <div class="admin-summary-footnote">นิสิตที่ยังไม่ได้รับมอบหมายอาจารย์</div>
+        </article>
       </section>
+      <p id="admin-summary-error" class="admin-summary-error" role="status" hidden></p>
 
-      <!-- 2. รายชื่อนิสิต -->
+      <!-- Student registry -->
       <section class="card">
         <div class="card-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
           <div style="display:flex; align-items:center; gap:8px;">
             <span class="material-icons header-icon">people</span>
-            <h2 class="card-title">รายชื่อนิสิตและการตรวจสอบความพร้อม</h2>
+            <h2 class="card-title">รายชื่อนิสิตและสถานะการฝึกงาน</h2>
             <span id="active-filter-badge" style="display:none; background:#FEF3C7; color:#B45309; font-size:12px; padding:2px 10px; border-radius:999px; font-weight:600;"></span>
           </div>
-
-          <!-- ปุ่มจัดการสำหรับแท็บนิสิตปกติ (Active) -->
           <div id="active-action-buttons" style="display:flex; gap:6px; flex-wrap:wrap;">
-            <button id="btn-import-student" class="btn btn-sm" onclick="openImportModal()" style="background:#10B981; color:white; border:1px solid #059669; font-size:12px; padding:6px 13px; border-radius:10px; cursor:pointer; display:inline-flex; align-items:center; gap:4px; font-weight:600;">
-              <span class="material-icons" style="font-size:15px;">upload_file</span> นำเข้ารายชื่อ REG &amp; UP Academy (Excel)
+            <button id="btn-import-student" class="btn btn-sm" onclick="openImportModal()" style="background:#047857; color:white; border:1px solid #047857; font-size:12px; padding:7px 13px; border-radius:8px; cursor:pointer; display:inline-flex; align-items:center; gap:4px; font-weight:600;">
+              <span class="material-icons" style="font-size:15px;">upload_file</span> นำเข้ารายชื่อ (Excel)
             </button>
-            <button id="btn-set-status" class="btn btn-sm" onclick="openSetStatusModal()" style="background:rgba(255,255,255,0.18); color:white; border:1px solid rgba(255,255,255,0.3); font-size:12px; padding:6px 12px; border-radius:10px; cursor:pointer;">
-              ตั้งสถานะนิสิต
-            </button>
-            <button id="btn-set-advisor" class="btn btn-sm" onclick="openSetAdvisorModal()" style="background:rgba(255,255,255,0.18); color:white; border:1px solid rgba(255,255,255,0.3); font-size:12px; padding:6px 12px; border-radius:10px; cursor:pointer;">
-              ตั้งอาจารย์ที่ปรึกษา
-            </button>
-            <button id="btn-set-supervisor" class="btn btn-sm" onclick="openSetSupervisorModal()" style="background:rgba(255,255,255,0.18); color:white; border:1px solid rgba(255,255,255,0.3); font-size:12px; padding:6px 12px; border-radius:10px; cursor:pointer; display:inline-flex; align-items:center; gap:4px;">
+            <button id="btn-set-supervisor" class="btn btn-sm" onclick="openSetSupervisorModal()" style="background:#FFFFFF; color:#334155; border:1px solid #CBD5E1; font-size:12px; padding:7px 12px; border-radius:8px; cursor:pointer; display:inline-flex; align-items:center; gap:4px;">
               <span class="material-icons" style="font-size:14px;">explore</span> ตั้งอาจารย์นิเทศก์
             </button>
-            <button id="btn-drop-student" class="btn btn-sm" onclick="openDropStudentModal()" style="background:#EF4444; color:white; border:1px solid #DC2626; font-size:12px; padding:6px 12px; border-radius:10px; cursor:pointer; display:inline-flex; align-items:center; gap:4px;">
+            <button id="btn-drop-student" class="btn btn-sm" onclick="openDropStudentModal()" style="background:#FFFFFF; color:#BE123C; border:1px solid #FDA4AF; font-size:12px; padding:7px 12px; border-radius:8px; cursor:pointer; display:inline-flex; align-items:center; gap:4px;">
               <span class="material-icons" style="font-size:14px;">person_remove</span> ดรอปนิสิต
             </button>
-            <button class="btn btn-sm" onclick="exportStudents()" style="background:rgba(255,255,255,0.18); color:white; border:1px solid rgba(255,255,255,0.3); font-size:12px; padding:6px 12px; border-radius:10px; cursor:pointer;">
-              Export Excel/CSV
+            <button class="btn btn-sm" onclick="exportStudents()" style="background:#FFFFFF; color:#334155; border:1px solid #CBD5E1; font-size:12px; padding:7px 12px; border-radius:8px; cursor:pointer;">
+              ส่งออกข้อมูล
             </button>
           </div>
-
-          <!-- ปุ่มจัดการสำหรับแท็บนิสิตที่ดรอป (Dropped) -->
           <div id="dropped-action-buttons" style="display:none; gap:8px; flex-wrap:wrap;">
-            <button id="btn-restore-student" class="btn btn-sm" onclick="openRestoreStudentModal()" style="background:#10B981; color:white; border:1px solid #059669; font-size:12px; padding:6px 14px; border-radius:10px; cursor:pointer; display:inline-flex; align-items:center; gap:4px;">
+            <button id="btn-restore-student" class="btn btn-sm" onclick="openRestoreStudentModal()" style="background:#047857; color:white; border:1px solid #047857; font-size:12px; padding:7px 14px; border-radius:8px; cursor:pointer; display:inline-flex; align-items:center; gap:4px;">
               <span class="material-icons" style="font-size:14px;">restore</span> กู้คืนสถานะนิสิต
             </button>
-            <button class="btn btn-sm" onclick="exportStudents()" style="background:rgba(255,255,255,0.18); color:white; border:1px solid rgba(255,255,255,0.3); font-size:12px; padding:6px 14px; border-radius:10px; cursor:pointer;">
-              Export รายชื่อที่ดรอป
+            <button class="btn btn-sm" onclick="exportStudents()" style="background:#FFFFFF; color:#334155; border:1px solid #CBD5E1; font-size:12px; padding:7px 14px; border-radius:8px; cursor:pointer;">
+              ส่งออกรายชื่อ
             </button>
           </div>
         </div>
         <div class="card-body">
 
           <!-- Tab สลับมุมมอง: นิสิตปกติ vs นิสิตที่ดรอป -->
-          <div style="display:flex; gap:8px; margin-bottom:16px; border-bottom:1px solid #E2E8F0; padding-bottom:12px;">
+          <div class="admin-student-tabs">
             <button id="tab-active" onclick="switchStudentTab('active')" class="tab-pill px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-all flex items-center gap-1.5 bg-white text-blue-700 shadow-sm cursor-pointer border border-blue-200">
               <span class="material-icons" style="font-size:16px;">check_circle</span>
               นิสิตกำลังศึกษา / ฝึกงาน
@@ -157,6 +704,10 @@ const PAGE_BODY_HTML = `
               <span class="material-icons" style="font-size:16px;">remove_circle_outline</span>
               นิสิตที่ดรอป / ถอนรายวิชา
               <span id="tab-badge-dropped" class="px-2 py-0.5 text-[11px] rounded-full bg-red-100 text-red-700 font-bold">0</span>
+            </button>
+            <button id="btn-manage-staff-roles" class="admin-role-button" type="button" onclick="openStaffRolesModal()">
+              <span class="material-icons" aria-hidden="true">manage_accounts</span>
+              <span>จัดการสิทธิ์บุคลากร</span>
             </button>
           </div>
 
@@ -218,25 +769,27 @@ const PAGE_BODY_HTML = `
             </button>
           </div>
 
-          <table class="data-table">
-            <thead id="students-thead">
-              <tr>
-                <th style="width: 14%;">รหัสนิสิต</th>
-                <th style="width: 22%;">ชื่อ-นามสกุล</th>
-                <th style="width: 20%;">อาจารย์ที่ปรึกษา</th>
-                <th style="width: 34%;">สถานะความพร้อม &amp; การตรวจสอบ</th>
-                <th style="width: 10%; min-width: 90px;" class="text-center">
-                  <label style="display:inline-flex;align-items:center;gap:4px;cursor:pointer;white-space:nowrap;" title="เลือกนักศึกษาทั้งหมดในหน้านี้">
-                    <span style="font-size:12px;">เลือกทั้งหมด</span>
-                    <input type="checkbox" id="select-all-students" style="width:16px;height:16px;cursor:pointer;" />
-                  </label>
-                </th>
-              </tr>
-            </thead>
-            <tbody id="students-tbody">
-              <tr><td colspan="5" class="text-center py-8 text-gray-400">กำลังโหลดข้อมูล...</td></tr>
-            </tbody>
-          </table>
+          <div class="admin-student-table-scroll">
+            <table class="data-table admin-student-table">
+              <thead id="students-thead">
+                <tr>
+                  <th style="width: 14%;">รหัสนิสิต</th>
+                  <th style="width: 22%;">ชื่อ-นามสกุล</th>
+                  <th style="width: 20%;">อาจารย์ที่ปรึกษา</th>
+                  <th style="width: 34%;">สถานะความพร้อม &amp; การตรวจสอบ</th>
+                  <th style="width: 10%; min-width: 90px;" class="text-center">
+                    <label style="display:inline-flex;align-items:center;gap:4px;cursor:pointer;white-space:nowrap;" title="เลือกนักศึกษาทั้งหมดในหน้านี้">
+                      <span style="font-size:12px;">เลือกทั้งหมด</span>
+                      <input type="checkbox" id="select-all-students" style="width:16px;height:16px;cursor:pointer;" />
+                    </label>
+                  </th>
+                </tr>
+              </thead>
+              <tbody id="students-tbody">
+                <tr><td colspan="5" class="text-center py-8 text-gray-400">กำลังโหลดข้อมูล...</td></tr>
+              </tbody>
+            </table>
+          </div>
 
           <!-- Pagination -->
           <div class="flex justify-between items-center mt-4 text-xs text-gray-500">
@@ -1166,7 +1719,9 @@ const PAGE_BODY_HTML = `
       </div>
     </div>
 
-  </main>
+      </main>
+    </div>
+  </div>
 `;
 
 export default function AdminDashboardPage() {

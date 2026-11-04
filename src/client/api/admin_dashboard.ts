@@ -1,6 +1,5 @@
 // @ts-nocheck
 let allStudents = [];
-let currentFilter = null;
 let currentPage = 1;
 const pageLimit = 12;
 let selectedStudentIds = new Set();
@@ -22,8 +21,6 @@ async function initAdminDashboard() {
       currentUserRole = meData.user.role;
       const user = meData.user;
       const majorSelect = document.getElementById('major-filter');
-      const scopeTitle = document.getElementById('admin-scope-banner-title');
-      const scopeSub = document.getElementById('admin-scope-banner-sub');
       const isCentral = Boolean(user.role === 'ADMIN' || user.role === 'STAFF' || user.isStaff || !user.department);
       if (!isCentral && user.department) {
         if (majorSelect) {
@@ -31,18 +28,12 @@ async function initAdminDashboard() {
           majorSelect.disabled = true;
           majorSelect.title = `คุณดูแลเฉพาะสาขาวิชา${user.department}`;
         }
-        if (scopeTitle) scopeTitle.textContent = `ระบบบริหารจัดการการฝึกงาน — สาขาวิชา${user.department}`;
-        if (scopeSub) scopeSub.textContent = `มุมมองอาจารย์ประจำวิชา (ดูแลเฉพาะนิสิตสาขาวิชา${user.department})`;
-      } else {
-        if (scopeTitle) scopeTitle.textContent = 'ระบบบริหารจัดการการฝึกงานและสหกิจศึกษา คณะ ICT มหาวิทยาลัยพะเยา (ทั้ง 8 สาขาวิชา)';
       }
     }
   } catch (err) {
     console.error('Failed to fetch user role:', err);
   }
 
-  // ถ้าเป็น STAFF ให้ซ่อนปุ่มที่ไม่มีสิทธิ์
-  applyStaffRestrictions();
   updateTableHeader();
 
   await loadDashboardSummary();
@@ -53,30 +44,18 @@ async function initAdminDashboard() {
 }
 
 // ==========================================
-// ซ่อน UI ที่ STAFF ไม่มีสิทธิ์ใช้
-// ==========================================
-function applyStaffRestrictions() {
-  if (currentUserRole !== 'STAFF') return;
-
-  // ซ่อนปุ่ม "ตั้งสถานะนิสิต"
-  const btnSetStatus = document.getElementById('btn-set-status');
-  if (btnSetStatus) btnSetStatus.style.display = 'none';
-
-  // ซ่อนปุ่ม "ตั้งอาจารย์ที่ปรึกษา"
-  const btnSetAdvisor = document.getElementById('btn-set-advisor');
-  if (btnSetAdvisor) btnSetAdvisor.style.display = 'none';
-
-  // ซ่อนปุ่ม "ดรอปนิสิต" และ "กู้คืนสถานะ"
-  const btnDrop = document.getElementById('btn-drop-student');
-  if (btnDrop) btnDrop.style.display = 'none';
-  const btnRestore = document.getElementById('btn-restore-student');
-  if (btnRestore) btnRestore.style.display = 'none';
-}
-
-// ==========================================
-// 1. โหลดข้อมูลสรุป (กราฟวงกลม + อาจารย์ + จำนวน)
+// 1. โหลดข้อมูลสรุปและตารางอาจารย์
 // ==========================================
 async function loadDashboardSummary() {
+  const errorEl = document.getElementById('admin-summary-error');
+  const showSummaryError = (message) => {
+    if (errorEl) {
+      errorEl.textContent = message;
+      errorEl.hidden = false;
+    }
+    console.error(`Dashboard summary unavailable: ${message}`);
+  };
+
   try {
     const majorFilter = document.getElementById('major-filter');
     const selectedMajor = majorFilter ? majorFilter.value : 'ALL';
@@ -84,10 +63,32 @@ async function loadDashboardSummary() {
       ? `/api/admin/dashboard-summary?major=${encodeURIComponent(selectedMajor)}`
       : '/api/admin/dashboard-summary';
     const res = await fetch(summaryUrl);
-    const data = await res.json();
-    if (!data.success) return;
+    if (res.redirected || !res.headers.get('content-type')?.includes('application/json')) {
+      showSummaryError('โหลดข้อมูลสรุปไม่ได้ กรุณาเข้าสู่ระบบใหม่และตรวจสอบสิทธิ์การใช้งาน');
+      return;
+    }
 
-    renderDashboardCharts(data.readinessStats, data.trainingStats, data.cvStats, data.placementStats, data.totalStudents);
+    const data = await res.json();
+    if (!res.ok || !data.success) {
+      showSummaryError(data.message || 'โหลดข้อมูลสรุปไม่ได้ กรุณาลองใหม่อีกครั้ง');
+      return;
+    }
+
+    const placementStats = data.placementStats || {};
+    const summaryValues = {
+      'kpi-total-students': data.totalStudents ?? 0,
+      'kpi-placement-approved': placementStats.approved ?? 0,
+      'kpi-placement-pending': placementStats.pending ?? 0,
+      'kpi-students-without-advisor': data.studentsWithoutAdvisor ?? 0,
+    };
+    Object.entries(summaryValues).forEach(([id, value]) => {
+      const element = document.getElementById(id);
+      if (element) element.textContent = String(value);
+    });
+    if (errorEl) {
+      errorEl.textContent = '';
+      errorEl.hidden = true;
+    }
 
     // --- ตารางอาจารย์ที่ปรึกษา ---
     renderAdvisorTable(data.advisorSummary);
@@ -108,147 +109,9 @@ async function loadDashboardSummary() {
     if (tabActiveBadge) tabActiveBadge.textContent = totalActiveStudents;
     if (tabDroppedBadge) tabDroppedBadge.textContent = totalDroppedStudents;
   } catch (err) {
+    showSummaryError('เชื่อมต่อเพื่อโหลดข้อมูลสรุปไม่ได้ กรุณาลองใหม่อีกครั้ง');
     console.error('Load dashboard summary error:', err);
   }
-}
-
-// วาดกราฟวงกลมทั้ง 4 อันจากสถิติที่ได้รับมา
-// ใช้ทั้งตอนโหลดครั้งแรก (loadDashboardSummary, ข้อมูลรวมทั้งหมด) และทุกครั้งที่ loadStudents คืนค่า chartStats ที่ผ่าน filter แล้ว
-function renderDashboardCharts(readinessStats, trainingStats, cvStats, placementStats, totalStudents) {
-  // --- กราฟ 1: สถานะความพร้อม ---
-  const r = readinessStats;
-  renderPieChart('chart-readiness', 'readiness', [
-    { key: 'approvedPlacement', label: 'อนุมัติที่ฝึกงานแล้ว', value: r.approvedPlacement, color: '#FF3EA5' },
-    { key: 'cvApproved', label: 'ตรวจCVผ่าน', value: r.cvApproved, color: '#FFD233' },
-    { key: 'noDataOrHoursLack', label: 'ไม่มีข้อมูล/ชม.ไม่ครบ', value: r.noDataOrHoursLack, color: '#8B5CF6' },
-    { key: 'trainingComplete', label: 'ผ่านการตรวจชม.ครบ', value: r.trainingComplete, color: '#00C3D0' },
-    { key: 'cvNotReviewed', label: 'ยังไม่ได้รีวิว CV', value: r.cvNotReviewed, color: '#3B82F6' },
-  ], 'สถานะความพร้อม', 'readiness-table', totalStudents);
-
-  // --- กราฟ 2: สถานะการอบรม ---
-  const t = trainingStats;
-  renderPieChart('chart-training', 'training', [
-    { key: 'passedComplete', label: 'ผ่านการตรวจชม.ครบ', value: t.passedComplete, color: '#FF3EA5' },
-    { key: 'completeNotChecked', label: 'ชม.ครบ ยังไม่ตรวจ', value: t.completeNotChecked, color: '#FFD233' },
-    { key: 'checkedNotPass', label: 'ตรวจแล้ว ยังไม่ผ่าน', value: t.checkedNotPass, color: '#00C3D0' },
-    { key: 'hoursNotComplete', label: 'ชั่วโมงยังไม่ครบ', value: t.hoursNotComplete, color: '#8B5CF6' },
-  ], 'สถานะการอบรม', 'training-table', totalStudents);
-
-  // --- กราฟ 3: สถานะ CV ---
-  const c = cvStats;
-  renderPieChart('chart-cv', 'cv', [
-    { key: 'reviewed', label: 'รีวิวCVแล้ว', value: c.reviewed, color: '#FF3EA5' },
-    { key: 'notReviewed', label: 'ยังไม่ได้รีวิว CV', value: c.notReviewed, color: '#FFD233' },
-    { key: 'failed', label: 'ไม่ผ่าน CV', value: c.failed, color: '#00C3D0' },
-    { key: 'noCv', label: 'ยังไม่ทำ CV', value: c.noCv, color: '#8B5CF6' },
-  ], 'สถานะการตรวจCV', 'cv-table', totalStudents);
-
-  // --- กราฟ 4: สถานะอนุมัติฝึกงาน ---
-  const p = placementStats;
-  const placementTotal = p.pending + p.approved + p.rejected;
-  renderPieChart('chart-placement', 'placement', [
-    { key: 'pending', label: 'รอผล', value: p.pending, color: '#FF3EA5' },
-    { key: 'approved', label: 'อนุมัติที่ฝึกงานแล้ว', value: p.approved, color: '#00C3D0' },
-    { key: 'rejected', label: 'ไม่อนุมัติที่ฝึกงาน', value: p.rejected, color: '#FFD233' },
-  ], 'สถานะอนุมัติฝึกงาน', 'placement-table', placementTotal || 1);
-}
-
-// ==========================================
-// สร้างกราฟวงกลม SVG + ตารางสถานะ
-// ==========================================
-function renderPieChart(containerId, chartType, segments, headerLabel, tableId, total) {
-  const container = document.getElementById(containerId);
-  if (!container) return;
-
-  // คำนวณ percentage และ dasharray
-  let cumulativeOffset = 0;
-  const circumference = 2 * Math.PI * 14; // r=14
-
-  let svgCircles = '';
-  segments.forEach((seg) => {
-    const pct = total > 0 ? (seg.value / total) * 100 : 0;
-    const dashLen = (pct / 100) * circumference;
-    const dashGap = circumference - dashLen;
-    const offset = -(cumulativeOffset / 100) * circumference;
-
-    if (pct > 0) {
-      svgCircles += `<circle cx="18" cy="18" r="14" fill="none" stroke="${seg.color}" stroke-width="4"
-        stroke-dasharray="${dashLen} ${dashGap}" stroke-dashoffset="${offset}" />`;
-    }
-    cumulativeOffset += pct;
-  });
-
-  // ถ้าไม่มีข้อมูลเลย แสดงวงกลมสีเทา
-  if (total === 0 || cumulativeOffset === 0) {
-    svgCircles = `<circle cx="18" cy="18" r="14" fill="none" stroke="#e5e7eb" stroke-width="4" />`;
-  }
-
-  container.innerHTML = `
-    <div class="bg-slate-50/60 border border-slate-200/80 rounded-xl p-3 flex flex-col h-full">
-      <h4 class="text-xs font-bold text-blue-800 mb-2.5 text-center">${headerLabel}</h4>
-      <div class="flex items-center gap-2 flex-1">
-        <div class="relative w-[90px] h-[90px] flex-shrink-0">
-          <svg viewBox="0 0 36 36" class="w-full h-full -rotate-90">
-            ${svgCircles}
-          </svg>
-          <div class="absolute inset-0 flex flex-col items-center justify-center">
-            <span class="text-[7px] text-gray-400">Total</span>
-            <span class="text-base font-bold text-gray-800">${total}</span>
-          </div>
-        </div>
-        <table class="text-[11px] border-collapse flex-1" id="${tableId}">
-          <thead>
-            <tr>
-              <th class="text-left pr-2 pb-1 font-medium text-gray-500">สถานะ</th>
-              <th class="text-right pr-2 pb-1 font-medium text-gray-500">จำนวน</th>
-              <th class="text-right pb-1 font-medium text-gray-500">%</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${segments.map((seg) => {
-              const pct = total > 0 ? ((seg.value / total) * 100).toFixed(1) : '0.0';
-              return `<tr class="chart-status-row cursor-pointer hover:bg-purple-100/70 transition-colors" data-chart="${chartType}" data-key="${seg.key}" data-label="${seg.label}" title="คลิกเพื่อกรองสถานะนี้">
-                <td class="pr-2 py-0.5 truncate max-w-[110px]" title="${seg.label}">
-                  <span class="inline-block w-1.5 h-1.5 rounded-full mr-1" style="background:${seg.color}"></span>${seg.label}
-                </td>
-                <td class="text-right pr-2">${seg.value}</td>
-                <td class="text-right text-gray-500">${pct}%</td>
-              </tr>`;
-            }).join('')}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  `;
-
-  // คงไฮไลต์แถวที่กำลังกรองอยู่ (ถ้ามี) แม้กราฟจะถูก re-render ใหม่ทุกครั้งที่ filter เปลี่ยน
-  if (currentFilter && currentFilter.chartType === chartType) {
-    const activeRow = container.querySelector(`.chart-status-row[data-key="${currentFilter.chartKey}"]`);
-    if (activeRow) activeRow.classList.add('bg-purple-100', 'font-bold');
-  }
-
-  // Event: คลิกสถานะในตาราง → กรองรายชื่อนิสิต (Toggle)
-  container.querySelectorAll('.chart-status-row').forEach(row => {
-    row.addEventListener('click', () => {
-      const isAlreadyActive = row.classList.contains('bg-purple-100');
-      document.querySelectorAll('.chart-status-row').forEach(r => r.classList.remove('bg-purple-100', 'font-bold'));
-
-      if (isAlreadyActive) {
-        currentFilter = null;
-      } else {
-        row.classList.add('bg-purple-100', 'font-bold');
-        currentFilter = {
-          chartType: row.dataset.chart,
-          chartKey: row.dataset.key,
-          label: row.dataset.label,
-        };
-        clearSearchBox();
-      }
-      currentPage = 1;
-      updateFilterUI();
-      loadStudents();
-    });
-  });
 }
 
 // ==========================================
@@ -285,8 +148,6 @@ window.switchStudentTab = function(tab) {
     if (droppedActions) droppedActions.style.display = 'flex';
   }
 
-  // ซ่อนปุ่มที่ STAFF ไม่มีสิทธิ์
-  applyStaffRestrictions();
   updateTableHeader();
   loadStudents();
 };
@@ -339,9 +200,6 @@ async function loadStudents() {
 
     let url = `/api/admin/students?page=${currentPage}&limit=${pageLimit}&viewDropped=${currentTab === 'dropped'}`;
     if (searchVal) url += `&search=${encodeURIComponent(searchVal)}`;
-    if (currentFilter) {
-      url += `&chartType=${encodeURIComponent(currentFilter.chartType)}&chartKey=${encodeURIComponent(currentFilter.chartKey)}`;
-    }
     const yearFilter = document.getElementById('year-filter');
     const selectedYear = yearFilter ? yearFilter.value : '';
     if (selectedYear) url += `&yearPrefix=${encodeURIComponent(selectedYear)}`;
@@ -359,16 +217,6 @@ async function loadStudents() {
     const res = await fetch(url);
     const data = await res.json();
     if (!data.success) return;
-
-    if (data.chartStats) {
-      renderDashboardCharts(
-        data.chartStats.readinessStats,
-        data.chartStats.trainingStats,
-        data.chartStats.cvStats,
-        data.chartStats.placementStats,
-        data.chartStats.totalStudents
-      );
-    }
 
     let studentsToRender = data.students || [];
     let totalToRender = data.total;
@@ -1001,10 +849,6 @@ window.confirmExport = async function() {
       if (statusFilter && statusFilter.value) params.set('statusFilter', statusFilter.value);
       if (advisorFilter && advisorFilter.value) params.set('advisorFilter', advisorFilter.value);
       if (skillFilter && skillFilter.value) params.set('skillFilter', skillFilter.value);
-      if (currentFilter) {
-        params.set('chartType', currentFilter.chartType);
-        params.set('chartKey', currentFilter.chartKey);
-      }
       url += params.toString();
     } else {
       url += `viewDropped=${currentTab === 'dropped'}&all=true`;
@@ -1142,10 +986,6 @@ if (yearFilterEl) {
   const el = document.getElementById(id);
   if (el) {
     el.addEventListener('change', () => {
-      if (currentFilter) {
-        currentFilter = null;
-        document.querySelectorAll('.chart-status-row').forEach(r => r.classList.remove('bg-purple-100', 'font-bold'));
-      }
       clearSearchBox();
       currentPage = 1;
       updateFilterUI();
@@ -1239,9 +1079,8 @@ function updateFilterUI() {
   const skillVal = document.getElementById('skill-filter')?.value;
   const hasDropdownFilter = statusVal || advisorVal || skillVal;
 
-  if (currentFilter || hasDropdownFilter) {
+  if (hasDropdownFilter) {
     const parts = [];
-    if (currentFilter) parts.push(currentFilter.label);
     if (statusVal) parts.push(document.getElementById('status-filter').selectedOptions[0]?.text);
     if (advisorVal) parts.push(advisorVal);
     if (skillVal) parts.push(document.getElementById('skill-filter').selectedOptions[0]?.text);
@@ -1256,20 +1095,9 @@ function updateFilterUI() {
   }
 }
 
-// Clear filter (จากกราฟ)
-window.clearFilter = function() {
-  currentFilter = null;
-  currentPage = 1;
-  document.querySelectorAll('.chart-status-row').forEach(r => r.classList.remove('bg-purple-100', 'font-bold'));
-  updateFilterUI();
-  loadStudents();
-};
-
-// Clear ALL filters (ทุก dropdown + กราฟ)
+// Clear ALL filters
 window.clearAllFilters = function() {
-  currentFilter = null;
   currentPage = 1;
-  document.querySelectorAll('.chart-status-row').forEach(r => r.classList.remove('bg-purple-100', 'font-bold'));
   ['status-filter', 'advisor-filter', 'skill-filter', 'year-filter'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.value = '';
@@ -1714,11 +1542,13 @@ let superAdminData = {
   archivedApplications: [],
 };
 
-let currentWorkspace = 'overview';
+type AdminWorkspace = 'overview' | 'unlock' | 'events' | 'companies' | 'documents' | 'coop';
 
-window.switchAdminWorkspace = function(wsKey) {
+let currentWorkspace: AdminWorkspace = 'overview';
+
+window.switchAdminWorkspace = function(wsKey: AdminWorkspace) {
   currentWorkspace = wsKey;
-  const workspaces = ['overview', 'unlock', 'events', 'companies', 'documents', 'coop'];
+  const workspaces: AdminWorkspace[] = ['overview', 'unlock', 'events', 'companies', 'documents', 'coop'];
   workspaces.forEach(k => {
     const panel = document.getElementById(`workspace-${k}`);
     const tabBtn = document.getElementById(`ws-tab-${k}`);
@@ -1726,29 +1556,13 @@ window.switchAdminWorkspace = function(wsKey) {
       panel.style.display = k === wsKey ? 'block' : 'none';
     }
     if (tabBtn) {
-      if (k === wsKey) {
-        tabBtn.style.border = '1px solid #4338CA';
-        tabBtn.style.background = '#EEF2FF';
-        tabBtn.style.color = '#312E81';
-        tabBtn.style.fontWeight = '700';
-      } else {
-        tabBtn.style.border = '1px solid #E2E8F0';
-        tabBtn.style.background = '#F8FAFC';
-        tabBtn.style.color = '#475569';
-        tabBtn.style.fontWeight = '600';
-      }
+      tabBtn.setAttribute('aria-current', k === wsKey ? 'page' : 'false');
     }
   });
 };
 
 window.loadSuperAdminOverview = async function() {
   try {
-    // เปิดปุ่มจัดการให้ Super Admin (พี่จอม - STAFF) ใช้งานได้ครบ
-    ['btn-set-status', 'btn-set-advisor', 'btn-drop-student', 'btn-restore-student'].forEach(id => {
-      const el = document.getElementById(id);
-      if (el) el.style.display = 'inline-flex';
-    });
-
     const res = await fetch('/api/admin/super-admin/overview');
     const data = await res.json();
     if (!data.success) return;
