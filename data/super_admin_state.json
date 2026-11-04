@@ -150,10 +150,11 @@
       "hrPhone": "098-xxx-xxxx",
       "hrEmail": "...@gmail.com",
       "recommendedPositions": "Software Developer",
-      "status": "PENDING_REVIEW",
+      "status": "VERIFIED",
       "submittedByStudentCode": "67024999",
       "submittedByStudentName": "ซง โกคู",
-      "createdAt": "2026-09-21T11:27:29.812Z"
+      "createdAt": "2026-09-21T11:27:29.812Z",
+      "verifiedAt": "2026-11-04T03:09:10.360Z"
     },
     {
       "id": "COMP-NEW-1",
@@ -376,7 +377,34 @@
       "verifiedAt": "2025-11-18T08:00:00.000Z"
     }
   ],
-  "docWorkflowMap": {},
+  "docWorkflowMap": {
+    "41": {
+      "studentId": 41,
+      "studentCode": "67099999",
+      "companyName": "เทสล่า",
+      "interviewDate": "2026-02-15",
+      "requestLetterIssued": true,
+      "requestLetterDocNo": "อว 7316/ว 438",
+      "requestLetterDate": "2026-11-04",
+      "requestLetterBatchId": "REQ-BATCH-767318",
+      "companyResponseStatus": "WAITING_RESPONSE",
+      "dispatchLetterIssued": false,
+      "isLocked": true
+    },
+    "43": {
+      "studentId": 43,
+      "studentCode": "67024999",
+      "companyName": "เทสล่า",
+      "interviewDate": "2026-02-15",
+      "requestLetterIssued": true,
+      "requestLetterDocNo": "อว 7316/ว 438",
+      "requestLetterDate": "2026-11-04",
+      "requestLetterBatchId": "REQ-BATCH-767318",
+      "companyResponseStatus": "WAITING_RESPONSE",
+      "dispatchLetterIssued": false,
+      "isLocked": true
+    }
+  },
   "archivedApplications": [
     {
       "id": "ARCH-001",
