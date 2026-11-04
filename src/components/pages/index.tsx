@@ -18,9 +18,14 @@ import AdminStudentDetailPage from "./AdminStudentDetailPage";
 export const PAGE_COMPONENTS: Record<string, React.ComponentType> = {
   "login": LoginPage,
   "dashboard": StudentDashboardPage,
+  "dashboard_student": StudentDashboardPage, // alias กันลิงก์เก่า
+  "dashboard_นิสิต": StudentDashboardPage,   // alias ภาษาไทย
   "dashboard_ที่ปรึกษา": AdvisorDashboardPage,
+  "dashboard_advisor": AdvisorDashboardPage, // alias ภาษาอังกฤษ
   "dashboard_รายวิชา": AdminDashboardPage,
+  "dashboard_admin": AdminDashboardPage,     // alias ภาษาอังกฤษ
   "Personal_Information": PersonalInfoPage,
+  "personal_info": PersonalInfoPage,         // alias
   "Certificate": CertificatePage,
   "CV": CvPage,
   "Profile": ProfilePage,

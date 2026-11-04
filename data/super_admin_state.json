@@ -14,11 +14,11 @@
       "prepSchedule": "ปี 3 เทอม 1",
       "internSchedule": "ปี 3 เทอม 2 (ออกฝึกงานเทอมถัดไปทันที)",
       "targetTerm": "2/2568",
-      "isUnlocked": false,
+      "isUnlocked": true,
       "openDate": "2026-01-01",
       "closeDate": "2026-04-30",
       "note": "เรียนเตรียมความพร้อมเทอมนี้ และออกฝึกงานในเทอมถัดไปทันที",
-      "updatedAt": "2026-11-04T05:08:02.660Z"
+      "updatedAt": "2026-11-04T02:20:53.142Z"
     },
     {
       "code": "CS",
@@ -30,7 +30,7 @@
       "openDate": "2026-06-01",
       "closeDate": "2026-08-31",
       "note": "เรียนเตรียมความพร้อมตอนปี 3 รอปลดล็อกยื่นขอฝึกงานตอนขึ้นปี 4",
-      "updatedAt": "2026-11-04T05:08:02.660Z"
+      "updatedAt": "2026-11-04T02:20:53.142Z"
     },
     {
       "code": "CPE",
@@ -42,7 +42,7 @@
       "openDate": "2026-06-01",
       "closeDate": "2026-08-31",
       "note": "เรียนเตรียมความพร้อมตอนปี 3 รอปลดล็อกยื่นขอฝึกงานตอนขึ้นปี 4",
-      "updatedAt": "2026-11-04T05:08:02.660Z"
+      "updatedAt": "2026-11-04T02:20:53.142Z"
     },
     {
       "code": "IT",
@@ -50,11 +50,11 @@
       "prepSchedule": "ปี 3 เทอม 2",
       "internSchedule": "ปี 4 เทอม 1",
       "targetTerm": "1/2569",
-      "isUnlocked": false,
+      "isUnlocked": true,
       "openDate": "2026-01-15",
       "closeDate": "2026-05-15",
       "note": "เปิดให้ยื่น Checklist และขอหนังสือขอความอนุเคราะห์รอบ 1/2569",
-      "updatedAt": "2026-11-04T05:08:02.660Z"
+      "updatedAt": "2026-11-04T02:20:53.142Z"
     },
     {
       "code": "DB",
@@ -62,11 +62,11 @@
       "prepSchedule": "ปี 3 เทอม 2",
       "internSchedule": "ปี 4 เทอม 1",
       "targetTerm": "1/2569",
-      "isUnlocked": false,
+      "isUnlocked": true,
       "openDate": "2026-01-15",
       "closeDate": "2026-05-15",
       "note": "เปิดให้ยื่น Checklist และขอหนังสือขอความอนุเคราะห์รอบ 1/2569",
-      "updatedAt": "2026-11-04T05:08:02.660Z"
+      "updatedAt": "2026-11-04T02:20:53.142Z"
     },
     {
       "code": "CGM",
@@ -78,7 +78,7 @@
       "openDate": "2026-06-01",
       "closeDate": "2026-08-31",
       "note": "อยู่ระหว่างสะสมชั่วโมงเตรียมความพร้อม รอปลดล็อกระบบยื่นบริษัท",
-      "updatedAt": "2026-11-04T05:08:02.660Z"
+      "updatedAt": "2026-11-04T02:20:53.142Z"
     },
     {
       "code": "GIS",
@@ -86,11 +86,11 @@
       "prepSchedule": "ปี 3 เทอม 2",
       "internSchedule": "ปี 4 เทอม 1",
       "targetTerm": "1/2569",
-      "isUnlocked": false,
+      "isUnlocked": true,
       "openDate": "2026-01-15",
       "closeDate": "2026-05-15",
       "note": "เปิดให้ยื่น Checklist สถานประกอบการตามกำหนดการหลักสูตร",
-      "updatedAt": "2026-11-04T05:08:02.660Z"
+      "updatedAt": "2026-11-04T02:20:53.142Z"
     },
     {
       "code": "DSA",
@@ -102,72 +102,10 @@
       "openDate": "2026-06-01",
       "closeDate": "2026-08-31",
       "note": "เรียนเตรียมความพร้อมปี 3 รอปลดล็อกยื่นสถานประกอบการตอนปี 4",
-      "updatedAt": "2026-11-04T05:08:02.660Z"
+      "updatedAt": "2026-11-04T02:20:53.142Z"
     }
   ],
   "trainingEvents": [
-    {
-      "id": "EVT-677402",
-      "title": "เ",
-      "skillType": "HARD",
-      "eventDate": "2026-11-05",
-      "startTime": "00:00",
-      "endTime": "12:00",
-      "rawHours": 12,
-      "creditedHours": 6,
-      "targetMajor": "ALL",
-      "location": "ห้องประชุมคณะ ICT มหาวิทยาลัยพะเยา",
-      "academicYear": "2569",
-      "createdBy": "AEKKAPHAT AINSAWAT",
-      "createdAt": "2026-11-04T07:17:57.402Z",
-      "checkIns": [
-        {
-          "studentCode": "67024964",
-          "nameTh": "กันตินันท์ เก่งมาก",
-          "major": "วิศวกรรมซอฟต์แวร์",
-          "checkedInAt": "2026-11-04T07:21:32.508Z",
-          "trainingRecordId": 50
-        }
-      ]
-    },
-    {
-      "id": "EVT-653645",
-      "title": "ไปเที่ยว",
-      "skillType": "HARD",
-      "eventDate": "2026-11-05",
-      "startTime": "00:00",
-      "endTime": "12:00",
-      "rawHours": 12,
-      "creditedHours": 6,
-      "targetMajor": "ธุรกิจดิจิทัล",
-      "location": "ห้องประชุมคณะ ICT มหาวิทยาลัยพะเยา",
-      "academicYear": "2569",
-      "createdBy": "AEKKAPHAT AINSAWAT",
-      "createdAt": "2026-11-04T07:17:33.645Z",
-      "checkIns": [
-        {
-          "studentCode": "67099997",
-          "nameTh": "kantitai Glakeng",
-          "major": "วิศวกรรมซอฟต์แวร์",
-          "checkedInAt": "2026-11-04T07:19:59.147Z",
-          "trainingRecordId": 49
-        },
-        {
-          "studentCode": "67099999",
-          "nameTh": "ไมเคิล แจ็คสัน",
-          "major": "วิศวกรรมซอฟต์แวร์",
-          "checkedInAt": "2026-11-04T07:19:59.083Z",
-          "trainingRecordId": 48
-        },
-        {
-          "studentCode": "67023110",
-          "nameTh": "เอกัทร อินทร์สวัสดิ์",
-          "major": "วิศวกรรมซอฟต์แวร์",
-          "checkedInAt": "2026-11-04T07:18:34.529Z",
-          "trainingRecordId": 47
-        }
-      ]
-    },
     {
       "id": "EVT-2568-01",
       "title": "อบรมเตรียมความพร้อมสหกิจศึกษา: เทคนิคการเขียน Resume และการสัมภาษณ์งาน",
@@ -212,10 +150,11 @@
       "hrPhone": "098-xxx-xxxx",
       "hrEmail": "...@gmail.com",
       "recommendedPositions": "Software Developer",
-      "status": "PENDING_REVIEW",
+      "status": "VERIFIED",
       "submittedByStudentCode": "67024999",
       "submittedByStudentName": "ซง โกคู",
-      "createdAt": "2026-09-21T11:27:29.812Z"
+      "createdAt": "2026-09-21T11:27:29.812Z",
+      "verifiedAt": "2026-11-04T03:09:10.360Z"
     },
     {
       "id": "COMP-NEW-1",
@@ -445,9 +384,9 @@
       "companyName": "เทสล่า",
       "interviewDate": "2026-02-15",
       "requestLetterIssued": true,
-      "requestLetterDocNo": "อว 7316/ว 247",
+      "requestLetterDocNo": "อว 7316/ว 438",
       "requestLetterDate": "2026-11-04",
-      "requestLetterBatchId": "REQ-BATCH-186973",
+      "requestLetterBatchId": "REQ-BATCH-767318",
       "companyResponseStatus": "WAITING_RESPONSE",
       "dispatchLetterIssued": false,
       "isLocked": true
@@ -458,42 +397,15 @@
       "companyName": "เทสล่า",
       "interviewDate": "2026-02-15",
       "requestLetterIssued": true,
-      "requestLetterDocNo": "อว 7316/ว 247",
+      "requestLetterDocNo": "อว 7316/ว 438",
       "requestLetterDate": "2026-11-04",
-      "requestLetterBatchId": "REQ-BATCH-186973",
+      "requestLetterBatchId": "REQ-BATCH-767318",
       "companyResponseStatus": "WAITING_RESPONSE",
-      "dispatchLetterIssued": false,
-      "isLocked": true
-    },
-    "47": {
-      "studentId": 47,
-      "studentCode": "67000001",
-      "companyName": "เรพ่ำรเ่ำพ",
-      "interviewDate": "2026-02-15",
-      "requestLetterIssued": true,
-      "requestLetterDocNo": "อว 7316/ว 0142",
-      "requestLetterDate": "2026-11-04",
-      "companyResponseStatus": "ACCEPTED",
-      "companyResponseFileName": "ใบตอบรับ_67000001.pdf",
-      "companyResponseUploadedAt": "2026-11-04T07:28:08.607Z",
-      "companyResponseNote": "ตรวจสอบไฟล์สแกนใบตอบรับแล้ว สถานประกอบการตอบรับเข้าฝึกงาน",
       "dispatchLetterIssued": false,
       "isLocked": true
     }
   },
   "archivedApplications": [
-    {
-      "id": "ARCH-066698",
-      "studentId": 47,
-      "studentCode": "67000001",
-      "studentName": "wfjuajfi",
-      "major": "วิศวกรรมซอฟต์แวร์",
-      "companyName": "เรพ่ำรเ่ำพ",
-      "position": "Software Developer",
-      "reason": "COMPANY_REJECTED",
-      "note": "สถานประกอบการแจ้งเต็มอัตรา / ไม่ผ่านการคัดเลือก",
-      "archivedAt": "2026-11-04T07:24:26.698Z"
-    },
     {
       "id": "ARCH-001",
       "studentId": 0,

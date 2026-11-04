@@ -12,8 +12,20 @@ function initPersistentHeader(templateUrl) {
             const headerNav = document.getElementById('header-nav');
 
             if (menuToggle && headerNav) {
-                menuToggle.addEventListener('click', () => {
-                    headerNav.classList.toggle('open');
+                const setMenuOpen = (open) => {
+                    headerNav.classList.toggle('open', open);
+                    const icon = menuToggle.querySelector('.material-icons');
+                    if (icon) icon.textContent = open ? 'close' : 'menu';
+                };
+                menuToggle.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    setMenuOpen(!headerNav.classList.contains('open'));
+                });
+                headerNav.addEventListener('click', (e) => {
+                    if (e.target.closest('a')) setMenuOpen(false);
+                });
+                document.addEventListener('click', (e) => {
+                    if (!headerNav.contains(e.target) && !menuToggle.contains(e.target)) setMenuOpen(false);
                 });
             }
 
@@ -141,13 +153,13 @@ function initPersistentHeader(templateUrl) {
                     const navDashboard = headerNav ? headerNav.querySelector('a[href*="dashboard"]') : null;
                     if (isCourseAdminOrStaff) {
                         if (navDashboard) {
-                            navDashboard.href = '../pages/dashboard_รายวิชา.html';
+                            navDashboard.href = '/pages/dashboard_รายวิชา.html';
                             navDashboard.innerHTML = '<span class="material-icons" style="font-size:16px;">analytics</span><span>Dashboard รายวิชา/คณะ</span>';
                         }
                         if (isAdvOrSup && headerNav && !headerNav.querySelector('#multi-role-advisor-link')) {
                             const advLink = document.createElement('a');
                             advLink.id = 'multi-role-advisor-link';
-                            advLink.href = '../pages/dashboard_ที่ปรึกษา.html';
+                            advLink.href = '/pages/dashboard_ที่ปรึกษา.html';
                             advLink.className = 'nav-link';
                             advLink.innerHTML = '<span class="material-icons" style="font-size:16px;">people</span><span>Dashboard ที่ปรึกษา</span>';
                             if (navDashboard && navDashboard.parentElement) {
@@ -156,7 +168,7 @@ function initPersistentHeader(templateUrl) {
                         }
                     } else if (isAdvOrSup) {
                         if (navDashboard) {
-                            navDashboard.href = '../pages/dashboard_ที่ปรึกษา.html';
+                            navDashboard.href = '/pages/dashboard_ที่ปรึกษา.html';
                             navDashboard.innerHTML = '<span class="material-icons" style="font-size:16px;">people</span><span>Dashboard ที่ปรึกษา</span>';
                         }
                     }
@@ -217,11 +229,12 @@ function initPersistentHeader(templateUrl) {
 
                     // Highlight active nav link
                     if (headerNav) {
+                        const cleanCurrentPath = currentPath.replace(/\.html$/i, '').toLowerCase();
                         headerNav.querySelectorAll('a').forEach(a => {
                             a.classList.remove('active');
                             const rawHref = (a.getAttribute('href') || '').split('?')[0];
-                            const targetHref = decodeURIComponent(rawHref.replace('../pages/', '/pages/'));
-                            if (targetHref && currentPath.includes(targetHref)) {
+                            const targetHref = decodeURIComponent(rawHref.replace('../pages/', '/pages/')).replace(/\.html$/i, '').toLowerCase();
+                            if (targetHref && (cleanCurrentPath === targetHref || (targetHref === '/pages/dashboard' && cleanCurrentPath === '/pages/dashboard_student'))) {
                                 a.classList.add('active');
                             }
                         });
@@ -245,7 +258,7 @@ window.switchIctRole = async function(roleMode, targetUrl) {
     window.location.href = targetUrl;
 };
 
-initPersistentHeader('../components/header.html');
+initPersistentHeader('/components/header.html');
 
 // ==========================================
 // Real-time refresh (polling) — แทน Socket.io เดิม

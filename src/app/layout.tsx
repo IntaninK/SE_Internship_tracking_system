@@ -26,7 +26,6 @@ export default function RootLayout({
           href="https://fonts.googleapis.com/icon?family=Material+Icons"
           rel="stylesheet"
         />
-        <link rel="stylesheet" href="/css/main.css" />
         <link rel="stylesheet" href="/css/main-output.css" />
         <link rel="stylesheet" href="/css/modern-ict.css" />
       </head>

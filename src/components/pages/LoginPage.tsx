@@ -18,7 +18,7 @@ const PAGE_STYLES: string[] = [
       background: #FFFFFF;
       border-radius: 36px;
       width: 100%;
-      max-width: 620px;
+      max-width: 580px;
       padding: 36px 36px 32px 36px;
       display: flex;
       flex-direction: column;
@@ -37,7 +37,7 @@ const PAGE_STYLES: string[] = [
       color: #FFFFFF !important;
       font-size: 22px;
       font-weight: 700;
-      width: 100%;
+      width: 95%;
       max-width: 540px;
       height: 62px;
       text-decoration: underline;
@@ -92,14 +92,14 @@ const PAGE_BODY_HTML = `
       <!-- โลโก้มหาวิทยาลัยพะเยา & SE / ICT -->
       <img
         src="/img/logo_login.png"
-        alt="โลโก้มหาวิทยาลัยพะเยา / SE"
-        class="w-[350px] max-w-[80%] h-auto object-contain"
+        alt="โลโก้มหาวิทยาลัยพะเยา / ICT"
+        class="w-[300px] max-w-[80%] h-auto object-contain"
       />
 
       <!-- ชื่อระบบ (สีน้ำเงิน #2C51D4 ตามภาพที่ 2) -->
       <div class="text-center px-4">
         <p class="text-[24px] text-[#2C51D4] text-center leading-normal font-medium" style="margin:0; font-size:24px; color:#2C51D4; font-weight:500;">
-          ระบบติดตามการเตรียมฝึกงานของนิสิตSE
+          ระบบติดตามการเตรียมฝึกงานของนิสิต ICT
         </p>
       </div>
 
