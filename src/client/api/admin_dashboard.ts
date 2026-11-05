@@ -1888,15 +1888,69 @@ window.updateSelectedMajors = function() {
   }
 };
 
-document.addEventListener('click', (e) => {
-  const container = document.getElementById('evt-major-dropdown-container');
-  const menu = document.getElementById('evt-major-dropdown-menu');
-  const arrow = document.getElementById('evt-major-arrow-icon');
-  if (container && menu && menu.style.display !== 'none' && !container.contains(e.target as Node)) {
-    menu.style.display = 'none';
+// ==========================================
+// Multi-Select: ชั้นปีเป้าหมายของกิจกรรมอบรม
+// ==========================================
+window.toggleYearDropdown = function() {
+  const menu = document.getElementById('evt-year-dropdown-menu');
+  const arrow = document.getElementById('evt-year-arrow-icon');
+  if (menu) {
+    const isHidden = menu.style.display === 'none' || !menu.style.display;
+    menu.style.display = isHidden ? 'block' : 'none';
     if (arrow) {
-      arrow.textContent = 'arrow_drop_down';
+      arrow.textContent = isHidden ? 'arrow_drop_up' : 'arrow_drop_down';
     }
+  }
+};
+
+window.toggleSelectAllYears = function(checked) {
+  const items = document.querySelectorAll('.evt-year-item') as NodeListOf<HTMLInputElement>;
+  items.forEach(cb => { cb.checked = checked; });
+  window.updateSelectedYears();
+};
+
+window.updateSelectedYears = function() {
+  const items = Array.from(document.querySelectorAll('.evt-year-item') as NodeListOf<HTMLInputElement>);
+  const allCheckbox = document.getElementById('evt-year-all') as HTMLInputElement | null;
+  const labelEl = document.getElementById('evt-year-selected-label');
+  const countEl = document.getElementById('evt-target-year-count');
+  const hiddenInput = document.getElementById('evt-target-year') as HTMLInputElement | null;
+
+  const checkedItems = items.filter(cb => cb.checked);
+  const total = items.length;
+
+  if (allCheckbox) {
+    allCheckbox.checked = checkedItems.length === total;
+  }
+
+  if (checkedItems.length === total || checkedItems.length === 0) {
+    if (labelEl) labelEl.textContent = 'ทุกชั้นปี (ทุกรหัสนิสิต)';
+    if (countEl) countEl.textContent = '(เลือกทุกชั้นปี)';
+    if (hiddenInput) hiddenInput.value = 'ALL';
+  } else {
+    const names = checkedItems.map(cb => cb.value);
+    const shortNames = checkedItems.map(cb => `ปี ${cb.value}`);
+    if (labelEl) labelEl.textContent = `เลือก ${checkedItems.length} ชั้นปี (${shortNames.join(', ')})`;
+    if (countEl) countEl.textContent = `(เลือก ${checkedItems.length}/${total} ชั้นปี)`;
+    if (hiddenInput) hiddenInput.value = names.join(', ');
+  }
+};
+
+document.addEventListener('click', (e) => {
+  const majorContainer = document.getElementById('evt-major-dropdown-container');
+  const majorMenu = document.getElementById('evt-major-dropdown-menu');
+  const majorArrow = document.getElementById('evt-major-arrow-icon');
+  if (majorContainer && majorMenu && majorMenu.style.display !== 'none' && !majorContainer.contains(e.target as Node)) {
+    majorMenu.style.display = 'none';
+    if (majorArrow) majorArrow.textContent = 'arrow_drop_down';
+  }
+
+  const yearContainer = document.getElementById('evt-year-dropdown-container');
+  const yearMenu = document.getElementById('evt-year-dropdown-menu');
+  const yearArrow = document.getElementById('evt-year-arrow-icon');
+  if (yearContainer && yearMenu && yearMenu.style.display !== 'none' && !yearContainer.contains(e.target as Node)) {
+    yearMenu.style.display = 'none';
+    if (yearArrow) yearArrow.textContent = 'arrow_drop_down';
   }
 });
 
@@ -1907,6 +1961,7 @@ window.createTrainingEvent = async function() {
   const startTime = document.getElementById('evt-start-time')?.value || '09:00';
   const endTime = document.getElementById('evt-end-time')?.value || '16:00';
   const targetMajor = document.getElementById('evt-target-major')?.value || 'ALL';
+  const targetYear = document.getElementById('evt-target-year')?.value || 'ALL';
   const location = document.getElementById('evt-location')?.value || '';
 
   if (!title) {
@@ -1925,6 +1980,7 @@ window.createTrainingEvent = async function() {
         startTime,
         endTime,
         targetMajor,
+        targetYear,
         location,
       }),
     });
@@ -1985,11 +2041,13 @@ window.handleEventDatePresetChange = function() {
 window.resetEventFilters = function() {
   const keywordEl = document.getElementById('filter-event-keyword') as HTMLInputElement | null;
   const majorEl = document.getElementById('filter-event-major') as HTMLSelectElement | null;
+  const yearEl = document.getElementById('filter-event-year') as HTMLSelectElement | null;
   const presetEl = document.getElementById('filter-event-date-preset') as HTMLSelectElement | null;
   const customDateEl = document.getElementById('filter-event-custom-date') as HTMLInputElement | null;
 
   if (keywordEl) keywordEl.value = '';
   if (majorEl) majorEl.value = 'ALL';
+  if (yearEl) yearEl.value = 'ALL';
   if (presetEl) presetEl.value = 'ALL';
   if (customDateEl) {
     customDateEl.value = '';
@@ -2003,6 +2061,7 @@ window.applyEventFilters = function() {
   const countBadge = document.getElementById('filter-event-count-badge');
   const keywordEl = document.getElementById('filter-event-keyword') as HTMLInputElement | null;
   const majorEl = document.getElementById('filter-event-major') as HTMLSelectElement | null;
+  const yearEl = document.getElementById('filter-event-year') as HTMLSelectElement | null;
   const presetEl = document.getElementById('filter-event-date-preset') as HTMLSelectElement | null;
   const customDateEl = document.getElementById('filter-event-custom-date') as HTMLInputElement | null;
 
@@ -2019,6 +2078,7 @@ window.applyEventFilters = function() {
 
   const keyword = (keywordEl?.value || '').trim().toLowerCase();
   const selectedMajor = majorEl?.value || 'ALL';
+  const selectedYear = yearEl?.value || 'ALL';
   const datePreset = presetEl?.value || 'ALL';
   const customDate = customDateEl?.value || '';
 
@@ -2034,6 +2094,13 @@ window.applyEventFilters = function() {
     if (selectedMajor !== 'ALL') {
       const tm = e.targetMajor || 'ALL';
       if (tm !== 'ALL' && !tm.includes(selectedMajor)) {
+        return false;
+      }
+    }
+    // 2.1 กรองชั้นปีเป้าหมาย
+    if (selectedYear !== 'ALL') {
+      const ty = e.targetYear || 'ALL';
+      if (ty !== 'ALL' && !ty.includes(selectedYear)) {
         return false;
       }
     }
@@ -2086,6 +2153,7 @@ window.renderSelectedEventCheckins = function() {
   const countEl = document.getElementById('checkin-list-count');
   const tbody = document.getElementById('checkin-history-tbody');
   const filterMajorEl = document.getElementById('checkin-filter-major') as HTMLSelectElement | null;
+  const filterYearEl = document.getElementById('checkin-filter-year') as HTMLSelectElement | null;
   const btnDeleteAll = document.getElementById('btn-delete-all-checkin') as HTMLButtonElement | null;
   const btnDeleteAllText = document.getElementById('btn-delete-all-text');
 
@@ -2101,11 +2169,15 @@ window.renderSelectedEventCheckins = function() {
     return;
   }
 
-  // แสดง Metadata กิจกรรม พร้อมสาขาเป้าหมาย
+  // แสดง Metadata กิจกรรม พร้อมสาขาและชั้นปีเป้าหมาย
   if (metaEl) {
     const targetMajorLabel = event.targetMajor === 'ALL' || !event.targetMajor
       ? 'ทุกสาขาวิชา (ทั้งคณะ ICT)'
       : event.targetMajor;
+
+    const targetYearLabel = event.targetYear === 'ALL' || !event.targetYear
+      ? 'ทุกชั้นปี'
+      : event.targetYear.split(',').map((y: string) => `ปี ${y.trim()}`).join(', ');
 
     metaEl.innerHTML = `
       <span style="display:inline-flex; align-items:center; gap:6px; flex-wrap:wrap;">
@@ -2113,13 +2185,14 @@ window.renderSelectedEventCheckins = function() {
         <span>📅 วันที่ ${event.eventDate} (${event.startTime} - ${event.endTime} น.)</span>
         <span>📍 ${event.location}</span>
         <span style="background:#FEF3C7; color:#92400E; padding:2px 8px; border-radius:999px; font-weight:600; font-size:11.5px;">🎯 สาขาเป้าหมาย: ${targetMajorLabel}</span>
+        <span style="background:#EDE9FE; color:#5B21B6; padding:2px 8px; border-radius:999px; font-weight:600; font-size:11.5px;">🎓 ชั้นปีเป้าหมาย: ${targetYearLabel}</span>
       </span>
     `;
   }
 
   const allCheckIns = event.checkIns || [];
 
-  // อัปเดตตัวเลือกสาขาวิชาใน Dropdown กรอง
+  // 1. อัปเดตตัวเลือกสาขาวิชาใน Dropdown กรอง
   if (filterMajorEl) {
     const currentFilterVal = filterMajorEl.value || 'ALL';
     const uniqueMajors = Array.from(new Set(allCheckIns.map(c => c.major).filter(Boolean)));
@@ -2135,33 +2208,76 @@ window.renderSelectedEventCheckins = function() {
     }
   }
 
+  // 2. อัปเดตตัวเลือกชั้นปีใน Dropdown กรอง:
+  // "ถ้ามีปีเดียวให้เป็นตัวกรองนั้น ถ้าหลายปีก็ให้เพิ่มทั้งหมด"
+  if (filterYearEl) {
+    const currentYearVal = filterYearEl.value || 'ALL';
+    const uniqueYears = Array.from(new Set(
+      allCheckIns
+        .map((c: any) => c.studentCode && c.studentCode.length >= 2 ? c.studentCode.substring(0, 2) : '')
+        .filter(Boolean)
+    )).sort((a: any, b: any) => Number(b) - Number(a));
+
+    if (uniqueYears.length === 1) {
+      filterYearEl.innerHTML = `<option value="${uniqueYears[0]}">ปี ${uniqueYears[0]}</option>`;
+      filterYearEl.value = uniqueYears[0];
+    } else if (uniqueYears.length > 1) {
+      filterYearEl.innerHTML = '<option value="ALL">ทุกชั้นปี (ทั้งหมด)</option>' +
+        uniqueYears.map((y: any) => `<option value="${y}">ปี ${y}</option>`).join('');
+
+      if (uniqueYears.includes(currentYearVal)) {
+        filterYearEl.value = currentYearVal;
+      } else {
+        filterYearEl.value = 'ALL';
+      }
+    } else {
+      filterYearEl.innerHTML = '<option value="ALL">ทุกชั้นปี (ทั้งหมด)</option>';
+      filterYearEl.value = 'ALL';
+    }
+  }
+
   const selectedMajor = filterMajorEl ? filterMajorEl.value : 'ALL';
-  const filteredCheckIns = selectedMajor === 'ALL'
-    ? allCheckIns
-    : allCheckIns.filter(c => c.major === selectedMajor);
+  const selectedYear = filterYearEl ? filterYearEl.value : 'ALL';
+  const isMajorFiltered = selectedMajor && selectedMajor !== 'ALL';
+  const isYearFiltered = selectedYear && selectedYear !== 'ALL';
+  const isFiltered = isMajorFiltered || isYearFiltered;
+
+  const filteredCheckIns = allCheckIns.filter((c: any) => {
+    if (isMajorFiltered && c.major !== selectedMajor) {
+      return false;
+    }
+    if (isYearFiltered) {
+      const y = c.studentCode ? c.studentCode.substring(0, 2) : '';
+      if (y !== selectedYear) return false;
+    }
+    return true;
+  });
 
   // อัปเดตตัวเลขนับจำนวนคน
   if (countEl) {
-    if (selectedMajor === 'ALL') {
+    if (!isFiltered) {
       countEl.textContent = String(allCheckIns.length);
     } else {
       countEl.textContent = `${filteredCheckIns.length} จาก ${allCheckIns.length}`;
     }
   }
 
-  // อัปเดตปุ่ม "ลบทั้งหมด" / "ลบเฉพาะสาขา"
+  // อัปเดตปุ่ม "ลบทั้งหมด" / "ลบเฉพาะที่กรอง"
   if (btnDeleteAll) {
     if (filteredCheckIns.length === 0) {
       btnDeleteAll.style.display = 'none';
     } else {
       btnDeleteAll.style.display = 'inline-flex';
       if (btnDeleteAllText) {
-        if (selectedMajor === 'ALL') {
+        if (!isFiltered) {
           btnDeleteAllText.textContent = `ลบทั้งหมด (${allCheckIns.length})`;
           btnDeleteAll.title = `ลบนิสิตทั้งหมดในกิจกรรม (${allCheckIns.length} คน)`;
         } else {
-          btnDeleteAllText.textContent = `ลบเฉพาะ ${selectedMajor} (${filteredCheckIns.length})`;
-          btnDeleteAll.title = `ลบเฉพาะนิสิตสาขา ${selectedMajor} (${filteredCheckIns.length} คน)`;
+          const descList: string[] = [];
+          if (isMajorFiltered) descList.push(selectedMajor);
+          if (isYearFiltered) descList.push(`ปี ${selectedYear}`);
+          btnDeleteAllText.textContent = `ลบเฉพาะ ${descList.join(' ')} (${filteredCheckIns.length})`;
+          btnDeleteAll.title = `ลบเฉพาะนิสิต ${descList.join(' ')} (${filteredCheckIns.length} คน)`;
         }
       }
     }
@@ -2173,7 +2289,10 @@ window.renderSelectedEventCheckins = function() {
   }
 
   if (filteredCheckIns.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="6" class="text-center py-6 text-gray-400">ไม่พบนิสิตสาขา "${selectedMajor}" ในรายการ Check-in กิจกรรมนี้</td></tr>`;
+    const emptyDesc: string[] = [];
+    if (isMajorFiltered) emptyDesc.push(`สาขา "${selectedMajor}"`);
+    if (isYearFiltered) emptyDesc.push(`ชั้นปี "${selectedYear}"`);
+    tbody.innerHTML = `<tr><td colspan="6" class="text-center py-6 text-gray-400">ไม่พบนิสิต ${emptyDesc.join(' และ ')} ในรายการ Check-in กิจกรรมนี้</td></tr>`;
     return;
   }
 
@@ -2205,9 +2324,10 @@ window.renderSelectedEventCheckins = function() {
   `).join('');
 };
 
-window.filterCheckInListByMajor = function() {
+window.filterCheckInList = function() {
   window.renderSelectedEventCheckins();
 };
+window.filterCheckInListByMajor = window.filterCheckInList;
 
 window.submitEventCheckIn = async function() {
   const selectEl = document.getElementById('checkin-event-select') as HTMLSelectElement | null;
@@ -2294,6 +2414,7 @@ window.deleteEventCheckIn = async function(eventId, studentCode, nameTh) {
 window.deleteAllEventCheckIns = async function() {
   const selectEl = document.getElementById('checkin-event-select') as HTMLSelectElement | null;
   const filterMajorEl = document.getElementById('checkin-filter-major') as HTMLSelectElement | null;
+  const filterYearEl = document.getElementById('checkin-filter-year') as HTMLSelectElement | null;
   const eventId = selectEl?.value;
   if (!eventId) return;
 
@@ -2301,24 +2422,38 @@ window.deleteAllEventCheckIns = async function() {
   if (!event) return;
 
   const selectedMajor = filterMajorEl ? filterMajorEl.value : 'ALL';
-  const isFiltered = selectedMajor && selectedMajor !== 'ALL';
-  const targetCheckIns = isFiltered
-    ? (event.checkIns || []).filter(c => c.major === selectedMajor)
-    : (event.checkIns || []);
+  const selectedYear = filterYearEl ? filterYearEl.value : 'ALL';
+  const isMajorFiltered = selectedMajor && selectedMajor !== 'ALL';
+  const isYearFiltered = selectedYear && selectedYear !== 'ALL';
+  const isFiltered = isMajorFiltered || isYearFiltered;
+
+  const targetCheckIns = (event.checkIns || []).filter((c: any) => {
+    if (isMajorFiltered && c.major !== selectedMajor) return false;
+    if (isYearFiltered) {
+      const y = c.studentCode ? c.studentCode.substring(0, 2) : '';
+      if (y !== selectedYear) return false;
+    }
+    return true;
+  });
 
   if (targetCheckIns.length === 0) {
     alert('ไม่มีรายชื่อนิสิตให้ลบ');
     return;
   }
 
+  const descList: string[] = [];
+  if (isMajorFiltered) descList.push(`สาขา${selectedMajor}`);
+  if (isYearFiltered) descList.push(`ชั้นปี ${selectedYear}`);
+  const filterDescText = descList.join(' + ');
+
   const confirmTitle = isFiltered
-    ? `⚠️ ยืนยันการยกเลิก Check-in นิสิต "สาขา${selectedMajor}" ทั้งหมด (${targetCheckIns.length} คน) ในกิจกรรมนี้ หรือไม่?\n\n* นิสิตสาขาอื่นจะไม่ได้รับผลกระทบ\n* ชั่วโมงอบรม (+${event.creditedHours} ชม.) จะถูกหักคืนจากนิสิตสาขา${selectedMajor} ทันที`
+    ? `⚠️ ยืนยันการยกเลิก Check-in นิสิต "${filterDescText}" ทั้งหมด (${targetCheckIns.length} คน) ในกิจกรรมนี้ หรือไม่?\n\n* นิสิตกลุ่มอื่นจะไม่ได้รับผลกระทบ\n* ชั่วโมงอบรม (+${event.creditedHours} ชม.) จะถูกหักคืนจากนิสิตกลุ่มนี้ทันที`
     : `⚠️ ยืนยันการยกเลิก Check-in นิสิต "ทั้งหมดทุกคน" (${targetCheckIns.length} คน) ในกิจกรรมนี้ หรือไม่?\n\n* ระบบจะลบรายชื่อทุกคนออกจากกิจกรรมนี้\n* ชั่วโมงอบรม (+${event.creditedHours} ชม.) จะถูกหักคืนจากนิสิตทุกคนทันที`;
 
   if (!confirm(confirmTitle)) return;
 
   try {
-    const url = `/api/admin/super-admin/events/${encodeURIComponent(eventId)}/checkin-all?major=${encodeURIComponent(selectedMajor)}`;
+    const url = `/api/admin/super-admin/events/${encodeURIComponent(eventId)}/checkin-all?major=${encodeURIComponent(selectedMajor)}&year=${encodeURIComponent(selectedYear)}`;
     const res = await fetch(url, { method: 'DELETE' });
     const data = await res.json();
     if (data.success) {

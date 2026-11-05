@@ -107,6 +107,23 @@
   ],
   "trainingEvents": [
     {
+      "id": "EVT-454894",
+      "title": "อบรมการเตรียมความพร้อมสำหรับการไปฝึกงานต้องเตรียมตัวอย่างไร",
+      "skillType": "SOFT",
+      "eventDate": "2026-11-05",
+      "startTime": "09:00",
+      "endTime": "16:00",
+      "rawHours": 7,
+      "creditedHours": 6,
+      "targetMajor": "ALL",
+      "targetYear": "67, 68",
+      "location": "ห้องประชุมคณะ ICT มหาวิทยาลัยพะเยา",
+      "academicYear": "2569",
+      "createdBy": "whyer kuru",
+      "createdAt": "2026-11-05T06:17:34.894Z",
+      "checkIns": []
+    },
+    {
       "id": "EVT-2568-01",
       "title": "อบรมเตรียมความพร้อมสหกิจศึกษา: เทคนิคการเขียน Resume และการสัมภาษณ์งาน",
       "skillType": "SOFT",

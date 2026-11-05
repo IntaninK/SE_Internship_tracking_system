@@ -2019,7 +2019,7 @@ router.post("/super-admin/major-unlock", async (req: Request, res: Response) => 
 router.post("/super-admin/events", async (req: Request, res: Response) => {
   try {
     const state = loadSuperAdminState();
-    const { title, skillType, eventDate, startTime, endTime, targetMajor, location, academicYear } =
+    const { title, skillType, eventDate, startTime, endTime, targetMajor, targetYear, location, academicYear } =
       req.body;
 
     if (!title || ! String(title).trim()) {
@@ -2041,6 +2041,7 @@ router.post("/super-admin/events", async (req: Request, res: Response) => {
       rawHours,
       creditedHours,
       targetMajor: targetMajor || "ALL",
+      targetYear: targetYear || "ALL",
       location: location || "คณะเทคโนโลยีสารสนเทศและการสื่อสาร ม.พะเยา",
       academicYear: academicYear || state.academicConfig.currentAcademicYear,
       createdBy: req.session?.user?.username || "พี่จอม (Super Admin)",
@@ -2186,16 +2187,21 @@ router.delete("/super-admin/events/:eventId/checkin-all", async (req: Request, r
     const state = loadSuperAdminState();
     const eventId = String(req.params.eventId);
     const major = req.query.major ? String(req.query.major) : "ALL";
+    const year = req.query.year ? String(req.query.year) : "ALL";
 
     const event = state.trainingEvents.find((e) => e.id === eventId);
     if (!event) {
       return res.status(404).json({ success: false, message: "ไม่พบกิจกรรมอบรมนี้" });
     }
 
-    // หานิสิตที่จะลบ (ทั้งหมด หรือ เฉพาะสาขาที่กรอง)
+    // หานิสิตที่จะลบ (ทั้งหมด หรือ เฉพาะสาขา/ชั้นปีที่กรอง)
     const targetsToDelete = event.checkIns.filter((c) => {
-      if (major && major !== "ALL") {
-        return c.major === major;
+      if (major && major !== "ALL" && c.major !== major) {
+        return false;
+      }
+      if (year && year !== "ALL") {
+        const y = c.studentCode ? c.studentCode.substring(0, 2) : "";
+        if (y !== year) return false;
       }
       return true;
     });

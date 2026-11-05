@@ -1077,6 +1077,54 @@ const PAGE_BODY_HTML = `
               </div>
 
               <div>
+                <label style="font-size:12.5px; font-weight:700; color:#334155; display:flex; justify-content:space-between; align-items:center;">
+                  <span>ชั้นปีเป้าหมาย (เลือกได้หลายชั้นปี)</span>
+                  <span id="evt-target-year-count" style="font-size:11px; font-weight:600; color:#4338CA;">(เลือกทุกชั้นปี)</span>
+                </label>
+                <input type="hidden" id="evt-target-year" value="ALL" />
+                <div id="evt-year-dropdown-container" style="position:relative; margin-top:4px;">
+                  <button type="button" id="evt-year-dropdown-btn" onclick="window.toggleYearDropdown()" class="input-field" style="width:100%; display:flex; align-items:center; justify-content:space-between; cursor:pointer; background:#FFFFFF; text-align:left; font-weight:600; color:#1E1B4B; padding:8px 12px; border:1px solid #CBD5E1; border-radius:10px;">
+                    <span id="evt-year-selected-label" style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:13px;">ทุกชั้นปี (ทุกรหัสนิสิต)</span>
+                    <span id="evt-year-arrow-icon" class="material-icons" style="font-size:18px; color:#64748B;">arrow_drop_down</span>
+                  </button>
+                  <div id="evt-year-dropdown-menu" style="display:none; position:absolute; top:calc(100% + 4px); left:0; right:0; z-index:1000; background:#FFFFFF; border:1px solid #CBD5E1; border-radius:12px; box-shadow:0 12px 28px -4px rgba(15,23,42,0.18), 0 4px 10px -2px rgba(15,23,42,0.08); padding:10px; max-height:260px; overflow-y:auto;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; padding:4px 6px 8px 6px; border-bottom:1px solid #E2E8F0; margin-bottom:6px;">
+                      <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-weight:700; font-size:12.5px; color:#1E1B4B;">
+                        <input type="checkbox" id="evt-year-all" onchange="window.toggleSelectAllYears(this.checked)" checked style="width:16px; height:16px; accent-color:#4338CA; cursor:pointer;" />
+                        <span>ทุกชั้นปี (ทุกรหัสนิสิต)</span>
+                      </label>
+                      <button type="button" onclick="window.toggleYearDropdown()" style="background:none; border:none; color:#64748B; font-size:11.5px; cursor:pointer; padding:2px 8px; border-radius:6px; font-weight:600; display:flex; align-items:center; gap:2px;" class="hover:bg-slate-200">
+                        <span>ปิด</span>
+                        <span class="material-icons" style="font-size:14px;">close</span>
+                      </button>
+                    </div>
+                    <div id="evt-year-checkbox-list" style="display:flex; flex-direction:column; gap:2px;">
+                      <label style="display:flex; align-items:center; gap:8px; padding:5px 8px; border-radius:8px; cursor:pointer; font-size:12.5px;" class="hover:bg-slate-100">
+                        <input type="checkbox" class="evt-year-item" value="67" onchange="window.updateSelectedYears()" checked style="width:15px; height:15px; accent-color:#4338CA; cursor:pointer;" />
+                        <span>ชั้นปี 67 (ปี 3)</span>
+                      </label>
+                      <label style="display:flex; align-items:center; gap:8px; padding:5px 8px; border-radius:8px; cursor:pointer; font-size:12.5px;" class="hover:bg-slate-100">
+                        <input type="checkbox" class="evt-year-item" value="68" onchange="window.updateSelectedYears()" checked style="width:15px; height:15px; accent-color:#4338CA; cursor:pointer;" />
+                        <span>ชั้นปี 68 (ปี 2)</span>
+                      </label>
+                      <label style="display:flex; align-items:center; gap:8px; padding:5px 8px; border-radius:8px; cursor:pointer; font-size:12.5px;" class="hover:bg-slate-100">
+                        <input type="checkbox" class="evt-year-item" value="66" onchange="window.updateSelectedYears()" checked style="width:15px; height:15px; accent-color:#4338CA; cursor:pointer;" />
+                        <span>ชั้นปี 66 (ปี 4)</span>
+                      </label>
+                      <label style="display:flex; align-items:center; gap:8px; padding:5px 8px; border-radius:8px; cursor:pointer; font-size:12.5px;" class="hover:bg-slate-100">
+                        <input type="checkbox" class="evt-year-item" value="65" onchange="window.updateSelectedYears()" checked style="width:15px; height:15px; accent-color:#4338CA; cursor:pointer;" />
+                        <span>ชั้นปี 65 (ปี 5 / ตกค้าง)</span>
+                      </label>
+                      <label style="display:flex; align-items:center; gap:8px; padding:5px 8px; border-radius:8px; cursor:pointer; font-size:12.5px;" class="hover:bg-slate-100">
+                        <input type="checkbox" class="evt-year-item" value="64" onchange="window.updateSelectedYears()" checked style="width:15px; height:15px; accent-color:#4338CA; cursor:pointer;" />
+                        <span>ชั้นปี 64 (ตกค้าง)</span>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div>
                 <label style="font-size:12.5px; font-weight:700; color:#334155;">สถานที่จัดงาน</label>
                 <input type="text" id="evt-location" class="input-field" value="ห้องประชุมคณะ ICT มหาวิทยาลัยพะเยา" style="margin-top:4px;" />
               </div>
@@ -1119,7 +1167,7 @@ const PAGE_BODY_HTML = `
                 </div>
 
                 <!-- 2. กรองสาขาวิชาเป้าหมาย -->
-                <div style="width:165px;">
+                <div style="width:160px;">
                   <select id="filter-event-major" onchange="window.applyEventFilters()" class="input-field" style="height:34px; font-size:12px; padding:4px 8px; border-radius:8px; margin:0; font-weight:600; cursor:pointer;">
                     <option value="ALL">🎯 ทุกสาขาวิชา</option>
                     <option value="วิศวกรรมซอฟต์แวร์">วิศวกรรมซอฟต์แวร์ (SE)</option>
@@ -1130,6 +1178,17 @@ const PAGE_BODY_HTML = `
                     <option value="คอมพิวเตอร์กราฟิกและมัลติมีเดีย">คอมพิวเตอร์กราฟิกฯ (CGM)</option>
                     <option value="ภูมิสารสนเทศศาสตร์">ภูมิสารสนเทศศาสตร์ (GIS)</option>
                     <option value="วิทยาการข้อมูลและการประยุกต์">วิทยาการข้อมูลฯ (DSA)</option>
+                  </select>
+                </div>
+
+                <!-- 2.1 กรองชั้นปีเป้าหมาย -->
+                <div style="width:130px;">
+                  <select id="filter-event-year" onchange="window.applyEventFilters()" class="input-field" style="height:34px; font-size:12px; padding:4px 8px; border-radius:8px; margin:0; font-weight:600; cursor:pointer;">
+                    <option value="ALL">🎓 ทุกชั้นปี</option>
+                    <option value="67">ปี 67 (ปี 3)</option>
+                    <option value="68">ปี 68 (ปี 2)</option>
+                    <option value="66">ปี 66 (ปี 4)</option>
+                    <option value="65">ปี 65 (ปี 5+)</option>
                   </select>
                 </div>
 
@@ -1183,11 +1242,19 @@ const PAGE_BODY_HTML = `
                 <h4 style="font-size:13.5px; font-weight:700; color:#1E293B; margin:0;">
                   รายชื่อนิสิตที่บันทึก Check-in ในกิจกรรมนี้แล้ว (<span id="checkin-list-count">0</span> คน)
                 </h4>
-                <div style="display:flex; align-items:center; gap:8px;">
-                  <label for="checkin-filter-major" style="font-size:12px; font-weight:700; color:#475569;">กรองสาขาวิชา:</label>
-                  <select id="checkin-filter-major" class="input-field" onchange="window.filterCheckInListByMajor()" style="padding:4px 10px; font-size:12px; width:auto; min-width:160px; height:32px; font-weight:600; cursor:pointer;">
-                    <option value="ALL">ทุกสาขาวิชา (ทั้งหมด)</option>
-                  </select>
+                <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+                  <div style="display:flex; align-items:center; gap:6px;">
+                    <label for="checkin-filter-major" style="font-size:12px; font-weight:700; color:#475569;">กรองสาขาวิชา:</label>
+                    <select id="checkin-filter-major" class="input-field" onchange="window.filterCheckInList()" style="padding:4px 10px; font-size:12px; width:auto; min-width:145px; height:32px; font-weight:600; cursor:pointer;">
+                      <option value="ALL">ทุกสาขาวิชา (ทั้งหมด)</option>
+                    </select>
+                  </div>
+                  <div style="display:flex; align-items:center; gap:6px;">
+                    <label for="checkin-filter-year" style="font-size:12px; font-weight:700; color:#475569;">กรองชั้นปี:</label>
+                    <select id="checkin-filter-year" class="input-field" onchange="window.filterCheckInList()" style="padding:4px 10px; font-size:12px; width:auto; min-width:130px; height:32px; font-weight:600; cursor:pointer;">
+                      <option value="ALL">ทุกชั้นปี (ทั้งหมด)</option>
+                    </select>
+                  </div>
                 </div>
               </div>
               <div style="max-height:280px; overflow-y:auto; border:1px solid #E2E8F0; border-radius:12px;">
