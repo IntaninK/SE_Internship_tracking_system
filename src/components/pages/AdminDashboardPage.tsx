@@ -39,7 +39,7 @@ const PAGE_STYLES: string[] = [`
     top: 70px;
     display: flex;
     width: 280px;
-    height: calc(100vh - 70px);
+    height: calc(125vh - 70px);
     min-height: 540px;
     flex-direction: column;
     overflow-y: auto;
@@ -684,7 +684,7 @@ const PAGE_BODY_HTML = `
             <span id="active-filter-badge" style="display:none; background:#FEF3C7; color:#B45309; font-size:12px; padding:2px 10px; border-radius:999px; font-weight:600;"></span>
           </div>
           <div id="active-action-buttons" style="display:flex; gap:6px; flex-wrap:wrap;">
-            <button id="btn-import-student" class="btn btn-sm" onclick="openImportModal()" style="background:#047857; color:white; border:1px solid #047857; font-size:12px; padding:7px 13px; border-radius:8px; cursor:pointer; display:inline-flex; align-items:center; gap:4px; font-weight:600;">
+            <button id="btn-import-student" class="btn btn-sm" onclick="openImportModal()" style="background:#10B981; color:white; border:1px solid #10B981; font-size:12px; padding:7px 13px; border-radius:8px; cursor:pointer; display:inline-flex; align-items:center; gap:4px; font-weight:600;">
               <span class="material-icons" style="font-size:15px;">upload_file</span> นำเข้ารายชื่อ (Excel)
             </button>
             <button id="btn-set-advisor" class="btn btn-sm" onclick="openSetAdvisorModal()" style="background:#FFFFFF; color:#1E40AF; border:1px solid #BFDBFE; font-size:12px; padding:7px 12px; border-radius:8px; cursor:pointer; display:inline-flex; align-items:center; gap:4px; font-weight:600;">
