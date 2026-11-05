@@ -191,14 +191,15 @@
       "hrPhone": "098-xxx-xxxx",
       "hrEmail": "...@gmail.com",
       "recommendedPositions": "Software Developer",
-      "status": "PENDING_REVIEW",
+      "status": "VERIFIED",
       "submittedByStudentCode": "67024964",
       "submittedByStudentName": "กันตินันท์ เก่งมาก",
-      "createdAt": "2026-08-26T15:36:39.736Z"
+      "createdAt": "2026-08-26T15:36:39.736Z",
+      "verifiedAt": "2026-11-05T07:57:01.125Z"
     },
     {
       "id": "COMP-NEW-13",
-      "nameTh": "nanosoft",
+      "nameTh": "tesla",
       "nameEn": "-",
       "province": "พะเยา",
       "address": "university phayao",
@@ -206,25 +207,11 @@
       "hrPhone": "098-xxx-xxxx",
       "hrEmail": "...@gmail.com",
       "recommendedPositions": "Software Developer",
-      "status": "PENDING_REVIEW",
+      "status": "VERIFIED",
       "submittedByStudentCode": "67024964",
       "submittedByStudentName": "กันตินันท์ เก่งมาก",
-      "createdAt": "2026-10-01T13:11:27.030Z"
-    },
-    {
-      "id": "COMP-NEW-12",
-      "nameTh": "wdij",
-      "nameEn": "-",
-      "province": "นครนายก",
-      "address": "fefe",
-      "hrContactName": "fefesf",
-      "hrPhone": "098-xxx-xxxx",
-      "hrEmail": "...@gmail.com",
-      "recommendedPositions": "Software Developer",
-      "status": "PENDING_REVIEW",
-      "submittedByStudentCode": "67023110",
-      "submittedByStudentName": "เอกัทร อินทร์สวัสดิ์",
-      "createdAt": "2026-10-01T06:36:41.974Z"
+      "createdAt": "2026-10-01T13:11:27.030Z",
+      "verifiedAt": "2026-11-05T07:58:48.108Z"
     },
     {
       "id": "COMP-NEW-4",
@@ -236,25 +223,11 @@
       "hrPhone": "098-xxx-xxxx",
       "hrEmail": "...@gmail.com",
       "recommendedPositions": "Software Developer",
-      "status": "PENDING_REVIEW",
+      "status": "VERIFIED",
       "submittedByStudentCode": "67023110",
       "submittedByStudentName": "เอกัทร อินทร์สวัสดิ์",
-      "createdAt": "2026-09-12T10:35:46.270Z"
-    },
-    {
-      "id": "COMP-NEW-11",
-      "nameTh": "GungaKingKa",
-      "nameEn": "-",
-      "province": "เชียงราย",
-      "address": "68, 1 ตำบล ท่าสุด อำเภอเมืองเชียงราย เชียงราย 57100",
-      "hrContactName": "นางรักกิต สีวิลัย",
-      "hrPhone": "0989969000",
-      "hrEmail": "GungaKingKa@gmail.com",
-      "recommendedPositions": "Java Developer",
-      "status": "PENDING_REVIEW",
-      "submittedByStudentCode": "67023097",
-      "submittedByStudentName": "อินทนิล กันทะยศ",
-      "createdAt": "2026-09-27T18:07:54.158Z"
+      "createdAt": "2026-09-12T10:35:46.270Z",
+      "verifiedAt": "2026-11-05T08:15:27.343Z"
     },
     {
       "id": "COMP-NEW-10",

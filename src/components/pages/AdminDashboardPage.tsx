@@ -1328,7 +1328,7 @@ const PAGE_BODY_HTML = `
       <!-- ส่วนที่ 1: แจ้งเตือนบริษัทใหม่ที่นิสิตกรอกเข้ามา (Pending Super Admin Confirm) -->
       <section class="card" id="pending-companies-section">
         <div class="card-header" style="background:linear-gradient(135deg, #92400E 0%, #D97706 100%); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
-          <div style="display:flex; align-items:center; gap:10px;">
+          <div style="display:flex; align-items:center; gap:10px; min-width:0; flex:1;">
             <span class="material-icons header-icon">notification_important</span>
             <div>
               <h2 class="card-title" style="margin:0;">แจ้งเตือน: รายชื่อบริษัทใหม่ที่นิสิตกรอกเพิ่มเข้ามา (รอพี่จอมตรวจสอบและกดยืนยันเข้า Master Data)</h2>
@@ -1337,21 +1337,46 @@ const PAGE_BODY_HTML = `
               </p>
             </div>
           </div>
+          <div style="display:flex; align-items:center; gap:8px; flex-shrink:0;" onclick="event.stopPropagation()">
+            <div style="position:relative;">
+              <input type="search" id="pending-companies-search" class="input-field"
+                placeholder="ค้นหาชื่อบริษัท / รหัสอ้างอิง / นิสิต..."
+                aria-label="ค้นหาบริษัท"
+                oninput="window.setPendingCompanySearch(event)"
+                onclick="event.stopPropagation()"
+                onkeydown="event.stopPropagation()"
+                style="width:min(360px, 42vw); min-width:180px; padding:8px 34px 8px 12px !important; color:#0F172A; background:#FFFFFF; border:1px solid #CBD5E1; border-radius:8px; font-size:13px; box-sizing:border-box;" />
+              <button type="button" id="pending-companies-search-clear"
+                onclick="window.clearPendingCompanySearch(event)"
+                aria-label="ล้างคำค้นหา"
+                style="display:none; position:absolute; right:6px; top:50%; transform:translateY(-50%); border:0; background:transparent; color:#64748B; font-size:18px; line-height:1; cursor:pointer; padding:4px;">×</button>
+            </div>
+            <button type="button" id="pending-companies-toggle"
+              onclick="window.togglePendingCompanies(event)"
+              aria-expanded="true" aria-controls="pending-companies-content"
+              aria-label="ย่อหรือขยายรายการบริษัท"
+              style="width:36px; height:36px; display:inline-flex; align-items:center; justify-content:center; border:1px solid rgba(255,255,255,.55); border-radius:8px; color:#92400E; background:#FFFFFF; cursor:pointer; padding:0;">
+              <span id="pending-companies-toggle-icon" class="material-icons" style="transition:transform 180ms ease; transform:rotate(180deg);">expand_more</span>
+            </button>
+          </div>
         </div>
-        <div class="card-body">
-          <table class="data-table">
-            <thead>
-              <tr>
-                <th style="width:26%;">ชื่อบริษัทที่นิสิตกรอกเข้ามา</th>
-                <th style="width:20%;">นิสิตที่ยื่นเพิ่ม</th>
-                <th style="width:28%;">ปรับชื่อมาตรฐาน / ยุบรวมกับบริษัทเดิม</th>
-                <th style="width:26%;" class="text-center">การอนุมัติเข้า Master Data</th>
-              </tr>
-            </thead>
-            <tbody id="pending-companies-tbody">
-              <tr><td colspan="4" class="text-center py-6 text-gray-400">ไม่มีรายการบริษัทใหม่รออนุมัติ</td></tr>
-            </tbody>
-          </table>
+        <div id="pending-companies-content" style="overflow:hidden; opacity:1; max-height:5000px; transition:max-height 220ms ease, opacity 180ms ease;">
+          <div class="card-body">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th style="width:26%;">ชื่อบริษัทที่นิสิตกรอกเข้ามา</th>
+                  <th style="width:20%;">นิสิตที่ยื่นเพิ่ม</th>
+                  <th style="width:28%;">ปรับชื่อมาตรฐาน / ยุบรวมกับบริษัทเดิม</th>
+                  <th style="width:26%;" class="text-center">การอนุมัติเข้า Master Data</th>
+                </tr>
+              </thead>
+              <tbody id="pending-companies-tbody">
+                <tr><td colspan="4" class="text-center py-6 text-gray-400">ไม่มีรายการบริษัทใหม่รออนุมัติ</td></tr>
+              </tbody>
+            </table>
+            <div id="pending-companies-pagination" style="display:flex; align-items:center; justify-content:flex-end; gap:12px; margin-top:12px; color:#475569; font-size:12px;"></div>
+          </div>
         </div>
       </section>
 

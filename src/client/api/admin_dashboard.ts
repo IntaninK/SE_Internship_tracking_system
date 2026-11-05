@@ -1714,6 +1714,7 @@ window.switchAdminWorkspace = function(wsKey: AdminWorkspace) {
       tabBtn.setAttribute('aria-current', k === wsKey ? 'page' : 'false');
     }
   });
+  if (wsKey === 'companies') renderPendingCompaniesTable();
 };
 
 window.loadSuperAdminOverview = async function() {
@@ -2591,51 +2592,181 @@ window.deleteAllEventCheckIns = async function() {
 // =========================================================================
 // WORKSPACE 4: ฐานข้อมูลสถานประกอบการกลาง (Company Master Data)
 // =========================================================================
+const PENDING_COMPANIES_COLLAPSED_PAGE_SIZE = 3;
+const PENDING_COMPANIES_EXPANDED_PAGE_SIZE = 10;
+let pendingCompaniesPage = 1;
+let pendingCompaniesSearch = '';
+let pendingCompaniesSearchTimeout: ReturnType<typeof setTimeout> | null = null;
+let pendingCompaniesExpanded = true;
+
+function escapePendingCompanyHtml(value: unknown) {
+  return String(value ?? '').replace(/[&<>"']/g, character => {
+    const entities: Record<string, string> = {
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#39;',
+    };
+    return entities[character];
+  });
+}
+
+window.setPendingCompanySearch = function(event) {
+  event.stopPropagation();
+  const searchInput = event.currentTarget as HTMLInputElement;
+  const clearButton = document.getElementById('pending-companies-search-clear');
+  pendingCompaniesSearch = searchInput.value.trim().toLowerCase();
+  pendingCompaniesPage = 1;
+  if (clearButton) clearButton.style.display = searchInput.value ? 'block' : 'none';
+
+  if (pendingCompaniesSearchTimeout) clearTimeout(pendingCompaniesSearchTimeout);
+  pendingCompaniesSearchTimeout = setTimeout(() => {
+    pendingCompaniesSearchTimeout = null;
+    renderPendingCompaniesTable();
+  }, 200);
+};
+
+window.clearPendingCompanySearch = function(event) {
+  event.preventDefault();
+  event.stopPropagation();
+  const searchInput = document.getElementById('pending-companies-search') as HTMLInputElement | null;
+  if (!searchInput) return;
+  searchInput.value = '';
+  pendingCompaniesSearch = '';
+  pendingCompaniesPage = 1;
+  const clearButton = document.getElementById('pending-companies-search-clear');
+  if (clearButton) clearButton.style.display = 'none';
+  if (pendingCompaniesSearchTimeout) {
+    clearTimeout(pendingCompaniesSearchTimeout);
+    pendingCompaniesSearchTimeout = null;
+  }
+  renderPendingCompaniesTable();
+  searchInput.focus();
+};
+
+window.togglePendingCompanies = function(event) {
+  event.stopPropagation();
+  const toggleButton = document.getElementById('pending-companies-toggle');
+  const toggleIcon = document.getElementById('pending-companies-toggle-icon');
+  if (!toggleButton) return;
+
+  pendingCompaniesExpanded = !pendingCompaniesExpanded;
+  pendingCompaniesPage = 1;
+  toggleButton.setAttribute('aria-expanded', String(pendingCompaniesExpanded));
+  if (toggleIcon) toggleIcon.style.transform = pendingCompaniesExpanded ? 'rotate(180deg)' : 'rotate(0deg)';
+  renderPendingCompaniesTable();
+};
+
 function renderPendingCompaniesTable() {
   const tbody = document.getElementById('pending-companies-tbody');
   if (!tbody) return;
   const allCompanies = superAdminData.companyMasterData || [];
   const pendingList = allCompanies.filter(c => c.status === 'PENDING_REVIEW');
   const verifiedList = allCompanies.filter(c => c.status === 'VERIFIED' || c.status === 'PARTNER');
+  const filteredList = pendingCompaniesSearch
+    ? pendingList.filter(company => [
+        company.nameTh,
+        company.id,
+        company.submittedByStudentName,
+        company.submittedByStudentCode,
+      ].some(value => String(value ?? '').toLowerCase().includes(pendingCompaniesSearch)))
+    : pendingList;
+  const pageSize = pendingCompaniesExpanded
+    ? PENDING_COMPANIES_EXPANDED_PAGE_SIZE
+    : PENDING_COMPANIES_COLLAPSED_PAGE_SIZE;
+  const totalPages = Math.ceil(filteredList.length / pageSize);
+  pendingCompaniesPage = Math.max(1, Math.min(pendingCompaniesPage, totalPages || 1));
+  const pageStart = (pendingCompaniesPage - 1) * pageSize;
+  const pageCompanies = filteredList.slice(pageStart, pageStart + pageSize);
 
-  if (pendingList.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="4" class="text-center py-6 text-emerald-700 font-semibold">✅ ไม่มีรายการบริษัทใหม่ค้างตรวจสอบ (บริษัททั้งหมดในระบบได้รับการยืนยันเข้า Master Data แล้ว)</td></tr>';
-    return;
+  if (filteredList.length === 0) {
+    const message = pendingCompaniesSearch
+      ? 'ไม่พบบริษัทที่ตรงกับคำค้นหา'
+      : '✅ ไม่มีรายการบริษัทใหม่ค้างตรวจสอบ (บริษัททั้งหมดในระบบได้รับการยืนยันเข้า Master Data แล้ว)';
+    const messageClass = pendingCompaniesSearch ? 'text-gray-400' : 'text-emerald-700 font-semibold';
+    tbody.innerHTML = `<tr><td colspan="4" class="text-center py-6 ${messageClass}">${message}</td></tr>`;
+  } else {
+    const mergeOptions = `<option value="">-- หรือเลือกยุบรวมเข้ากับบริษัทเดิมที่มีอยู่แล้ว --</option>` +
+      verifiedList.map(company => `<option value="${escapePendingCompanyHtml(company.id)}">${escapePendingCompanyHtml(company.nameTh)} (${escapePendingCompanyHtml(company.province)})</option>`).join('');
+
+    tbody.innerHTML = pageCompanies.map(company => {
+      const id = escapePendingCompanyHtml(company.id);
+      const name = escapePendingCompanyHtml(company.nameTh);
+      const studentName = escapePendingCompanyHtml(company.submittedByStudentName || 'นิสิตในระบบ');
+      const studentCode = escapePendingCompanyHtml(company.submittedByStudentCode || '-');
+      return `
+        <tr>
+          <td>
+            <div title="${name}" style="font-weight:500; color:#0F172A; font-size:20px; line-height:1.35; overflow-wrap:anywhere;">${name}</div>
+            <div style="margin-top:2px; font-size:12px; color:#64748B;">รหัสอ้างอิง: ${id}</div>
+          </td>
+          <td>
+            <div style="font-weight:700; color:#1E293B;">${studentName}</div>
+            <div style="font-size:11.5px; color:#64748B;">รหัส ${studentCode}</div>
+          </td>
+          <td>
+            <input type="text" id="std-name-${id}" class="input-field" value="${name}" placeholder="ปรับชื่อบริษัทให้เป็นมาตรฐาน..." style="font-size:12px; padding:6px 10px !important; margin-bottom:6px; font-weight:700;" />
+            <select id="merge-into-${id}" class="input-field" style="font-size:11.5px; padding:5px 8px !important;">
+              ${mergeOptions}
+            </select>
+          </td>
+          <td class="text-center">
+            <div style="display:flex; gap:6px; justify-content:center; flex-wrap:wrap;">
+              <button type="button" data-pending-action="confirm" data-company-id="${id}"
+                style="background:#10B981; color:white; border:none; padding:7px 12px; border-radius:8px; font-size:12px; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:4px;">
+                <span class="material-icons" style="font-size:15px;">check_circle</span> ยืนยันเข้า Master Data
+              </button>
+              <button type="button" data-pending-action="merge" data-company-id="${id}"
+                style="background:#4338CA; color:white; border:none; padding:7px 12px; border-radius:8px; font-size:12px; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:4px;">
+                <span class="material-icons" style="font-size:15px;">merge_type</span> ยุบรวมชื่อซ้ำ
+              </button>
+            </div>
+          </td>
+        </tr>
+      `;
+    }).join('');
+
+    tbody.querySelectorAll<HTMLButtonElement>('[data-pending-action]').forEach(button => {
+      button.addEventListener('click', () => {
+        const id = button.dataset.companyId || '';
+        if (button.dataset.pendingAction === 'confirm') {
+          window.confirmPendingCompany(id);
+        } else {
+          window.mergePendingCompany(id);
+        }
+      });
+    });
   }
 
-  const mergeOptions = `<option value="">-- หรือเลือกยุบรวมเข้ากับบริษัทเดิมที่มีอยู่แล้ว --</option>` +
-    verifiedList.map(v => `<option value="${v.id}">${v.nameTh} (${v.province})</option>`).join('');
+  const pagination = document.getElementById('pending-companies-pagination');
+  if (pagination) {
+    const firstItem = filteredList.length ? pageStart + 1 : 0;
+    const lastItem = Math.min(pageStart + pageSize, filteredList.length);
+    const showPageButtons = filteredList.length > pageSize;
+    pagination.innerHTML = `
+      <span>แสดง ${firstItem}-${lastItem} จาก ${filteredList.length} รายการ</span>
+      ${showPageButtons ? `
+        <button type="button" data-page-direction="previous" ${pendingCompaniesPage <= 1 ? 'disabled' : ''}
+          style="border:1px solid #CBD5E1; border-radius:6px; background:#FFFFFF; color:#334155; padding:5px 10px; cursor:${pendingCompaniesPage <= 1 ? 'not-allowed' : 'pointer'}; opacity:${pendingCompaniesPage <= 1 ? '.5' : '1'};">ก่อนหน้า</button>
+        <button type="button" data-page-direction="next" ${pendingCompaniesPage >= totalPages ? 'disabled' : ''}
+          style="border:1px solid #CBD5E1; border-radius:6px; background:#FFFFFF; color:#334155; padding:5px 10px; cursor:${pendingCompaniesPage >= totalPages ? 'not-allowed' : 'pointer'}; opacity:${pendingCompaniesPage >= totalPages ? '.5' : '1'};">ถัดไป</button>
+      ` : ''}
+    `;
+    pagination.querySelectorAll<HTMLButtonElement>('[data-page-direction]').forEach(button => {
+      button.addEventListener('click', () => {
+        if (button.disabled) return;
+        pendingCompaniesPage += button.dataset.pageDirection === 'next' ? 1 : -1;
+        renderPendingCompaniesTable();
+      });
+    });
+  }
 
-  tbody.innerHTML = pendingList.map(c => `
-    <tr>
-      <td>
-        <div style="font-weight:800; color:#92400E; font-size:13.5px;">${c.nameTh}</div>
-        <div style="font-size:11px; color:#64748B;">รหัสอ้างอิง: ${c.id}</div>
-      </td>
-      <td>
-        <div style="font-weight:700; color:#1E293B;">${c.submittedByStudentName || 'นิสิตในระบบ'}</div>
-        <div style="font-size:11.5px; color:#64748B;">รหัส ${c.submittedByStudentCode || '-'}</div>
-      </td>
-      <td>
-        <input type="text" id="std-name-${c.id}" class="input-field" value="${c.nameTh}" placeholder="ปรับชื่อบริษัทให้เป็นมาตรฐาน..." style="font-size:12px; padding:6px 10px !important; margin-bottom:6px; font-weight:700;" />
-        <select id="merge-into-${c.id}" class="input-field" style="font-size:11.5px; padding:5px 8px !important;">
-          ${mergeOptions}
-        </select>
-      </td>
-      <td class="text-center">
-        <div style="display:flex; gap:6px; justify-content:center; flex-wrap:wrap;">
-          <button type="button" onclick="confirmPendingCompany('${c.id}')"
-            style="background:#10B981; color:white; border:none; padding:7px 12px; border-radius:8px; font-size:12px; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:4px;">
-            <span class="material-icons" style="font-size:15px;">check_circle</span> ยืนยันเข้า Master Data
-          </button>
-          <button type="button" onclick="mergePendingCompany('${c.id}')"
-            style="background:#4338CA; color:white; border:none; padding:7px 12px; border-radius:8px; font-size:12px; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:4px;">
-            <span class="material-icons" style="font-size:15px;">merge_type</span> ยุบรวมชื่อซ้ำ
-          </button>
-        </div>
-      </td>
-    </tr>
-  `).join('');
+  const content = document.getElementById('pending-companies-content');
+  if (content && content.scrollHeight > 0) {
+    content.style.maxHeight = `${content.scrollHeight}px`;
+    content.style.opacity = '1';
+  }
 }
 
 window.confirmPendingCompany = async function(id) {
