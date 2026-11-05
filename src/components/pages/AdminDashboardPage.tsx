@@ -254,20 +254,27 @@ const PAGE_STYLES: string[] = [`
   #admin-dashboard .admin-main .card-header {
     min-height: 68px;
     padding: 18px 24px !important;
-    border-bottom: 1px solid var(--admin-border) !important;
-    background: #FFFFFF !important;
+    border-bottom-color: rgba(255, 255, 255, 0.1) !important;
+    background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 50%, #2563eb 100%) !important;
+  }
+
+  #admin-dashboard .admin-main .card-header .card-title,
+  #admin-dashboard .admin-main .card-header p {
+    color: #FFFFFF !important;
+  }
+
+  #admin-dashboard .admin-main .card-header .header-icon {
+    background: rgba(255, 255, 255, 0.14);
+    color: #FFFFFF !important;
   }
 
   #admin-dashboard .admin-main .card-header .card-title {
-    color: var(--admin-ink) !important;
     font-size: 20px !important;
   }
 
   #admin-dashboard .admin-main .card-header .header-icon {
     padding: 6px;
     border-radius: 8px;
-    background: #EEF2FF;
-    color: var(--admin-primary) !important;
   }
 
   #admin-dashboard .admin-main .card-body {
@@ -917,7 +924,7 @@ const PAGE_BODY_HTML = `
             <button type="button" onclick="bulkToggleMajors('UNLOCK_ALL')" style="background:#10B981; color:white; border:none; padding:7px 14px; border-radius:10px; font-size:12px; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:4px;">
               <span class="material-icons" style="font-size:15px;">lock_open</span> ปลดล็อกทั้ง 8 สาขา
             </button>
-            <button type="button" onclick="bulkToggleMajors('LOCK_ALL')" style="background:rgba(255,255,255,0.18); color:white; border:1px solid rgba(255,255,255,0.3); padding:7px 14px; border-radius:10px; font-size:12px; font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:4px;">
+            <button type="button" onclick="bulkToggleMajors('LOCK_ALL')" style="background:red; color:white; border:1px solid rgba(255,255,255,0.3); padding:7px 14px; border-radius:10px; font-size:12px; font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:4px;">
               <span class="material-icons" style="font-size:15px;">lock</span> ล็อกทั้งหมดชั่วคราว
             </button>
           </div>
@@ -1302,7 +1309,7 @@ const PAGE_BODY_HTML = `
             <button type="button" onclick="downloadCoop01Csv('APPROVED_ONLY')" style="background:#10B981; color:white; border:none; padding:9px 16px; border-radius:10px; font-size:12.5px; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:6px;">
               <span class="material-icons" style="font-size:17px;">download</span> Export เฉพาะนิสิตที่บริษัทตอบรับแล้ว (CSV สำหรับ Co-op 01)
             </button>
-            <button type="button" onclick="downloadCoop01Csv('ALL')" style="background:rgba(255,255,255,0.18); color:white; border:1px solid rgba(255,255,255,0.3); padding:9px 16px; border-radius:10px; font-size:12.5px; font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:6px;">
+            <button type="button" onclick="downloadCoop01Csv('ALL')" style="background:#0D6EFD; color:white; border:1px solid rgba(255,255,255,0.3); padding:9px 16px; border-radius:10px; font-size:12.5px; font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:6px;">
               <span class="material-icons" style="font-size:17px;">table_view</span> Export ข้อมูลทั้งรุ่น (CSV)
             </button>
           </div>
