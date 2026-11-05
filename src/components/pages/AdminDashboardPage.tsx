@@ -1103,9 +1103,56 @@ const PAGE_BODY_HTML = `
           <div class="card-body">
             <!-- เลือกกิจกรรมที่จะ Check-in -->
             <div style="margin-bottom:16px; padding:14px 16px; background:#F8FAFC; border:1px solid #E2E8F0; border-radius:14px;">
-              <label style="font-size:12.5px; font-weight:700; color:#1E293B; display:block; margin-bottom:6px;">
-                1. เลือกกิจกรรมอบรมที่ต้องการบันทึก Check-in รหัสนิสิต:
-              </label>
+              <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:8px;">
+                <label style="font-size:12.5px; font-weight:700; color:#1E293B;">
+                  1. เลือกกิจกรรมอบรมที่ต้องการบันทึก Check-in รหัสนิสิต:
+                </label>
+                <span id="filter-event-count-badge" style="font-size:11.5px; font-weight:600; color:#64748B;"></span>
+              </div>
+
+              <!-- แถบค้นหาและกรองกิจกรรม (Compact Filter Toolbar) -->
+              <div style="display:flex; align-items:center; gap:8px; margin-bottom:10px; flex-wrap:wrap;">
+                <!-- 1. ค้นหาชื่อกิจกรรม -->
+                <div style="flex:1; min-width:180px; position:relative;">
+                  <span class="material-icons" style="position:absolute; left:10px; top:50%; transform:translateY(-50%); font-size:18px; color:#94A3B8; pointer-events:none; z-index:1;">search</span>
+                  <input type="text" id="filter-event-keyword" placeholder="ค้นหาชื่อกิจกรรม..." oninput="window.applyEventFilters()" class="input-field" style="padding-left:36px !important; height:34px !important; min-height:34px !important; font-size:12px; border-radius:8px; margin:0;" />
+                </div>
+
+                <!-- 2. กรองสาขาวิชาเป้าหมาย -->
+                <div style="width:165px;">
+                  <select id="filter-event-major" onchange="window.applyEventFilters()" class="input-field" style="height:34px; font-size:12px; padding:4px 8px; border-radius:8px; margin:0; font-weight:600; cursor:pointer;">
+                    <option value="ALL">🎯 ทุกสาขาวิชา</option>
+                    <option value="วิศวกรรมซอฟต์แวร์">วิศวกรรมซอฟต์แวร์ (SE)</option>
+                    <option value="วิทยาการคอมพิวเตอร์">วิทยาการคอมพิวเตอร์ (CS)</option>
+                    <option value="วิศวกรรมคอมพิวเตอร์">วิศวกรรมคอมพิวเตอร์ (CPE)</option>
+                    <option value="เทคโนโลยีสารสนเทศ">เทคโนโลยีสารสนเทศ (IT)</option>
+                    <option value="ธุรกิจดิจิทัล">ธุรกิจดิจิทัล (DB)</option>
+                    <option value="คอมพิวเตอร์กราฟิกและมัลติมีเดีย">คอมพิวเตอร์กราฟิกฯ (CGM)</option>
+                    <option value="ภูมิสารสนเทศศาสตร์">ภูมิสารสนเทศศาสตร์ (GIS)</option>
+                    <option value="วิทยาการข้อมูลและการประยุกต์">วิทยาการข้อมูลฯ (DSA)</option>
+                  </select>
+                </div>
+
+                <!-- 3. กรองวันที่ -->
+                <div style="width:130px;">
+                  <select id="filter-event-date-preset" onchange="window.handleEventDatePresetChange()" class="input-field" style="height:34px; font-size:12px; padding:4px 8px; border-radius:8px; margin:0; font-weight:600; cursor:pointer;">
+                    <option value="ALL">📅 ทุกวันที่</option>
+                    <option value="TODAY">🔥 วันนี้</option>
+                    <option value="THIS_MONTH">📆 เดือนนี้</option>
+                    <option value="CUSTOM">🗓️ ระบุวันที่...</option>
+                  </select>
+                </div>
+
+                <!-- ช่องระบุวันที่แบบกำหนดเอง (แสดงเมื่อเลือก CUSTOM) -->
+                <input type="date" id="filter-event-custom-date" onchange="window.applyEventFilters()" class="input-field" style="display:none; width:130px; height:34px; font-size:12px; padding:4px 8px; border-radius:8px; margin:0;" />
+
+                <!-- 4. ปุ่มล้างค่าตัวกรอง -->
+                <button type="button" onclick="window.resetEventFilters()" title="ล้างตัวกรองทั้งหมด" style="height:34px; padding:0 10px; background:#F1F5F9; border:1px solid #CBD5E1; border-radius:8px; font-size:12px; font-weight:600; color:#475569; cursor:pointer; display:inline-flex; align-items:center; gap:4px; transition:all 0.15s;" class="hover:bg-slate-200">
+                  <span class="material-icons" style="font-size:15px;">refresh</span>
+                  <span>ล้างค่า</span>
+                </button>
+              </div>
+
               <select id="checkin-event-select" class="input-field" onchange="renderSelectedEventCheckins()" style="font-weight:700; color:#1E1B4B;"></select>
               <div id="checkin-selected-event-meta" style="margin-top:8px; font-size:12px; color:#475569;"></div>
             </div>

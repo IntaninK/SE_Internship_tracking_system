@@ -1933,6 +1933,9 @@ window.createTrainingEvent = async function() {
       alert('✅ ' + data.message);
       const titleEl = document.getElementById('evt-title');
       if (titleEl) titleEl.value = '';
+      if (typeof window.resetEventFilters === 'function') {
+        window.resetEventFilters();
+      }
       await window.loadSuperAdminOverview();
       const selectEl = document.getElementById('checkin-event-select');
       if (selectEl && data.event?.id) {
@@ -1948,28 +1951,133 @@ window.createTrainingEvent = async function() {
   }
 };
 
-function renderEventsDropdownAndCheckins() {
-  const selectEl = document.getElementById('checkin-event-select');
+function getTodayDateStr(): string {
+  const d = new Date();
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function getThisMonthStr(): string {
+  const d = new Date();
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  return `${year}-${month}`;
+}
+
+window.handleEventDatePresetChange = function() {
+  const presetEl = document.getElementById('filter-event-date-preset') as HTMLSelectElement | null;
+  const customDateEl = document.getElementById('filter-event-custom-date') as HTMLInputElement | null;
+  if (!presetEl || !customDateEl) return;
+
+  if (presetEl.value === 'CUSTOM') {
+    customDateEl.style.display = 'inline-block';
+    if (!customDateEl.value) {
+      customDateEl.value = getTodayDateStr();
+    }
+  } else {
+    customDateEl.style.display = 'none';
+  }
+  window.applyEventFilters();
+};
+
+window.resetEventFilters = function() {
+  const keywordEl = document.getElementById('filter-event-keyword') as HTMLInputElement | null;
+  const majorEl = document.getElementById('filter-event-major') as HTMLSelectElement | null;
+  const presetEl = document.getElementById('filter-event-date-preset') as HTMLSelectElement | null;
+  const customDateEl = document.getElementById('filter-event-custom-date') as HTMLInputElement | null;
+
+  if (keywordEl) keywordEl.value = '';
+  if (majorEl) majorEl.value = 'ALL';
+  if (presetEl) presetEl.value = 'ALL';
+  if (customDateEl) {
+    customDateEl.value = '';
+    customDateEl.style.display = 'none';
+  }
+  window.applyEventFilters();
+};
+
+window.applyEventFilters = function() {
+  const selectEl = document.getElementById('checkin-event-select') as HTMLSelectElement | null;
+  const countBadge = document.getElementById('filter-event-count-badge');
+  const keywordEl = document.getElementById('filter-event-keyword') as HTMLInputElement | null;
+  const majorEl = document.getElementById('filter-event-major') as HTMLSelectElement | null;
+  const presetEl = document.getElementById('filter-event-date-preset') as HTMLSelectElement | null;
+  const customDateEl = document.getElementById('filter-event-custom-date') as HTMLInputElement | null;
+
   if (!selectEl) return;
+
   const currentVal = selectEl.value;
   const events = superAdminData.trainingEvents || [];
-
   if (events.length === 0) {
     selectEl.innerHTML = '<option value="">-- ยังไม่มีกิจกรรมอบรม กรุณาสร้างกิจกรรมทางด้านซ้าย --</option>';
+    if (countBadge) countBadge.textContent = '';
     window.renderSelectedEventCheckins();
     return;
   }
 
-  selectEl.innerHTML = events.map(e => `
+  const keyword = (keywordEl?.value || '').trim().toLowerCase();
+  const selectedMajor = majorEl?.value || 'ALL';
+  const datePreset = presetEl?.value || 'ALL';
+  const customDate = customDateEl?.value || '';
+
+  const todayStr = getTodayDateStr();
+  const thisMonthStr = getThisMonthStr();
+
+  const filtered = events.filter((e: any) => {
+    // 1. ค้นหาชื่อกิจกรรม
+    if (keyword && !e.title.toLowerCase().includes(keyword)) {
+      return false;
+    }
+    // 2. กรองสาขาวิชาเป้าหมาย
+    if (selectedMajor !== 'ALL') {
+      const tm = e.targetMajor || 'ALL';
+      if (tm !== 'ALL' && !tm.includes(selectedMajor)) {
+        return false;
+      }
+    }
+    // 3. กรองวันที่จัดกิจกรรม
+    if (datePreset === 'TODAY') {
+      if (e.eventDate !== todayStr) return false;
+    } else if (datePreset === 'THIS_MONTH') {
+      if (!e.eventDate || !e.eventDate.startsWith(thisMonthStr)) return false;
+    } else if (datePreset === 'CUSTOM' && customDate) {
+      if (e.eventDate !== customDate) return false;
+    }
+    return true;
+  });
+
+  if (countBadge) {
+    countBadge.textContent = filtered.length === events.length
+      ? `(ทั้งหมด ${events.length} กิจกรรม)`
+      : `(พบ ${filtered.length}/${events.length} กิจกรรม)`;
+  }
+
+  if (filtered.length === 0) {
+    selectEl.innerHTML = '<option value="">-- ไม่พบกิจกรรมที่ตรงกับตัวกรองค้นหา --</option>';
+    selectEl.value = '';
+    window.renderSelectedEventCheckins();
+    return;
+  }
+
+  selectEl.innerHTML = filtered.map((e: any) => `
     <option value="${e.id}">
       [${e.skillType} Skill +${e.creditedHours} ชม.] ${e.title} (${e.eventDate} • Check-in แล้ว ${(e.checkIns || []).length} คน)
     </option>
   `).join('');
 
-  if (currentVal && events.some(e => e.id === currentVal)) {
+  if (currentVal && filtered.some((e: any) => e.id === currentVal)) {
     selectEl.value = currentVal;
+  } else {
+    selectEl.value = filtered[0].id;
   }
+
   window.renderSelectedEventCheckins();
+};
+
+function renderEventsDropdownAndCheckins() {
+  window.applyEventFilters();
 }
 
 window.renderSelectedEventCheckins = function() {
