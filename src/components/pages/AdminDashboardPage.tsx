@@ -1331,7 +1331,53 @@ const PAGE_BODY_HTML = `
          WORKSPACE 4: ระบบฐานข้อมูลสถานประกอบการกลาง (Company Master Data)
          ===================================================================== -->
     <div id="workspace-companies" style="display:none;">
-      <!-- ส่วนที่ 1: แจ้งเตือนบริษัทใหม่ที่นิสิตกรอกเข้ามา (Pending Super Admin Confirm) -->
+      <!-- ส่วนที่ 1: ตารางฐานข้อมูลสถานประกอบการกลาง (Verified Master Data) -->
+      <section class="card">
+        <div class="card-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+          <div style="display:flex; align-items:center; gap:10px;">
+            <span class="material-icons header-icon">domain_verification</span>
+            <div>
+              <h2 class="card-title" style="margin:0;">ฐานข้อมูลสถานประกอบการกลาง (Company Master Data)</h2>
+              <p style="margin:2px 0 0 0; font-size:12px; color:#E0E7FF;">รายชื่อบริษัทในตารางนี้จะไปแสดงเป็น Auto-suggest / Dropdown ให้นิสิตเลือกอัตโนมัติตอนทำ Checklist</p>
+            </div>
+          </div>
+          <div style="display:flex; align-items:center; gap:8px; flex-shrink:0;">
+            <button type="button" onclick="openAddMasterCompanyModal()" style="background:#10B981; color:white; border:none; padding:8px 16px; border-radius:10px; font-size:12.5px; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:6px;">
+              <span class="material-icons" style="font-size:16px;">add_business</span> เพิ่มสถานประกอบการเข้า Master Data
+            </button>
+            <button type="button" id="master-companies-toggle"
+              onclick="window.toggleMasterCompanies(event)"
+              aria-expanded="true" aria-controls="master-companies-tbody"
+              aria-label="ย่อรายการบริษัท"
+              title="ย่อรายการบริษัท"
+              style="width:36px; height:36px; display:inline-flex; align-items:center; justify-content:center; border:1px solid rgba(255,255,255,.55); border-radius:8px; color:#1E3A8A; background:#FFFFFF; cursor:pointer; padding:0;">
+              <span id="master-companies-toggle-icon" class="material-icons" style="transition:transform 180ms ease; transform:rotate(180deg);">expand_more</span>
+            </button>
+          </div>
+        </div>
+        <div class="card-body">
+          <div style="display:flex; gap:10px; margin-bottom:14px; flex-wrap:wrap;">
+            <input type="text" id="master-company-search" class="input-field" placeholder="ค้นหาชื่อบริษัท (ไทย/อังกฤษ), จังหวัด หรือตำแหน่งงาน..." oninput="window.searchMasterCompanies()" style="max-width:360px;" />
+          </div>
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th style="width:26%;">ชื่อสถานประกอบการ (มาตรฐาน)</th>
+                <th style="width:14%;">จังหวัด</th>
+                <th style="width:24%;">ผู้ติดต่อ (HR) / เบอร์โทร</th>
+                <th style="width:22%;">ตำแหน่งงานที่เปิดรับ</th>
+                <th style="width:14%;" class="text-center">สถานะ</th>
+              </tr>
+            </thead>
+            <tbody id="master-companies-tbody">
+              <tr><td colspan="5" class="text-center py-6 text-gray-400">กำลังโหลดฐานข้อมูลบริษัท...</td></tr>
+            </tbody>
+          </table>
+          <div id="master-companies-pagination" style="display:flex; align-items:center; justify-content:flex-end; gap:12px; margin-top:12px; color:#475569; font-size:12px;"></div>
+        </div>
+      </section>
+
+      <!-- ส่วนที่ 2: แจ้งเตือนบริษัทใหม่ที่นิสิตกรอกเข้ามา (Pending Super Admin Confirm) -->
       <section class="card" id="pending-companies-section">
         <div class="card-header" style="background:linear-gradient(135deg, #92400E 0%, #D97706 100%); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
           <div style="display:flex; align-items:center; gap:10px; min-width:0; flex:1;">
@@ -1383,41 +1429,6 @@ const PAGE_BODY_HTML = `
             </table>
             <div id="pending-companies-pagination" style="display:flex; align-items:center; justify-content:flex-end; gap:12px; margin-top:12px; color:#475569; font-size:12px;"></div>
           </div>
-        </div>
-      </section>
-
-      <!-- ส่วนที่ 2: ตารางฐานข้อมูลสถานประกอบการกลาง (Verified Master Data) -->
-      <section class="card">
-        <div class="card-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
-          <div style="display:flex; align-items:center; gap:10px;">
-            <span class="material-icons header-icon">domain_verification</span>
-            <div>
-              <h2 class="card-title" style="margin:0;">ฐานข้อมูลสถานประกอบการกลาง (Company Master Data)</h2>
-              <p style="margin:2px 0 0 0; font-size:12px; color:#E0E7FF;">รายชื่อบริษัทในตารางนี้จะไปแสดงเป็น Auto-suggest / Dropdown ให้นิสิตเลือกอัตโนมัติตอนทำ Checklist</p>
-            </div>
-          </div>
-          <button type="button" onclick="openAddMasterCompanyModal()" style="background:#10B981; color:white; border:none; padding:8px 16px; border-radius:10px; font-size:12.5px; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:6px;">
-            <span class="material-icons" style="font-size:16px;">add_business</span> เพิ่มสถานประกอบการเข้า Master Data
-          </button>
-        </div>
-        <div class="card-body">
-          <div style="display:flex; gap:10px; margin-bottom:14px; flex-wrap:wrap;">
-            <input type="text" id="master-company-search" class="input-field" placeholder="ค้นหาชื่อบริษัท (ไทย/อังกฤษ), จังหวัด หรือตำแหน่งงาน..." oninput="renderMasterCompanyTable()" style="max-width:360px;" />
-          </div>
-          <table class="data-table">
-            <thead>
-              <tr>
-                <th style="width:26%;">ชื่อสถานประกอบการ (มาตรฐาน)</th>
-                <th style="width:14%;">จังหวัด</th>
-                <th style="width:24%;">ผู้ติดต่อ (HR) / เบอร์โทร</th>
-                <th style="width:22%;">ตำแหน่งงานที่เปิดรับ</th>
-                <th style="width:14%;" class="text-center">สถานะ</th>
-              </tr>
-            </thead>
-            <tbody id="master-companies-tbody">
-              <tr><td colspan="5" class="text-center py-6 text-gray-400">กำลังโหลดฐานข้อมูลบริษัท...</td></tr>
-            </tbody>
-          </table>
         </div>
       </section>
     </div>

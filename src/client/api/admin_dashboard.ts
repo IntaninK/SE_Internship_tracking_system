@@ -2818,6 +2818,31 @@ window.mergePendingCompany = async function(id) {
   }
 };
 
+const MASTER_COMPANIES_COLLAPSED_PAGE_SIZE = 3;
+const MASTER_COMPANIES_EXPANDED_PAGE_SIZE = 10;
+let masterCompaniesExpanded = true;
+let masterCompaniesPage = 1;
+
+window.toggleMasterCompanies = function(event) {
+  event.stopPropagation();
+  const toggleButton = document.getElementById('master-companies-toggle');
+  const toggleIcon = document.getElementById('master-companies-toggle-icon');
+  if (!toggleButton) return;
+
+  masterCompaniesExpanded = !masterCompaniesExpanded;
+  masterCompaniesPage = 1;
+  toggleButton.setAttribute('aria-expanded', String(masterCompaniesExpanded));
+  toggleButton.setAttribute('aria-label', masterCompaniesExpanded ? 'ย่อรายการบริษัท' : 'ขยายรายการบริษัท');
+  toggleButton.title = masterCompaniesExpanded ? 'ย่อรายการบริษัท' : 'ขยายรายการบริษัท';
+  if (toggleIcon) toggleIcon.style.transform = masterCompaniesExpanded ? 'rotate(180deg)' : 'rotate(0deg)';
+  window.renderMasterCompanyTable();
+};
+
+window.searchMasterCompanies = function() {
+  masterCompaniesPage = 1;
+  window.renderMasterCompanyTable();
+};
+
 window.renderMasterCompanyTable = function() {
   const tbody = document.getElementById('master-companies-tbody');
   if (!tbody) return;
@@ -2830,36 +2855,66 @@ window.renderMasterCompanyTable = function() {
     );
   }
 
+  const pageSize = masterCompaniesExpanded
+    ? MASTER_COMPANIES_EXPANDED_PAGE_SIZE
+    : MASTER_COMPANIES_COLLAPSED_PAGE_SIZE;
+  const totalPages = Math.ceil(list.length / pageSize);
+  masterCompaniesPage = Math.max(1, Math.min(masterCompaniesPage, totalPages || 1));
+  const pageStart = (masterCompaniesPage - 1) * pageSize;
+  const pageCompanies = list.slice(pageStart, pageStart + pageSize);
+
   if (list.length === 0) {
     tbody.innerHTML = '<tr><td colspan="5" class="text-center py-6 text-gray-400">ไม่พบรายการสถานประกอบการที่ค้นหา</td></tr>';
-    return;
+  } else {
+    tbody.innerHTML = pageCompanies.map(c => {
+      let badge = `<span style="background:#DCFCE7; color:#166534; padding:3px 10px; border-radius:999px; font-size:11.5px; font-weight:700;">✅ ยืนยันแล้ว (Master)</span>`;
+      if (c.status === 'PARTNER') {
+        badge = `<span style="background:#EEF2FF; color:#3730A3; border:1px solid #C7D2FE; padding:3px 10px; border-radius:999px; font-size:11.5px; font-weight:700;">⭐ พันธมิตรคณะ ICT</span>`;
+      } else if (c.status === 'BLACKLIST') {
+        badge = `<span style="background:#FEE2E2; color:#991B1B; padding:3px 10px; border-radius:999px; font-size:11.5px; font-weight:700;">⛔ งดส่งนิสิต (Blacklist)</span>`;
+      }
+
+      return `
+        <tr>
+          <td>
+            <div style="font-weight:800; color:#1E1B4B; font-size:13.5px;">${c.nameTh}</div>
+            <div style="font-size:11.5px; color:#64748B;">${c.nameEn || '-'}</div>
+            <div style="font-size:11px; color:#94A3B8; margin-top:2px;">${c.address || ''}</div>
+          </td>
+          <td style="font-weight:600; color:#334155;">${c.province || '-'}</td>
+          <td>
+            <div style="font-size:12.5px; font-weight:600; color:#1E293B;">${c.hrContactName || '-'}</div>
+            <div style="font-size:11.5px; color:#64748B;">📞 ${c.hrPhone || '-'} | ✉️ ${c.hrEmail || '-'}</div>
+          </td>
+          <td style="font-size:12px; color:#475569;">${c.recommendedPositions || '-'}</td>
+          <td class="text-center">${badge}</td>
+        </tr>
+      `;
+    }).join('');
   }
 
-  tbody.innerHTML = list.map(c => {
-    let badge = `<span style="background:#DCFCE7; color:#166534; padding:3px 10px; border-radius:999px; font-size:11.5px; font-weight:700;">✅ ยืนยันแล้ว (Master)</span>`;
-    if (c.status === 'PARTNER') {
-      badge = `<span style="background:#EEF2FF; color:#3730A3; border:1px solid #C7D2FE; padding:3px 10px; border-radius:999px; font-size:11.5px; font-weight:700;">⭐ พันธมิตรคณะ ICT</span>`;
-    } else if (c.status === 'BLACKLIST') {
-      badge = `<span style="background:#FEE2E2; color:#991B1B; padding:3px 10px; border-radius:999px; font-size:11.5px; font-weight:700;">⛔ งดส่งนิสิต (Blacklist)</span>`;
-    }
-
-    return `
-      <tr>
-        <td>
-          <div style="font-weight:800; color:#1E1B4B; font-size:13.5px;">${c.nameTh}</div>
-          <div style="font-size:11.5px; color:#64748B;">${c.nameEn || '-'}</div>
-          <div style="font-size:11px; color:#94A3B8; margin-top:2px;">${c.address || ''}</div>
-        </td>
-        <td style="font-weight:600; color:#334155;">${c.province || '-'}</td>
-        <td>
-          <div style="font-size:12.5px; font-weight:600; color:#1E293B;">${c.hrContactName || '-'}</div>
-          <div style="font-size:11.5px; color:#64748B;">📞 ${c.hrPhone || '-'} | ✉️ ${c.hrEmail || '-'}</div>
-        </td>
-        <td style="font-size:12px; color:#475569;">${c.recommendedPositions || '-'}</td>
-        <td class="text-center">${badge}</td>
-      </tr>
+  const pagination = document.getElementById('master-companies-pagination');
+  if (pagination) {
+    const firstItem = list.length ? pageStart + 1 : 0;
+    const lastItem = Math.min(pageStart + pageSize, list.length);
+    const showPageButtons = list.length > pageSize;
+    pagination.innerHTML = `
+      <span>แสดง ${firstItem}-${lastItem} จาก ${list.length} รายการ</span>
+      ${showPageButtons ? `
+        <button type="button" data-page-direction="previous" ${masterCompaniesPage <= 1 ? 'disabled' : ''}
+          style="border:1px solid #CBD5E1; border-radius:6px; background:#FFFFFF; color:#334155; padding:5px 10px; cursor:${masterCompaniesPage <= 1 ? 'not-allowed' : 'pointer'}; opacity:${masterCompaniesPage <= 1 ? '.5' : '1'};">ก่อนหน้า</button>
+        <button type="button" data-page-direction="next" ${masterCompaniesPage >= totalPages ? 'disabled' : ''}
+          style="border:1px solid #CBD5E1; border-radius:6px; background:#FFFFFF; color:#334155; padding:5px 10px; cursor:${masterCompaniesPage >= totalPages ? 'not-allowed' : 'pointer'}; opacity:${masterCompaniesPage >= totalPages ? '.5' : '1'};">ถัดไป</button>
+      ` : ''}
     `;
-  }).join('');
+    pagination.querySelectorAll<HTMLButtonElement>('[data-page-direction]').forEach(button => {
+      button.addEventListener('click', () => {
+        if (button.disabled) return;
+        masterCompaniesPage += button.dataset.pageDirection === 'next' ? 1 : -1;
+        window.renderMasterCompanyTable();
+      });
+    });
+  }
 };
 
 window.openAddMasterCompanyModal = function() {
