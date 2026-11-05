@@ -2180,6 +2180,140 @@ router.post("/super-admin/events/:eventId/checkin", async (req: Request, res: Re
   }
 });
 
+// [DELETE ALL / FILTERED Check-in] ลบนิสิตทั้งหมดในกิจกรรม หรือเฉพาะสาขาที่กำหนด พร้อมหักชั่วโมงคืน
+router.delete("/super-admin/events/:eventId/checkin-all", async (req: Request, res: Response) => {
+  try {
+    const state = loadSuperAdminState();
+    const eventId = String(req.params.eventId);
+    const major = req.query.major ? String(req.query.major) : "ALL";
+
+    const event = state.trainingEvents.find((e) => e.id === eventId);
+    if (!event) {
+      return res.status(404).json({ success: false, message: "ไม่พบกิจกรรมอบรมนี้" });
+    }
+
+    // หานิสิตที่จะลบ (ทั้งหมด หรือ เฉพาะสาขาที่กรอง)
+    const targetsToDelete = event.checkIns.filter((c) => {
+      if (major && major !== "ALL") {
+        return c.major === major;
+      }
+      return true;
+    });
+
+    if (targetsToDelete.length === 0) {
+      return res.status(400).json({ success: false, message: "ไม่พบนิสิตที่ตรงกับเงื่อนไขที่จะลบ" });
+    }
+
+    // 1. ดึง recordId ทั้งหมดที่จะลบออกจาก Neon DB
+    const recordIdsToDelete = targetsToDelete
+      .map((c) => c.trainingRecordId)
+      .filter((id): id is number => typeof id === "number");
+
+    if (recordIdsToDelete.length > 0) {
+      await prisma.trainingRecord.deleteMany({
+        where: { id: { in: recordIdsToDelete } },
+      });
+    }
+
+    // สำหรับรายการที่ fallback: ลบตาม studentCode + event.title
+    const targetStudentCodes = targetsToDelete.map((c) => c.studentCode);
+    const matchedStudents = await prisma.student.findMany({
+      where: { studentCode: { in: targetStudentCodes } },
+      select: { id: true },
+    });
+    const studentIds = matchedStudents.map((s) => s.id);
+    if (studentIds.length > 0) {
+      await prisma.trainingRecord.deleteMany({
+        where: {
+          studentId: { in: studentIds },
+          title: `[Check-in กิจกรรมคณะ] ${event.title}`,
+        },
+      });
+    }
+
+    // 2. ลบออกจากอาเรย์ event.checkIns
+    const targetCodesSet = new Set(targetStudentCodes);
+    event.checkIns = event.checkIns.filter((c) => !targetCodesSet.has(c.studentCode));
+
+    saveSuperAdminState(state);
+
+    const scopeDesc = major && major !== "ALL" ? `สาขา${major}` : "ทั้งหมด";
+    res.json({
+      success: true,
+      message: `ยกเลิก Check-in นิสิต${scopeDesc} สำเร็จ ${targetsToDelete.length} คน (หักชั่วโมงคืนเรียบร้อย)`,
+      deletedCount: targetsToDelete.length,
+      event,
+    });
+  } catch (err) {
+    console.error("DELETE /api/admin/super-admin/events/:eventId/checkin-all error:", err);
+    res.status(500).json({ success: false, message: "ยกเลิก Check-in ทั้งหมดไม่สำเร็จ" });
+  }
+});
+
+// [DELETE Check-in] ลบนิสิตออกจาก Check-in กิจกรรมอบรม และหักชั่วโมงคืนทันที
+router.delete("/super-admin/events/:eventId/checkin/:studentCode", async (req: Request, res: Response) => {
+  try {
+    const state = loadSuperAdminState();
+    const eventId = String(req.params.eventId);
+    const studentCode = String(req.params.studentCode);
+
+    const event = state.trainingEvents.find((e) => e.id === eventId);
+    if (!event) {
+      return res.status(404).json({ success: false, message: "ไม่พบกิจกรรมอบรมนี้" });
+    }
+
+    const checkInIdx = event.checkIns.findIndex((c) => c.studentCode === studentCode);
+    if (checkInIdx === -1) {
+      return res.status(404).json({ success: false, message: "ไม่พบนิสิตคนนี้ในรายการ Check-in ของกิจกรรมนี้" });
+    }
+
+    const checkInItem = event.checkIns[checkInIdx];
+
+    // 1. ลบชั่วโมงอบรมออกจากฐานข้อมูลจริง (PostgreSQL / Neon DB)
+    if (checkInItem.trainingRecordId) {
+      try {
+        await prisma.trainingRecord.delete({
+          where: { id: checkInItem.trainingRecordId },
+        });
+      } catch (dbErr) {
+        console.warn("Could not delete training record by id, searching by student and title fallback:", dbErr);
+        const student = await prisma.student.findUnique({ where: { studentCode } });
+        if (student) {
+          await prisma.trainingRecord.deleteMany({
+            where: {
+              studentId: student.id,
+              title: `[Check-in กิจกรรมคณะ] ${event.title}`,
+            },
+          });
+        }
+      }
+    } else {
+      const student = await prisma.student.findUnique({ where: { studentCode } });
+      if (student) {
+        await prisma.trainingRecord.deleteMany({
+          where: {
+            studentId: student.id,
+            title: `[Check-in กิจกรรมคณะ] ${event.title}`,
+          },
+        });
+      }
+    }
+
+    // 2. ลบออกจากอาเรย์ checkIns ใน state
+    event.checkIns.splice(checkInIdx, 1);
+    saveSuperAdminState(state);
+
+    res.json({
+      success: true,
+      message: `ยกเลิก Check-in และหักชั่วโมงคืนให้นิสิต ${studentCode} สำเร็จ`,
+      event,
+    });
+  } catch (err) {
+    console.error("DELETE /api/admin/super-admin/events/:eventId/checkin error:", err);
+    res.status(500).json({ success: false, message: "ยกเลิก Check-in ไม่สำเร็จ" });
+  }
+});
+
 // 9.6 เพิ่ม / แก้ไขข้อมูลบริษัทในฐานข้อมูลกลาง (Company Master Data)
 router.post("/super-admin/companies", async (req: Request, res: Response) => {
   try {

@@ -120,7 +120,15 @@
       "academicYear": "2568",
       "createdBy": "พี่จอม (เจ้าหน้าที่คณะ / Super Admin)",
       "createdAt": "2026-01-10T09:00:00.000Z",
-      "checkIns": []
+      "checkIns": [
+        {
+          "studentCode": "67024964",
+          "nameTh": "กันตินันท์ เก่งมาก",
+          "major": "วิศวกรรมซอฟต์แวร์",
+          "checkedInAt": "2026-11-05T03:26:06.151Z",
+          "trainingRecordId": 63
+        }
+      ]
     },
     {
       "id": "EVT-2568-02",

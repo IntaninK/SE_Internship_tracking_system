@@ -1829,6 +1829,77 @@ window.previewEventHours = function() {
   }
 };
 
+// ==========================================
+// Multi-Select: สาขาวิชาเป้าหมายของกิจกรรมอบรม
+// ==========================================
+window.toggleMajorDropdown = function() {
+  const menu = document.getElementById('evt-major-dropdown-menu');
+  const arrow = document.getElementById('evt-major-arrow-icon');
+  if (menu) {
+    const isHidden = menu.style.display === 'none' || !menu.style.display;
+    menu.style.display = isHidden ? 'block' : 'none';
+    if (arrow) {
+      arrow.textContent = isHidden ? 'arrow_drop_up' : 'arrow_drop_down';
+    }
+  }
+};
+
+window.toggleSelectAllMajors = function(checked) {
+  const items = document.querySelectorAll('.evt-major-item') as NodeListOf<HTMLInputElement>;
+  items.forEach(cb => { cb.checked = checked; });
+  window.updateSelectedMajors();
+};
+
+window.updateSelectedMajors = function() {
+  const items = Array.from(document.querySelectorAll('.evt-major-item') as NodeListOf<HTMLInputElement>);
+  const allCheckbox = document.getElementById('evt-major-all') as HTMLInputElement | null;
+  const labelEl = document.getElementById('evt-major-selected-label');
+  const countEl = document.getElementById('evt-target-major-count');
+  const hiddenInput = document.getElementById('evt-target-major') as HTMLInputElement | null;
+
+  const checkedItems = items.filter(cb => cb.checked);
+  const total = items.length;
+
+  if (allCheckbox) {
+    allCheckbox.checked = checkedItems.length === total;
+  }
+
+  if (checkedItems.length === total || checkedItems.length === 0) {
+    if (labelEl) labelEl.textContent = 'ทุกสาขาวิชา (ทั้งคณะ ICT)';
+    if (countEl) countEl.textContent = '(เลือก 8 สาขา)';
+    if (hiddenInput) hiddenInput.value = 'ALL';
+  } else {
+    const names = checkedItems.map(cb => cb.value);
+    const shortNames = checkedItems.map(cb => {
+      const v = cb.value;
+      if (v === 'วิศวกรรมซอฟต์แวร์') return 'SE';
+      if (v === 'วิทยาการคอมพิวเตอร์') return 'CS';
+      if (v === 'วิศวกรรมคอมพิวเตอร์') return 'CPE';
+      if (v === 'เทคโนโลยีสารสนเทศ') return 'IT';
+      if (v === 'ธุรกิจดิจิทัล') return 'DB';
+      if (v === 'คอมพิวเตอร์กราฟิกและมัลติมีเดีย') return 'CGM';
+      if (v === 'ภูมิสารสนเทศศาสตร์') return 'GIS';
+      if (v === 'วิทยาการข้อมูลและการประยุกต์') return 'DSA';
+      return v;
+    });
+    if (labelEl) labelEl.textContent = `เลือก ${checkedItems.length} สาขา (${shortNames.join(', ')})`;
+    if (countEl) countEl.textContent = `(เลือก ${checkedItems.length}/${total} สาขา)`;
+    if (hiddenInput) hiddenInput.value = names.join(', ');
+  }
+};
+
+document.addEventListener('click', (e) => {
+  const container = document.getElementById('evt-major-dropdown-container');
+  const menu = document.getElementById('evt-major-dropdown-menu');
+  const arrow = document.getElementById('evt-major-arrow-icon');
+  if (container && menu && menu.style.display !== 'none' && !container.contains(e.target as Node)) {
+    menu.style.display = 'none';
+    if (arrow) {
+      arrow.textContent = 'arrow_drop_down';
+    }
+  }
+});
+
 window.createTrainingEvent = async function() {
   const title = document.getElementById('evt-title')?.value?.trim();
   const skillType = document.getElementById('evt-skill-type')?.value || 'SOFT';
@@ -1902,10 +1973,14 @@ function renderEventsDropdownAndCheckins() {
 }
 
 window.renderSelectedEventCheckins = function() {
-  const selectEl = document.getElementById('checkin-event-select');
+  const selectEl = document.getElementById('checkin-event-select') as HTMLSelectElement | null;
   const metaEl = document.getElementById('checkin-selected-event-meta');
   const countEl = document.getElementById('checkin-list-count');
   const tbody = document.getElementById('checkin-history-tbody');
+  const filterMajorEl = document.getElementById('checkin-filter-major') as HTMLSelectElement | null;
+  const btnDeleteAll = document.getElementById('btn-delete-all-checkin') as HTMLButtonElement | null;
+  const btnDeleteAllText = document.getElementById('btn-delete-all-text');
+
   if (!selectEl || !tbody) return;
 
   const eventId = selectEl.value;
@@ -1913,46 +1988,122 @@ window.renderSelectedEventCheckins = function() {
   if (!event) {
     if (metaEl) metaEl.textContent = '';
     if (countEl) countEl.textContent = '0';
-    tbody.innerHTML = '<tr><td colspan="5" class="text-center py-6 text-gray-400">กรุณาเลือกกิจกรรมอบรม</td></tr>';
+    if (btnDeleteAll) btnDeleteAll.style.display = 'none';
+    tbody.innerHTML = '<tr><td colspan="6" class="text-center py-6 text-gray-400">กรุณาเลือกกิจกรรมอบรม</td></tr>';
     return;
   }
 
+  // แสดง Metadata กิจกรรม พร้อมสาขาเป้าหมาย
   if (metaEl) {
+    const targetMajorLabel = event.targetMajor === 'ALL' || !event.targetMajor
+      ? 'ทุกสาขาวิชา (ทั้งคณะ ICT)'
+      : event.targetMajor;
+
     metaEl.innerHTML = `
       <span style="display:inline-flex; align-items:center; gap:6px; flex-wrap:wrap;">
         <span style="background:#DBEAFE; color:#1E40AF; padding:2px 8px; border-radius:999px; font-weight:700;">${event.skillType} SKILL (+${event.creditedHours} ชม.)</span>
         <span>📅 วันที่ ${event.eventDate} (${event.startTime} - ${event.endTime} น.)</span>
         <span>📍 ${event.location}</span>
+        <span style="background:#FEF3C7; color:#92400E; padding:2px 8px; border-radius:999px; font-weight:600; font-size:11.5px;">🎯 สาขาเป้าหมาย: ${targetMajorLabel}</span>
       </span>
     `;
   }
 
-  const checkIns = event.checkIns || [];
-  if (countEl) countEl.textContent = String(checkIns.length);
+  const allCheckIns = event.checkIns || [];
 
-  if (checkIns.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="5" class="text-center py-6 text-gray-400">ยังไม่มีรายชื่อนิสิตที่ Check-in ในกิจกรรมนี้ — สามารถกรอกหรือวางรหัสนิสิตด้านบนเพื่อบันทึกได้ทันที</td></tr>';
+  // อัปเดตตัวเลือกสาขาวิชาใน Dropdown กรอง
+  if (filterMajorEl) {
+    const currentFilterVal = filterMajorEl.value || 'ALL';
+    const uniqueMajors = Array.from(new Set(allCheckIns.map(c => c.major).filter(Boolean)));
+    uniqueMajors.sort();
+
+    filterMajorEl.innerHTML = '<option value="ALL">ทุกสาขาวิชา (ทั้งหมด)</option>' +
+      uniqueMajors.map(m => `<option value="${m}">${m}</option>`).join('');
+
+    if (uniqueMajors.includes(currentFilterVal)) {
+      filterMajorEl.value = currentFilterVal;
+    } else {
+      filterMajorEl.value = 'ALL';
+    }
+  }
+
+  const selectedMajor = filterMajorEl ? filterMajorEl.value : 'ALL';
+  const filteredCheckIns = selectedMajor === 'ALL'
+    ? allCheckIns
+    : allCheckIns.filter(c => c.major === selectedMajor);
+
+  // อัปเดตตัวเลขนับจำนวนคน
+  if (countEl) {
+    if (selectedMajor === 'ALL') {
+      countEl.textContent = String(allCheckIns.length);
+    } else {
+      countEl.textContent = `${filteredCheckIns.length} จาก ${allCheckIns.length}`;
+    }
+  }
+
+  // อัปเดตปุ่ม "ลบทั้งหมด" / "ลบเฉพาะสาขา"
+  if (btnDeleteAll) {
+    if (filteredCheckIns.length === 0) {
+      btnDeleteAll.style.display = 'none';
+    } else {
+      btnDeleteAll.style.display = 'inline-flex';
+      if (btnDeleteAllText) {
+        if (selectedMajor === 'ALL') {
+          btnDeleteAllText.textContent = `ลบทั้งหมด (${allCheckIns.length})`;
+          btnDeleteAll.title = `ลบนิสิตทั้งหมดในกิจกรรม (${allCheckIns.length} คน)`;
+        } else {
+          btnDeleteAllText.textContent = `ลบเฉพาะ ${selectedMajor} (${filteredCheckIns.length})`;
+          btnDeleteAll.title = `ลบเฉพาะนิสิตสาขา ${selectedMajor} (${filteredCheckIns.length} คน)`;
+        }
+      }
+    }
+  }
+
+  if (allCheckIns.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="6" class="text-center py-6 text-gray-400">ยังไม่มีรายชื่อนิสิตที่ Check-in ในกิจกรรมนี้ — สามารถกรอกหรือวางรหัสนิสิตด้านบนเพื่อบันทึกได้ทันที</td></tr>';
     return;
   }
 
-  tbody.innerHTML = checkIns.map(c => `
+  if (filteredCheckIns.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="6" class="text-center py-6 text-gray-400">ไม่พบนิสิตสาขา "${selectedMajor}" ในรายการ Check-in กิจกรรมนี้</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = filteredCheckIns.map(c => `
     <tr>
       <td style="font-weight:700; color:#1E1B4B;">${c.studentCode}</td>
       <td>${c.nameTh}</td>
-      <td>${c.major}</td>
+      <td><span style="font-weight:600; color:#334155;">${c.major}</span></td>
       <td class="text-center">
         <span style="background:#DCFCE7; color:#166534; padding:2px 9px; border-radius:999px; font-size:11.5px; font-weight:700;">
           +${event.creditedHours} ชม. (${event.skillType})
         </span>
       </td>
       <td style="font-size:11.5px; color:#64748B;">${new Date(c.checkedInAt).toLocaleString('th-TH')}</td>
+      <td class="text-center">
+        <button type="button" 
+          title="ยกเลิก Check-in และหักชั่วโมงคืน" 
+          onclick="window.deleteEventCheckIn('${event.id}', '${c.studentCode}', '${c.nameTh}')" 
+          style="background:#FEE2E2; border:1px solid #FECACA; color:#DC2626; border-radius:8px; padding:5px 8px; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; transition:background 0.15s ease;">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="3 6 5 6 21 6"></polyline>
+            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+            <line x1="10" y1="11" x2="10" y2="17"></line>
+            <line x1="14" y1="11" x2="14" y2="17"></line>
+          </svg>
+        </button>
+      </td>
     </tr>
   `).join('');
 };
 
+window.filterCheckInListByMajor = function() {
+  window.renderSelectedEventCheckins();
+};
+
 window.submitEventCheckIn = async function() {
-  const selectEl = document.getElementById('checkin-event-select');
-  const codesEl = document.getElementById('checkin-student-codes');
+  const selectEl = document.getElementById('checkin-event-select') as HTMLSelectElement | null;
+  const codesEl = document.getElementById('checkin-student-codes') as HTMLTextAreaElement | null;
   const bannerEl = document.getElementById('checkin-result-banner');
 
   const eventId = selectEl?.value;
@@ -2004,6 +2155,81 @@ window.submitEventCheckIn = async function() {
   }
 };
 
+window.deleteEventCheckIn = async function(eventId, studentCode, nameTh) {
+  const confirmMsg = `ยืนยันการยกเลิก Check-in ของ "${nameTh}" (${studentCode}) หรือไม่?\n\n* ระบบจะลบรายชื่อออกจากกิจกรรมนี้ และหักชั่วโมงอบรมออกจากนิสิตทันที`;
+  if (!confirm(confirmMsg)) return;
+
+  try {
+    const res = await fetch(`/api/admin/super-admin/events/${encodeURIComponent(eventId)}/checkin/${encodeURIComponent(studentCode)}`, {
+      method: 'DELETE',
+    });
+    const data = await res.json();
+    if (data.success) {
+      alert(data.message || 'ยกเลิก Check-in สำเร็จ');
+      await window.loadSuperAdminOverview();
+      await loadDashboardSummary();
+      await loadStudents();
+      const selectEl = document.getElementById('checkin-event-select') as HTMLSelectElement | null;
+      if (selectEl) {
+        selectEl.value = eventId;
+        window.renderSelectedEventCheckins();
+      }
+    } else {
+      alert('เกิดข้อผิดพลาด: ' + (data.message || 'ยกเลิก Check-in ไม่สำเร็จ'));
+    }
+  } catch (err) {
+    console.error(err);
+    alert('เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์');
+  }
+};
+
+window.deleteAllEventCheckIns = async function() {
+  const selectEl = document.getElementById('checkin-event-select') as HTMLSelectElement | null;
+  const filterMajorEl = document.getElementById('checkin-filter-major') as HTMLSelectElement | null;
+  const eventId = selectEl?.value;
+  if (!eventId) return;
+
+  const event = (superAdminData.trainingEvents || []).find(e => e.id === eventId);
+  if (!event) return;
+
+  const selectedMajor = filterMajorEl ? filterMajorEl.value : 'ALL';
+  const isFiltered = selectedMajor && selectedMajor !== 'ALL';
+  const targetCheckIns = isFiltered
+    ? (event.checkIns || []).filter(c => c.major === selectedMajor)
+    : (event.checkIns || []);
+
+  if (targetCheckIns.length === 0) {
+    alert('ไม่มีรายชื่อนิสิตให้ลบ');
+    return;
+  }
+
+  const confirmTitle = isFiltered
+    ? `⚠️ ยืนยันการยกเลิก Check-in นิสิต "สาขา${selectedMajor}" ทั้งหมด (${targetCheckIns.length} คน) ในกิจกรรมนี้ หรือไม่?\n\n* นิสิตสาขาอื่นจะไม่ได้รับผลกระทบ\n* ชั่วโมงอบรม (+${event.creditedHours} ชม.) จะถูกหักคืนจากนิสิตสาขา${selectedMajor} ทันที`
+    : `⚠️ ยืนยันการยกเลิก Check-in นิสิต "ทั้งหมดทุกคน" (${targetCheckIns.length} คน) ในกิจกรรมนี้ หรือไม่?\n\n* ระบบจะลบรายชื่อทุกคนออกจากกิจกรรมนี้\n* ชั่วโมงอบรม (+${event.creditedHours} ชม.) จะถูกหักคืนจากนิสิตทุกคนทันที`;
+
+  if (!confirm(confirmTitle)) return;
+
+  try {
+    const url = `/api/admin/super-admin/events/${encodeURIComponent(eventId)}/checkin-all?major=${encodeURIComponent(selectedMajor)}`;
+    const res = await fetch(url, { method: 'DELETE' });
+    const data = await res.json();
+    if (data.success) {
+      alert(`✅ ${data.message}`);
+      await window.loadSuperAdminOverview();
+      await loadDashboardSummary();
+      await loadStudents();
+      if (selectEl) {
+        selectEl.value = eventId;
+        window.renderSelectedEventCheckins();
+      }
+    } else {
+      alert('เกิดข้อผิดพลาด: ' + (data.message || 'ยกเลิก Check-in ไม่สำเร็จ'));
+    }
+  } catch (err) {
+    console.error(err);
+    alert('เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์');
+  }
+};
 // =========================================================================
 // WORKSPACE 4: ฐานข้อมูลสถานประกอบการกลาง (Company Master Data)
 // =========================================================================

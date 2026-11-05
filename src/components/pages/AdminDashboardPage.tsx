@@ -964,15 +964,15 @@ const PAGE_BODY_HTML = `
     <div id="workspace-events" style="display:none;">
       <div style="display:grid; grid-template-columns:390px 1fr; gap:20px;" class="max-lg:!grid-cols-1">
         <!-- ซ้าย: ฟอร์มสร้างกิจกรรมอบรมโดย พี่จอม (Super Admin) -->
-        <section class="card" style="margin-bottom:0;">
-          <div class="card-header">
+        <section class="card" style="margin-bottom:0; overflow:visible !important;">
+          <div class="card-header" style="border-top-left-radius:15px; border-top-right-radius:15px;">
             <span class="material-icons header-icon">add_task</span>
             <div>
               <h2 class="card-title" style="margin:0;">สร้างกิจกรรมอบรมภายในคณะ</h2>
               <p style="margin:2px 0 0 0; font-size:11.5px; color:#E0E7FF;">คำนวณชั่วโมงอัตโนมัติ (สูงสุดไม่เกิน 6 ชม./วัน)</p>
             </div>
           </div>
-          <div class="card-body">
+          <div class="card-body" style="overflow:visible !important;">
             <div style="display:flex; flex-direction:column; gap:12px;">
               <div>
                 <label style="font-size:12.5px; font-weight:700; color:#334155;">ชื่อกิจกรรมอบรม / สัมมนา <span style="color:#EF4444;">*</span></label>
@@ -1017,18 +1017,63 @@ const PAGE_BODY_HTML = `
               </div>
 
               <div>
-                <label style="font-size:12.5px; font-weight:700; color:#334155;">สาขาวิชาเป้าหมาย</label>
-                <select id="evt-target-major" class="input-field" style="margin-top:4px;">
-                  <option value="ALL">ทุกสาขาวิชา (ทั้งคณะ ICT)</option>
-                  <option value="วิศวกรรมซอฟต์แวร์">สาขาวิศวกรรมซอฟต์แวร์ (SE)</option>
-                  <option value="วิทยาการคอมพิวเตอร์">สาขาวิทยาการคอมพิวเตอร์ (CS)</option>
-                  <option value="วิศวกรรมคอมพิวเตอร์">สาขาวิศวกรรมคอมพิวเตอร์ (CPE)</option>
-                  <option value="เทคโนโลยีสารสนเทศ">สาขาเทคโนโลยีสารสนเทศ (IT)</option>
-                  <option value="ธุรกิจดิจิทัล">สาขาธุรกิจดิจิทัล (DB)</option>
-                  <option value="คอมพิวเตอร์กราฟิกและมัลติมีเดีย">สาขาคอมพิวเตอร์กราฟิกฯ (CGM)</option>
-                  <option value="ภูมิสารสนเทศศาสตร์">สาขาภูมิสารสนเทศศาสตร์ (GIS)</option>
-                  <option value="วิทยาการข้อมูลและการประยุกต์">สาขาวิทยาการข้อมูลฯ (DSA)</option>
-                </select>
+                <label style="font-size:12.5px; font-weight:700; color:#334155; display:flex; justify-content:space-between; align-items:center;">
+                  <span>สาขาวิชาเป้าหมาย (เลือกได้หลายสาขา)</span>
+                  <span id="evt-target-major-count" style="font-size:11px; font-weight:600; color:#4338CA;">(เลือก 8 สาขา)</span>
+                </label>
+                <input type="hidden" id="evt-target-major" value="ALL" />
+                <div id="evt-major-dropdown-container" style="position:relative; margin-top:4px;">
+                  <button type="button" id="evt-major-dropdown-btn" onclick="window.toggleMajorDropdown()" class="input-field" style="width:100%; display:flex; align-items:center; justify-content:space-between; cursor:pointer; background:#FFFFFF; text-align:left; font-weight:600; color:#1E1B4B; padding:8px 12px; border:1px solid #CBD5E1; border-radius:10px;">
+                    <span id="evt-major-selected-label" style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:13px;">ทุกสาขาวิชา (ทั้งคณะ ICT)</span>
+                    <span id="evt-major-arrow-icon" class="material-icons" style="font-size:18px; color:#64748B;">arrow_drop_down</span>
+                  </button>
+                  <div id="evt-major-dropdown-menu" style="display:none; position:absolute; top:calc(100% + 4px); left:0; right:0; z-index:1000; background:#FFFFFF; border:1px solid #CBD5E1; border-radius:12px; box-shadow:0 12px 28px -4px rgba(15,23,42,0.18), 0 4px 10px -2px rgba(15,23,42,0.08); padding:10px; max-height:290px; overflow-y:auto;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; padding:4px 6px 8px 6px; border-bottom:1px solid #E2E8F0; margin-bottom:6px;">
+                      <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-weight:700; font-size:12.5px; color:#1E1B4B;">
+                        <input type="checkbox" id="evt-major-all" onchange="window.toggleSelectAllMajors(this.checked)" checked style="width:16px; height:16px; accent-color:#4338CA; cursor:pointer;" />
+                        <span>ทุกสาขาวิชา (ทั้งคณะ ICT)</span>
+                      </label>
+                      <button type="button" onclick="window.toggleMajorDropdown()" style="background:none; border:none; color:#64748B; font-size:11.5px; cursor:pointer; padding:2px 8px; border-radius:6px; font-weight:600; display:flex; align-items:center; gap:2px;" class="hover:bg-slate-200">
+                        <span>ปิด</span>
+                        <span class="material-icons" style="font-size:14px;">close</span>
+                      </button>
+                    </div>
+                    <div id="evt-major-checkbox-list" style="display:flex; flex-direction:column; gap:2px;">
+                      <label style="display:flex; align-items:center; gap:8px; padding:5px 8px; border-radius:8px; cursor:pointer; font-size:12.5px;" class="hover:bg-slate-100">
+                        <input type="checkbox" class="evt-major-item" value="วิศวกรรมซอฟต์แวร์" onchange="window.updateSelectedMajors()" checked style="width:15px; height:15px; accent-color:#4338CA; cursor:pointer;" />
+                        <span>สาขาวิศวกรรมซอฟต์แวร์ (SE)</span>
+                      </label>
+                      <label style="display:flex; align-items:center; gap:8px; padding:5px 8px; border-radius:8px; cursor:pointer; font-size:12.5px;" class="hover:bg-slate-100">
+                        <input type="checkbox" class="evt-major-item" value="วิทยาการคอมพิวเตอร์" onchange="window.updateSelectedMajors()" checked style="width:15px; height:15px; accent-color:#4338CA; cursor:pointer;" />
+                        <span>สาขาวิทยาการคอมพิวเตอร์ (CS)</span>
+                      </label>
+                      <label style="display:flex; align-items:center; gap:8px; padding:5px 8px; border-radius:8px; cursor:pointer; font-size:12.5px;" class="hover:bg-slate-100">
+                        <input type="checkbox" class="evt-major-item" value="วิศวกรรมคอมพิวเตอร์" onchange="window.updateSelectedMajors()" checked style="width:15px; height:15px; accent-color:#4338CA; cursor:pointer;" />
+                        <span>สาขาวิศวกรรมคอมพิวเตอร์ (CPE)</span>
+                      </label>
+                      <label style="display:flex; align-items:center; gap:8px; padding:5px 8px; border-radius:8px; cursor:pointer; font-size:12.5px;" class="hover:bg-slate-100">
+                        <input type="checkbox" class="evt-major-item" value="เทคโนโลยีสารสนเทศ" onchange="window.updateSelectedMajors()" checked style="width:15px; height:15px; accent-color:#4338CA; cursor:pointer;" />
+                        <span>สาขาเทคโนโลยีสารสนเทศ (IT)</span>
+                      </label>
+                      <label style="display:flex; align-items:center; gap:8px; padding:5px 8px; border-radius:8px; cursor:pointer; font-size:12.5px;" class="hover:bg-slate-100">
+                        <input type="checkbox" class="evt-major-item" value="ธุรกิจดิจิทัล" onchange="window.updateSelectedMajors()" checked style="width:15px; height:15px; accent-color:#4338CA; cursor:pointer;" />
+                        <span>สาขาธุรกิจดิจิทัล (DB)</span>
+                      </label>
+                      <label style="display:flex; align-items:center; gap:8px; padding:5px 8px; border-radius:8px; cursor:pointer; font-size:12.5px;" class="hover:bg-slate-100">
+                        <input type="checkbox" class="evt-major-item" value="คอมพิวเตอร์กราฟิกและมัลติมีเดีย" onchange="window.updateSelectedMajors()" checked style="width:15px; height:15px; accent-color:#4338CA; cursor:pointer;" />
+                        <span>สาขาคอมพิวเตอร์กราฟิกฯ (CGM)</span>
+                      </label>
+                      <label style="display:flex; align-items:center; gap:8px; padding:5px 8px; border-radius:8px; cursor:pointer; font-size:12.5px;" class="hover:bg-slate-100">
+                        <input type="checkbox" class="evt-major-item" value="ภูมิสารสนเทศศาสตร์" onchange="window.updateSelectedMajors()" checked style="width:15px; height:15px; accent-color:#4338CA; cursor:pointer;" />
+                        <span>สาขาภูมิสารสนเทศศาสตร์ (GIS)</span>
+                      </label>
+                      <label style="display:flex; align-items:center; gap:8px; padding:5px 8px; border-radius:8px; cursor:pointer; font-size:12.5px;" class="hover:bg-slate-100">
+                        <input type="checkbox" class="evt-major-item" value="วิทยาการข้อมูลและการประยุกต์" onchange="window.updateSelectedMajors()" checked style="width:15px; height:15px; accent-color:#4338CA; cursor:pointer;" />
+                        <span>สาขาวิทยาการข้อมูลฯ (DSA)</span>
+                      </label>
+                    </div>
+                  </div>
+                </div>
               </div>
 
               <div>
@@ -1087,10 +1132,16 @@ const PAGE_BODY_HTML = `
 
             <!-- ตารางรายชื่อนิสิตที่ Check-in ในกิจกรรมนี้แล้ว -->
             <div>
-              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+              <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:10px;">
                 <h4 style="font-size:13.5px; font-weight:700; color:#1E293B; margin:0;">
                   รายชื่อนิสิตที่บันทึก Check-in ในกิจกรรมนี้แล้ว (<span id="checkin-list-count">0</span> คน)
                 </h4>
+                <div style="display:flex; align-items:center; gap:8px;">
+                  <label for="checkin-filter-major" style="font-size:12px; font-weight:700; color:#475569;">กรองสาขาวิชา:</label>
+                  <select id="checkin-filter-major" class="input-field" onchange="window.filterCheckInListByMajor()" style="padding:4px 10px; font-size:12px; width:auto; min-width:160px; height:32px; font-weight:600; cursor:pointer;">
+                    <option value="ALL">ทุกสาขาวิชา (ทั้งหมด)</option>
+                  </select>
+                </div>
               </div>
               <div style="max-height:280px; overflow-y:auto; border:1px solid #E2E8F0; border-radius:12px;">
                 <table class="data-table" style="margin:0;">
@@ -1101,10 +1152,24 @@ const PAGE_BODY_HTML = `
                       <th>สาขาวิชา</th>
                       <th class="text-center">ชั่วโมงที่ได้รับ</th>
                       <th>เวลาที่บันทึก</th>
+                      <th class="text-center" style="width:140px; white-space:nowrap;">
+                        <div style="display:inline-flex; align-items:center; gap:6px; justify-content:center;">
+                          <span>จัดการ</span>
+                          <button type="button" id="btn-delete-all-checkin" onclick="window.deleteAllEventCheckIns()" title="ลบทั้งหมดตามที่กำลังแสดง" style="background:#FEE2E2; border:1px solid #FECACA; color:#DC2626; border-radius:6px; padding:3px 8px; font-size:11px; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:4px; transition:all 0.15s ease;">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                              <polyline points="3 6 5 6 21 6"></polyline>
+                              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                              <line x1="10" y1="11" x2="10" y2="17"></line>
+                              <line x1="14" y1="11" x2="14" y2="17"></line>
+                            </svg>
+                            <span id="btn-delete-all-text">ลบทั้งหมด</span>
+                          </button>
+                        </div>
+                      </th>
                     </tr>
                   </thead>
                   <tbody id="checkin-history-tbody">
-                    <tr><td colspan="5" class="text-center py-6 text-gray-400">ยังไม่มีรายการ Check-in ในกิจกรรมนี้</td></tr>
+                    <tr><td colspan="6" class="text-center py-6 text-gray-400">ยังไม่มีรายการ Check-in ในกิจกรรมนี้</td></tr>
                   </tbody>
                 </table>
               </div>
