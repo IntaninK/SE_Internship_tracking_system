@@ -533,15 +533,47 @@ router.get("/students/:studentId/checklist", async (req: Request, res: Response)
       });
     }
 
-    // ดึง Checklist Template ทั้งหมด
-    const sections = await prisma.checklistSection.findMany({
-      include: {
-        items: {
-          orderBy: { order: "asc" },
+    // ดึง Checklist Template ตามเวอร์ชันที่นิสิตยื่น (หรือ Active Version)
+    const primaryCompany = student.companies?.[0];
+    const targetVersionId = primaryCompany?.checklistVersionId;
+
+    let targetVersion = targetVersionId
+      ? await prisma.checklistVersion.findUnique({
+          where: { id: targetVersionId },
+          include: {
+            sections: {
+              orderBy: { order: "asc" },
+              include: { items: { orderBy: { order: "asc" } } },
+            },
+          },
+        })
+      : null;
+
+    if (!targetVersion) {
+      targetVersion = await prisma.checklistVersion.findFirst({
+        where: { status: "ACTIVE" },
+        include: {
+          sections: {
+            orderBy: { order: "asc" },
+            include: { items: { orderBy: { order: "asc" } } },
+          },
         },
-      },
-      orderBy: { order: "asc" },
-    });
+      });
+    }
+
+    if (!targetVersion) {
+      targetVersion = await prisma.checklistVersion.findFirst({
+        orderBy: { id: "asc" },
+        include: {
+          sections: {
+            orderBy: { order: "asc" },
+            include: { items: { orderBy: { order: "asc" } } },
+          },
+        },
+      });
+    }
+
+    const sections = targetVersion?.sections || [];
 
     const canReview = Boolean(
       student.advisorId &&

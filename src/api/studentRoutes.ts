@@ -416,15 +416,40 @@ router.post("/cv", upload.single("cv"), async (req: Request, res: Response) => {
 // ==========================================
 router.get("/checklist-template", async (_req: Request, res: Response) => {
   try {
-    const sections = await prisma.checklistSection.findMany({
-      orderBy: { order: "asc" },
+    let activeVersion = await prisma.checklistVersion.findFirst({
+      where: { status: "ACTIVE" },
       include: {
-        items: {
+        sections: {
           orderBy: { order: "asc" },
+          include: {
+            items: {
+              where: { isActive: true },
+              orderBy: { order: "asc" },
+            },
+          },
         },
       },
     });
-    res.json({ success: true, sections });
+
+    if (!activeVersion) {
+      activeVersion = await prisma.checklistVersion.findFirst({
+        orderBy: { id: "asc" },
+        include: {
+          sections: {
+            orderBy: { order: "asc" },
+            include: {
+              items: {
+                where: { isActive: true },
+                orderBy: { order: "asc" },
+              },
+            },
+          },
+        },
+      });
+    }
+
+    const sections = activeVersion ? activeVersion.sections : [];
+    res.json({ success: true, version: activeVersion, sections });
   } catch (err) {
     console.error("GET /api/student/checklist-template error:", err);
     res.status(500).json({ success: false, message: "ดึงแบบฟอร์ม Checklist ไม่สำเร็จ" });
@@ -584,10 +609,12 @@ router.post("/companies", async (req: Request, res: Response) => {
     saveSuperAdminState(state);
 
     // สร้างบริษัทใหม่
+    const activeVer = await prisma.checklistVersion.findFirst({ where: { status: "ACTIVE" } });
     const company = await prisma.company.create({
       data: {
         studentId: student.id,
         name: matchedMaster ? matchedMaster.nameTh : cleanName,
+        checklistVersionId: activeVer ? activeVer.id : 1,
         checklistStatus: "PENDING",
         submission: {
           create: {

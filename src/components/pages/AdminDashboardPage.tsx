@@ -634,6 +634,11 @@ const PAGE_BODY_HTML = `
             <span>กิจกรรมอบรม &amp; Check-in</span>
             <span id="badge-events-count" class="admin-nav-badge">2 กิจกรรม</span>
           </button>
+          <button type="button" id="ws-tab-checklist" aria-current="false" onclick="switchAdminWorkspace('checklist')">
+            <span class="material-icons" aria-hidden="true">fact_check</span>
+            <span>ตั้งค่า Checklist บริษัท</span>
+            <span id="badge-checklist-version" class="admin-nav-badge">v1.0</span>
+          </button>
           <button type="button" id="ws-tab-companies" aria-current="false" onclick="switchAdminWorkspace('companies')">
             <span class="material-icons" aria-hidden="true">business</span>
             <span>ฐานข้อมูลบริษัท</span>
@@ -648,6 +653,7 @@ const PAGE_BODY_HTML = `
             <span class="material-icons" aria-hidden="true">cloud_upload</span>
             <span>ส่งต่อระบบ Co-op</span>
           </button>
+          
         </nav>
         <div class="admin-sidebar-note">
           <strong>ศูนย์กลางคณะ ICT</strong>
@@ -1575,6 +1581,146 @@ const PAGE_BODY_HTML = `
           </div>
         </div>
       </section>
+    </div>
+
+    <!-- =====================================================================
+         WORKSPACE 7: ตั้งค่า Checklist บริษัท (สำหรับ Super Admin / Staff)
+         ===================================================================== -->
+    <div id="workspace-checklist" style="display:none;">
+      <section class="card" style="margin-bottom:20px;">
+        <div class="card-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+          <div style="display:flex; align-items:center; gap:10px;">
+            <span class="material-icons header-icon">fact_check</span>
+            <div>
+              <h2 class="card-title" style="margin:0;">ตั้งค่า Checklist บริษัท (สำหรับนิสิตประเมินก่อนยื่นฝึกงาน)</h2>
+              <p style="margin:2px 0 0 0; font-size:12px; color:#E0E7FF;">
+                จัดการเวอร์ชัน หัวข้อหลัก และเกณฑ์คำถามที่นิสิตต้องตรวจสอบความน่าเชื่อถือของบริษัทก่อนยื่นสมัครฝึกงาน
+              </p>
+            </div>
+          </div>
+          <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+            <button type="button" onclick="window.openCreateVersionModal ? window.openCreateVersionModal(true) : null" style="background:#0D6EFD; color:white; border:none; padding:8px 14px; border-radius:8px; font-size:12.5px; font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:6px;">
+              <span class="material-icons" style="font-size:17px;">content_copy</span> คัดลอกสร้างเวอร์ชันใหม่
+            </button>
+            <button type="button" onclick="window.openCreateVersionModal ? window.openCreateVersionModal(false) : null" style="background:#475569; color:white; border:none; padding:8px 14px; border-radius:8px; font-size:12.5px; font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:6px;">
+              <span class="material-icons" style="font-size:17px;">add</span> สร้างเวอร์ชันเปล่า
+            </button>
+          </div>
+        </div>
+
+        <div class="card-body">
+          <!-- แถบเลือกเวอร์ชัน & สถานะ -->
+          <div style="background:#F8FAFC; border:1px solid #E2E8F0; border-radius:12px; padding:14px 18px; margin-bottom:18px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;">
+            <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+              <label style="font-size:13px; font-weight:700; color:#334155;">เลือกเวอร์ชัน:</label>
+              <select id="checklist-version-select" onchange="window.switchChecklistVersion ? window.switchChecklistVersion(this.value) : null" class="input-field" style="width:auto; min-width:260px; height:44px; min-height:44px; line-height:1.6; font-size:13.5px; padding:6px 36px 6px 14px; background:#FFFFFF; border:1px solid #CBD5E1; border-radius:8px; cursor:pointer; box-sizing:border-box; overflow:visible;">
+                <!-- dynamic options -->
+              </select>
+              <div id="checklist-version-badge-wrap">
+                <!-- dynamic status badge -->
+              </div>
+            </div>
+
+            <div id="checklist-version-actions" style="display:flex; align-items:center; gap:8px;">
+              <!-- dynamic action buttons: Activate, Edit Info, Delete -->
+            </div>
+          </div>
+
+          <!-- กล่องคำอธิบายเวอร์ชัน -->
+          <div id="checklist-version-desc-box" style="margin-bottom:16px; font-size:12.5px; color:#475569; padding:10px 14px; background:#F1F5F9; border-radius:8px; border-left:4px solid #3B82F6; display:none;"></div>
+
+          <!-- แถบหัวข้อรายการคำถาม -->
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:10px;">
+            <div style="font-size:14px; font-weight:700; color:#1E293B;">
+              📋 หัวข้อและเกณฑ์การประเมิน <span id="checklist-sections-summary" style="font-size:12.5px; font-weight:500; color:#64748B;"></span>
+            </div>
+            <button type="button" onclick="window.openAddSectionModal ? window.openAddSectionModal() : null" style="background:#2563EB; color:white; border:none; padding:7px 14px; border-radius:8px; font-size:12.5px; font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:6px;">
+              <span class="material-icons" style="font-size:17px;">add_circle_outline</span> เพิ่มหมวดหลักใหม่
+            </button>
+          </div>
+
+          <!-- รายการหมวดหมู่และคำถาม (Dynamic Accordion / Cards) -->
+          <div id="checklist-sections-container">
+            <div style="text-align:center; padding:30px; color:#94A3B8;">กำลังโหลดข้อมูล Checklist...</div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- Modal: สร้าง/แก้ไขเวอร์ชัน Checklist -->
+    <div id="checklist-version-modal" style="display:none; position:fixed; inset:0; background:rgba(15,23,42,0.55); z-index:1000; justify-content:center; align-items:center; backdrop-filter:blur(4px);">
+      <div style="background:white; border-radius:20px; padding:24px 28px; width:500px; max-width:94%; box-shadow:0 20px 50px rgba(15,23,42,0.25);">
+        <h3 style="font-size:17px; font-weight:700; margin-bottom:14px; color:#1E293B;" id="cv-modal-title">สร้างเวอร์ชันใหม่</h3>
+        <input type="hidden" id="cv-mode" value="create" />
+        <input type="hidden" id="cv-version-id" value="" />
+        <div style="margin-bottom:12px;">
+          <label style="font-size:12.5px; font-weight:700; color:#475569;">ชื่อเวอร์ชัน *</label>
+          <input type="text" id="cv-version-name" class="input-field" placeholder="เช่น v2.0 (ปีการศึกษา 2568)" style="margin-top:4px;" />
+        </div>
+        <div style="margin-bottom:12px;">
+          <label style="font-size:12.5px; font-weight:700; color:#475569;">คำอธิบายเวอร์ชัน</label>
+          <input type="text" id="cv-description" class="input-field" placeholder="เช่น ปรับเกณฑ์ความน่าเชื่อถือและ Tech Stack สำหรับปี 68" style="margin-top:4px;" />
+        </div>
+        <div id="cv-clone-wrap" style="margin-bottom:16px;">
+          <label style="font-size:12.5px; font-weight:700; color:#475569;">คัดลอกหมวดและคำถามจาก</label>
+          <select id="cv-clone-select" class="input-field" style="margin-top:4px; cursor:pointer;">
+            <!-- dynamic clone options -->
+          </select>
+          <span style="font-size:11.5px; color:#64748B;">* ระบบจะคัดลอกทุกหมวดและคำถามมาให้แก้ไขต่อทันที สะดวกโดยไม่ต้องพิมพ์ใหม่</span>
+        </div>
+        <div style="display:flex; justify-content:flex-end; gap:8px;">
+          <button type="button" onclick="document.getElementById('checklist-version-modal').style.display='none'" style="background:#F1F5F9; color:#475569; border:none; padding:8px 16px; border-radius:8px; font-size:13px; font-weight:600; cursor:pointer;">ยกเลิก</button>
+          <button type="button" onclick="window.saveChecklistVersion ? window.saveChecklistVersion() : null" style="background:#2563EB; color:white; border:none; padding:8px 18px; border-radius:8px; font-size:13px; font-weight:600; cursor:pointer;">บันทึก</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal: เพิ่ม/แก้ไขหมวดหลัก (Section) -->
+    <div id="checklist-section-modal" style="display:none; position:fixed; inset:0; background:rgba(15,23,42,0.55); z-index:1000; justify-content:center; align-items:center; backdrop-filter:blur(4px);">
+      <div style="background:white; border-radius:20px; padding:24px 28px; width:480px; max-width:94%; box-shadow:0 20px 50px rgba(15,23,42,0.25);">
+        <h3 style="font-size:17px; font-weight:700; margin-bottom:14px; color:#1E293B;" id="cs-modal-title">เพิ่มหมวดหลัก</h3>
+        <input type="hidden" id="cs-section-id" value="" />
+        <div style="margin-bottom:16px;">
+          <label style="font-size:12.5px; font-weight:700; color:#475569;">ชื่อหมวดหลัก *</label>
+          <input type="text" id="cs-title" class="input-field" placeholder="เช่น ส่วนที่ 6 สวัสดิการและค่าตอบแทน" style="margin-top:4px;" />
+        </div>
+        <div style="display:flex; justify-content:flex-end; gap:8px;">
+          <button type="button" onclick="document.getElementById('checklist-section-modal').style.display='none'" style="background:#F1F5F9; color:#475569; border:none; padding:8px 16px; border-radius:8px; font-size:13px; font-weight:600; cursor:pointer;">ยกเลิก</button>
+          <button type="button" onclick="window.saveChecklistSection ? window.saveChecklistSection() : null" style="background:#2563EB; color:white; border:none; padding:8px 18px; border-radius:8px; font-size:13px; font-weight:600; cursor:pointer;">บันทึก</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal: เพิ่ม/แก้ไขข้อย่อย (Item) -->
+    <div id="checklist-item-modal" style="display:none; position:fixed; inset:0; background:rgba(15,23,42,0.55); z-index:1000; justify-content:center; align-items:center; backdrop-filter:blur(4px);">
+      <div style="background:white; border-radius:20px; padding:24px 28px; width:520px; max-width:94%; box-shadow:0 20px 50px rgba(15,23,42,0.25);">
+        <h3 style="font-size:17px; font-weight:700; margin-bottom:14px; color:#1E293B;" id="ci-modal-title">เพิ่มเกณฑ์คำถาม</h3>
+        <input type="hidden" id="ci-item-id" value="" />
+        <input type="hidden" id="ci-section-id" value="" />
+        <div style="margin-bottom:12px;">
+          <label style="font-size:12.5px; font-weight:700; color:#475569;">รายละเอียดเกณฑ์ที่ต้องพิจารณา *</label>
+          <textarea id="ci-description" class="input-field" rows="3" placeholder="เช่น ตรวจสอบกับกรมพัฒนาธุรกิจการค้า (DBD) นำชื่อบริษัทไปค้นในเว็บ DBD..." style="margin-top:4px; height:auto; padding:8px 12px; resize:vertical;"></textarea>
+        </div>
+        <div style="margin-bottom:12px;">
+          <label style="font-size:12.5px; font-weight:700; color:#475569;">คำใบ้ / ตัวอย่างคำตอบ (Placeholder สำหรับช่องรายละเอียดเพิ่ม)</label>
+          <input type="text" id="ci-placeholder" class="input-field" placeholder="เช่น ระบุทุนจดทะเบียน หรือสถานะ Active ในระบบ" style="margin-top:4px;" />
+          <span style="font-size:11.5px; color:#64748B;">* แสดงเป็นตัวอย่างจางๆ ในช่องกรอกของนิสิต ช่วยให้นิสิตรู้ว่าควรพิมพ์อะไร</span>
+        </div>
+        <div style="margin-bottom:16px; display:flex; gap:16px; align-items:center;">
+          <label style="display:flex; align-items:center; gap:6px; font-size:13px; font-weight:600; color:#334155; cursor:pointer;">
+            <input type="checkbox" id="ci-required" style="width:16px; height:16px; cursor:pointer;" />
+            <span>เป็นข้อบังคับ (Required)</span>
+          </label>
+          <label style="display:flex; align-items:center; gap:6px; font-size:13px; font-weight:600; color:#334155; cursor:pointer;">
+            <input type="checkbox" id="ci-active" checked style="width:16px; height:16px; cursor:pointer;" />
+            <span>เปิดใช้งานในแบบฟอร์ม (Active)</span>
+          </label>
+        </div>
+        <div style="display:flex; justify-content:flex-end; gap:8px;">
+          <button type="button" onclick="document.getElementById('checklist-item-modal').style.display='none'" style="background:#F1F5F9; color:#475569; border:none; padding:8px 16px; border-radius:8px; font-size:13px; font-weight:600; cursor:pointer;">ยกเลิก</button>
+          <button type="button" onclick="window.saveChecklistItem ? window.saveChecklistItem() : null" style="background:#2563EB; color:white; border:none; padding:8px 18px; border-radius:8px; font-size:13px; font-weight:600; cursor:pointer;">บันทึก</button>
+        </div>
+      </div>
     </div>
 
     <!-- Modal: เพิ่มสถานประกอบการเข้า Master Data -->

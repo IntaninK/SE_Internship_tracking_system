@@ -155,12 +155,15 @@ function renderCompanyCard(comp, index) {
       const ans = answersMap[item.id] || { checked: false, detail: '' };
       rowsHtml += `
         <tr>
-          <td class="desc-col">${item.description}</td>
+          <td class="desc-col">
+            ${item.description}
+            ${item.isRequired ? '<span style="color:#DC2626; font-size:11px; font-weight:700; margin-left:6px; background:#FEE2E2; padding:1px 6px; border-radius:4px;">*จำเป็น</span>' : ''}
+          </td>
           <td class="check-col">
-            <input type="checkbox" class="custom-checkbox" data-item-id="${item.id}" ${ans.checked ? 'checked' : ''} ${isDroppedStudent ? 'disabled style="cursor: not-allowed;"' : ''} />
+            <input type="checkbox" onchange="window.updateChecklistProgress ? window.updateChecklistProgress(${index}) : null" class="custom-checkbox" data-item-id="${item.id}" data-section-id="${sec.id}" ${ans.checked ? 'checked' : ''} ${isDroppedStudent ? 'disabled style="cursor: not-allowed;"' : ''} />
           </td>
           <td class="detail-col">
-            <input type="text" class="detail-input" placeholder="รายละเอียดเพิ่ม" data-item-id="${item.id}" value="${ans.detail || ''}" ${isDroppedStudent ? 'readonly style="background-color: #f8fafc; cursor: not-allowed;"' : ''} />
+            <input type="text" class="detail-input" placeholder="${item.placeholder || 'รายละเอียดเพิ่ม'}" data-item-id="${item.id}" value="${ans.detail || ''}" ${isDroppedStudent ? 'readonly style="background-color: #f8fafc; cursor: not-allowed;"' : ''} />
           </td>
         </tr>
       `;
@@ -168,10 +171,15 @@ function renderCompanyCard(comp, index) {
 
     sectionsHtml += `
       <div class="px-6 py-2">
-        <h3 class="section-title">
-          <span class="material-icons text-blue-600">bookmark</span>
-          ${sec.title}
-        </h3>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; flex-wrap:wrap; gap:8px;">
+          <h3 class="section-title" style="margin:0;">
+            <span class="material-icons text-blue-600">bookmark</span>
+            ${sec.title}
+          </h3>
+          <button type="button" onclick="window.selectAllInSection(${index}, ${sec.id})" ${isDroppedStudent ? 'disabled style="display:none;"' : ''} style="font-size:11.5px; font-weight:600; color:#2563EB; background:#EFF6FF; border:1px solid #BFDBFE; padding:3px 10px; border-radius:6px; cursor:pointer; display:inline-flex; align-items:center; gap:4px;">
+            <span class="material-icons" style="font-size:15px;">done_all</span> เลือกทั้งหมดในหมวดนี้
+          </button>
+        </div>
         <table class="checklist-table">
           <thead>
             <tr>
@@ -208,6 +216,17 @@ function renderCompanyCard(comp, index) {
       </div>
     </div>
     <div id="body-${index}" class="company-body" style="display: block;">
+      <!-- Progress Bar สรุปความคืบหน้าการกรอก -->
+      <div style="padding:14px 24px; background:#F8FAFC; border-bottom:1px solid #E2E8F0; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;">
+        <div style="font-size:13px; font-weight:700; color:#334155; display:flex; align-items:center; gap:6px;">
+          <span class="material-icons" style="color:#2563EB; font-size:18px;">task_alt</span>
+          <span>ความคืบหน้าการตรวจสอบ:</span>
+          <span id="progress-text-${index}" style="color:#2563EB;">0/0 ข้อ (0%)</span>
+        </div>
+        <div style="width:200px; max-width:100%; height:8px; background:#E2E8F0; border-radius:999px; overflow:hidden;">
+          <div id="progress-bar-${index}" style="width:0%; height:100%; background:linear-gradient(90deg, #3B82F6, #10B981); border-radius:999px; transition:width 0.25s ease;"></div>
+        </div>
+      </div>
       ${sectionsHtml}
     </div>
   `;
@@ -314,3 +333,45 @@ document.getElementById('save-all-btn').addEventListener('click', async () => {
 });
 
 loadData();
+
+
+window.selectAllInSection = function(compIndex: number, sectionId: number) {
+  const card = document.getElementById(`company-card-${compIndex}`);
+  if (!card) return;
+  const checkboxes = card.querySelectorAll(`input[type="checkbox"][data-section-id="${sectionId}"]`) as NodeListOf<HTMLInputElement>;
+  
+  // ตรวจสอบว่าถ้าติ๊กหมดแล้ว ให้เอาออก ถ้ายังไม่หมด ให้ติ๊กให้ครบ
+  const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+  checkboxes.forEach(cb => {
+    if (!cb.disabled) cb.checked = !allChecked;
+  });
+
+  if (window.updateChecklistProgress) window.updateChecklistProgress(compIndex);
+};
+
+window.updateChecklistProgress = function(compIndex: number) {
+  const card = document.getElementById(`company-card-${compIndex}`);
+  if (!card) return;
+  const checkboxes = card.querySelectorAll('input.custom-checkbox') as NodeListOf<HTMLInputElement>;
+  const total = checkboxes.length;
+  if (total === 0) return;
+
+  const checkedCount = Array.from(checkboxes).filter(cb => cb.checked).length;
+  const pct = Math.round((checkedCount / total) * 100);
+
+  const textEl = document.getElementById(`progress-text-${compIndex}`);
+  const barEl = document.getElementById(`progress-bar-${compIndex}`);
+
+  if (textEl) textEl.textContent = `ติ๊กแล้ว ${checkedCount}/${total} ข้อ (${pct}%)`;
+  if (barEl) barEl.style.width = `${pct}%`;
+};
+
+// Auto update progress after render
+const origRenderCompanyCard = renderCompanyCard;
+renderCompanyCard = function(comp: any, index: number) {
+  const card = origRenderCompanyCard(comp, index);
+  setTimeout(() => {
+    if (window.updateChecklistProgress) window.updateChecklistProgress(index);
+  }, 50);
+  return card;
+};

@@ -2869,4 +2869,458 @@ router.post("/super-admin/documents/toggle-lock", async (req: Request, res: Resp
   }
 });
 
+
+// =====================================================================
+// 10. ระบบตั้งค่าและจัดการ CHECKLIST บริษัท (สำหรับ Super Admin / Staff)
+// =====================================================================
+
+// ตรวจสอบสิทธิ์เฉพาะ Staff / Super Admin
+function requireSuperAdminStaff(req: Request, res: Response, next: Function) {
+  const isSuperAdmin = Boolean(
+    req.staff?.isStaff ||
+    req.session.user?.role === "STAFF" ||
+    req.session.user?.role === "ADMIN"
+  );
+  if (!isSuperAdmin) {
+    return res.status(403).json({
+      success: false,
+      message: "เฉพาะเจ้าหน้าที่คณะ (Staff/Super Admin) เท่านั้นที่สามารถจัดการตั้งค่า Checklist ได้",
+    });
+  }
+  next();
+}
+
+// 10.1 ดึงรายการเวอร์ชันทั้งหมด
+router.get("/checklist-versions", requireSuperAdminStaff, async (_req: Request, res: Response) => {
+  try {
+    const versions = await prisma.checklistVersion.findMany({
+      orderBy: [{ status: "asc" }, { id: "desc" }],
+      include: {
+        sections: {
+          orderBy: { order: "asc" },
+          include: {
+            items: {
+              orderBy: { order: "asc" },
+              include: {
+                _count: { select: { answers: true } },
+              },
+            },
+          },
+        },
+        _count: {
+          select: { companies: true },
+        },
+      },
+    });
+
+    res.json({ success: true, versions });
+  } catch (err) {
+    console.error("GET /api/admin/checklist-versions error:", err);
+    res.status(500).json({ success: false, message: "ดึงรายการเวอร์ชัน Checklist ไม่สำเร็จ" });
+  }
+});
+
+// 10.2 สร้างเวอร์ชันใหม่ (หรือคัดลอกจากเวอร์ชันเดิม)
+router.post("/checklist-versions", requireSuperAdminStaff, async (req: Request, res: Response) => {
+  try {
+    const { versionName, description, cloneFromVersionId } = req.body;
+    if (!versionName || !String(versionName).trim()) {
+      return res.status(400).json({ success: false, message: "กรุณาระบุชื่อเวอร์ชัน เช่น v2.0 (ปีการศึกษา 2568)" });
+    }
+
+    const cleanName = String(versionName).trim();
+    const cleanDesc = description ? String(description).trim() : null;
+
+    // สร้าง Version ใหม่
+    const newVersion = await prisma.checklistVersion.create({
+      data: {
+        versionName: cleanName,
+        description: cleanDesc,
+        status: "DRAFT",
+      },
+    });
+
+    // หากเลือกคัดลอกจากเวอร์ชันเดิม
+    if (cloneFromVersionId) {
+      const sourceVersion = await prisma.checklistVersion.findUnique({
+        where: { id: parseInt(String(cloneFromVersionId), 10) },
+        include: {
+          sections: {
+            include: { items: true },
+            orderBy: { order: "asc" },
+          },
+        },
+      });
+
+      if (sourceVersion && sourceVersion.sections.length > 0) {
+        for (const sec of sourceVersion.sections) {
+          await prisma.checklistSection.create({
+            data: {
+              versionId: newVersion.id,
+              title: sec.title,
+              order: sec.order,
+              items: {
+                create: sec.items.map((it) => ({
+                  order: it.order,
+                  description: it.description,
+                  placeholder: it.placeholder,
+                  isRequired: it.isRequired,
+                  isActive: it.isActive,
+                })),
+              },
+            },
+          });
+        }
+      }
+    }
+
+    res.json({
+      success: true,
+      message: `สร้างเวอร์ชัน ${newVersion.versionName} สำเร็จ`,
+      version: newVersion,
+    });
+  } catch (err) {
+    console.error("POST /api/admin/checklist-versions error:", err);
+    res.status(500).json({ success: false, message: "สร้างเวอร์ชันใหม่ไม่สำเร็จ" });
+  }
+});
+
+// 10.3 เปิดใช้งานเวอร์ชัน (Activate Version)
+router.put("/checklist-versions/:id/activate", requireSuperAdminStaff, async (req: Request, res: Response) => {
+  try {
+    const versionId = parseInt(String(req.params.id), 10);
+    const target = await prisma.checklistVersion.findUnique({
+      where: { id: versionId },
+      include: { sections: { include: { items: true } } },
+    });
+
+    if (!target) {
+      return res.status(404).json({ success: false, message: "ไม่พบเวอร์ชันที่ต้องการเปิดใช้งาน" });
+    }
+
+    if (target.sections.length === 0) {
+      return res.status(400).json({ success: false, message: "ไม่สามารถเปิดใช้งานเวอร์ชันที่ไม่มีหมวดคำถามได้" });
+    }
+
+    // อัปเดตเวอร์ชันเดิมที่เป็น ACTIVE ให้เป็น ARCHIVED
+    await prisma.checklistVersion.updateMany({
+      where: { status: "ACTIVE" },
+      data: { status: "ARCHIVED" },
+    });
+
+    // ตั้งเวอร์ชันเป้าหมายเป็น ACTIVE
+    const updated = await prisma.checklistVersion.update({
+      where: { id: versionId },
+      data: { status: "ACTIVE" },
+    });
+
+    res.json({
+      success: true,
+      message: `เปิดใช้งาน ${updated.versionName} เรียบร้อยแล้ว นิสิตที่เริ่มทำ Checklist ใหม่จะใช้เกณฑ์ชุดนี้`,
+      version: updated,
+    });
+  } catch (err) {
+    console.error("PUT /api/admin/checklist-versions/:id/activate error:", err);
+    res.status(500).json({ success: false, message: "เปิดใช้งานเวอร์ชันไม่สำเร็จ" });
+  }
+});
+
+// 10.4 แก้ไขข้อมูลเวอร์ชัน (ชื่อ/คำอธิบาย)
+router.put("/checklist-versions/:id", requireSuperAdminStaff, async (req: Request, res: Response) => {
+  try {
+    const versionId = parseInt(String(req.params.id), 10);
+    const { versionName, description } = req.body;
+
+    const updated = await prisma.checklistVersion.update({
+      where: { id: versionId },
+      data: {
+        versionName: versionName ? String(versionName).trim() : undefined,
+        description: description !== undefined ? (description ? String(description).trim() : null) : undefined,
+      },
+    });
+
+    res.json({ success: true, message: "แก้ไขข้อมูลเวอร์ชันเรียบร้อยแล้ว", version: updated });
+  } catch (err) {
+    console.error("PUT /api/admin/checklist-versions/:id error:", err);
+    res.status(500).json({ success: false, message: "แก้ไขข้อมูลเวอร์ชันไม่สำเร็จ" });
+  }
+});
+
+// 10.5 ลบเวอร์ชัน (เฉพาะ DRAFT และไม่มีบริษัทใช้อยู่)
+router.delete("/checklist-versions/:id", requireSuperAdminStaff, async (req: Request, res: Response) => {
+  try {
+    const versionId = parseInt(String(req.params.id), 10);
+    const target = await prisma.checklistVersion.findUnique({
+      where: { id: versionId },
+      include: {
+        _count: { select: { companies: true } },
+      },
+    });
+
+    if (!target) {
+      return res.status(404).json({ success: false, message: "ไม่พบเวอร์ชันที่ต้องการลบ" });
+    }
+
+    if (target.status === "ACTIVE") {
+      return res.status(400).json({ success: false, message: "ไม่สามารถลบเวอร์ชันที่กำลังเปิดใช้งานอยู่ได้" });
+    }
+
+    if (target._count.companies > 0) {
+      return res.status(400).json({
+        success: false,
+        message: `ไม่สามารถลบเวอร์ชันนี้ได้เนื่องจากมีประวัตินิสิต ${target._count.companies} บริษัท ผูกอยู่กับเวอร์ชันนี้`,
+      });
+    }
+
+    // ลบ Sections และ Items ที่ผูกอยู่ (Cascade)
+    await prisma.checklistItem.deleteMany({
+      where: { section: { versionId } },
+    });
+    await prisma.checklistSection.deleteMany({
+      where: { versionId },
+    });
+    await prisma.checklistVersion.delete({
+      where: { id: versionId },
+    });
+
+    res.json({ success: true, message: `ลบเวอร์ชัน ${target.versionName} เรียบร้อยแล้ว` });
+  } catch (err) {
+    console.error("DELETE /api/admin/checklist-versions/:id error:", err);
+    res.status(500).json({ success: false, message: "ลบเวอร์ชันไม่สำเร็จ" });
+  }
+});
+
+// 10.6 เพิ่มหมวดหลักใหม่ (Checklist Section)
+router.post("/checklist-sections", requireSuperAdminStaff, async (req: Request, res: Response) => {
+  try {
+    const { versionId, title } = req.body;
+    if (!versionId || !title || !String(title).trim()) {
+      return res.status(400).json({ success: false, message: "กรุณาระบุชื่อหมวดหลัก" });
+    }
+
+    const vId = parseInt(versionId, 10);
+    const maxOrderSec = await prisma.checklistSection.findFirst({
+      where: { versionId: vId },
+      orderBy: { order: "desc" },
+    });
+    const newOrder = maxOrderSec ? maxOrderSec.order + 1 : 1;
+
+    const section = await prisma.checklistSection.create({
+      data: {
+        versionId: vId,
+        title: String(title).trim(),
+        order: newOrder,
+      },
+    });
+
+    res.json({ success: true, message: "เพิ่มหมวดหลักเรียบร้อยแล้ว", section });
+  } catch (err) {
+    console.error("POST /api/admin/checklist-sections error:", err);
+    res.status(500).json({ success: false, message: "เพิ่มหมวดหลักไม่สำเร็จ" });
+  }
+});
+
+// 10.7 แก้ไขหมวดหลัก (Checklist Section)
+router.put("/checklist-sections/:id", requireSuperAdminStaff, async (req: Request, res: Response) => {
+  try {
+    const sectionId = parseInt(String(req.params.id), 10);
+    const { title } = req.body;
+
+    if (!title || !String(title).trim()) {
+      return res.status(400).json({ success: false, message: "กรุณาระบุชื่อหมวดหลัก" });
+    }
+
+    const section = await prisma.checklistSection.update({
+      where: { id: sectionId },
+      data: { title: String(title).trim() },
+    });
+
+    res.json({ success: true, message: "แก้ไขชื่อหมวดหลักเรียบร้อยแล้ว", section });
+  } catch (err) {
+    console.error("PUT /api/admin/checklist-sections/:id error:", err);
+    res.status(500).json({ success: false, message: "แก้ไขหมวดหลักไม่สำเร็จ" });
+  }
+});
+
+// 10.8 ลบหมวดหลัก (Checklist Section)
+router.delete("/checklist-sections/:id", requireSuperAdminStaff, async (req: Request, res: Response) => {
+  try {
+    const sectionId = parseInt(String(req.params.id), 10);
+
+    // ตรวจสอบว่ามีคำตอบของนิสิตในข้อใดข้อหนึ่งของหมวดนี้หรือไม่
+    const answersCount = await prisma.companyChecklistAnswer.count({
+      where: { checklistItem: { sectionId } },
+    });
+
+    if (answersCount > 0) {
+      return res.status(400).json({
+        success: false,
+        message: `ไม่สามารถลบหมวดนี้ได้เนื่องจากมีคำตอบของนิสิต ${answersCount} รายการผูกอยู่ แนะนำให้ปิดใช้งานข้อในหมวดแทน`,
+      });
+    }
+
+    await prisma.checklistItem.deleteMany({ where: { sectionId } });
+    await prisma.checklistSection.delete({ where: { id: sectionId } });
+
+    res.json({ success: true, message: "ลบหมวดหลักเรียบร้อยแล้ว" });
+  } catch (err) {
+    console.error("DELETE /api/admin/checklist-sections/:id error:", err);
+    res.status(500).json({ success: false, message: "ลบหมวดหลักไม่สำเร็จ" });
+  }
+});
+
+// 10.9 เพิ่มข้อย่อย (Checklist Item)
+router.post("/checklist-items", requireSuperAdminStaff, async (req: Request, res: Response) => {
+  try {
+    const { sectionId, description, placeholder, isRequired } = req.body;
+    if (!sectionId || !description || !String(description).trim()) {
+      return res.status(400).json({ success: false, message: "กรุณาระบุข้อความคำถาม/เกณฑ์การพิจารณา" });
+    }
+
+    const sId = parseInt(sectionId, 10);
+    const maxOrderItem = await prisma.checklistItem.findFirst({
+      where: { sectionId: sId },
+      orderBy: { order: "desc" },
+    });
+    const newOrder = maxOrderItem ? maxOrderItem.order + 1 : 1;
+
+    const item = await prisma.checklistItem.create({
+      data: {
+        sectionId: sId,
+        order: newOrder,
+        description: String(description).trim(),
+        placeholder: placeholder ? String(placeholder).trim() : null,
+        isRequired: Boolean(isRequired),
+        isActive: true,
+      },
+    });
+
+    res.json({ success: true, message: "เพิ่มข้อย่อยเรียบร้อยแล้ว", item });
+  } catch (err) {
+    console.error("POST /api/admin/checklist-items error:", err);
+    res.status(500).json({ success: false, message: "เพิ่มข้อย่อยไม่สำเร็จ" });
+  }
+});
+
+// 10.10 แก้ไขข้อย่อย (Checklist Item)
+router.put("/checklist-items/:id", requireSuperAdminStaff, async (req: Request, res: Response) => {
+  try {
+    const itemId = parseInt(String(req.params.id), 10);
+    const { description, placeholder, isRequired, isActive } = req.body;
+
+    const item = await prisma.checklistItem.update({
+      where: { id: itemId },
+      data: {
+        description: description ? String(description).trim() : undefined,
+        placeholder: placeholder !== undefined ? (placeholder ? String(placeholder).trim() : null) : undefined,
+        isRequired: isRequired !== undefined ? Boolean(isRequired) : undefined,
+        isActive: isActive !== undefined ? Boolean(isActive) : undefined,
+      },
+    });
+
+    res.json({ success: true, message: "แก้ไขข้อย่อยเรียบร้อยแล้ว", item });
+  } catch (err) {
+    console.error("PUT /api/admin/checklist-items/:id error:", err);
+    res.status(500).json({ success: false, message: "แก้ไขข้อย่อยไม่สำเร็จ" });
+  }
+});
+
+// 10.11 ลบข้อย่อย (Checklist Item)
+router.delete("/checklist-items/:id", requireSuperAdminStaff, async (req: Request, res: Response) => {
+  try {
+    const itemId = parseInt(String(req.params.id), 10);
+
+    const answersCount = await prisma.companyChecklistAnswer.count({
+      where: { checklistItemId: itemId },
+    });
+
+    if (answersCount > 0) {
+      return res.status(400).json({
+        success: false,
+        message: `ไม่สามารถลบข้อนี้ได้เนื่องจากมีนิสิตเคยตอบแล้ว ${answersCount} รายการ กรุณากดปุ่ม "ปิดใช้งาน (ซ่อน)" แทน`,
+      });
+    }
+
+    await prisma.checklistItem.delete({ where: { id: itemId } });
+    res.json({ success: true, message: "ลบข้อย่อยเรียบร้อยแล้ว" });
+  } catch (err) {
+    console.error("DELETE /api/admin/checklist-items/:id error:", err);
+    res.status(500).json({ success: false, message: "ลบข้อย่อยไม่สำเร็จ" });
+  }
+});
+
+// 10.12 สลับลำดับหมวดหลัก หรือ ข้อย่อย (Move Up / Down)
+router.post("/checklist-reorder", requireSuperAdminStaff, async (req: Request, res: Response) => {
+  try {
+    const { type, id, direction } = req.body; // type: 'section' | 'item', direction: 'up' | 'down'
+    if (!type || !id || !direction) {
+      return res.status(400).json({ success: false, message: "ข้อมูลไม่ครบถ้วน" });
+    }
+
+    const targetId = parseInt(id, 10);
+
+    if (type === "section") {
+      const current = await prisma.checklistSection.findUnique({ where: { id: targetId } });
+      if (!current) return res.status(404).json({ success: false, message: "ไม่พบหมวดนี้" });
+
+      const sibling = await prisma.checklistSection.findFirst({
+        where: {
+          versionId: current.versionId,
+          order: direction === "up" ? { lt: current.order } : { gt: current.order },
+        },
+        orderBy: { order: direction === "up" ? "desc" : "asc" },
+      });
+
+      if (!sibling) {
+        return res.json({ success: true, message: "อยู่ลำดับแรกหรือลำดับสุดท้ายแล้ว" });
+      }
+
+      // สลับ order ผ่าน transaction
+      const currentOrder = current.order;
+      const siblingOrder = sibling.order;
+
+      await prisma.$transaction([
+        prisma.checklistSection.update({ where: { id: current.id }, data: { order: -9999 } }),
+        prisma.checklistSection.update({ where: { id: sibling.id }, data: { order: currentOrder } }),
+        prisma.checklistSection.update({ where: { id: current.id }, data: { order: siblingOrder } }),
+      ]);
+
+      return res.json({ success: true, message: "จัดลำดับหมวดใหม่เรียบร้อยแล้ว" });
+    }
+
+    if (type === "item") {
+      const current = await prisma.checklistItem.findUnique({ where: { id: targetId } });
+      if (!current) return res.status(404).json({ success: false, message: "ไม่พบข้อนี้" });
+
+      const sibling = await prisma.checklistItem.findFirst({
+        where: {
+          sectionId: current.sectionId,
+          order: direction === "up" ? { lt: current.order } : { gt: current.order },
+        },
+        orderBy: { order: direction === "up" ? "desc" : "asc" },
+      });
+
+      if (!sibling) {
+        return res.json({ success: true, message: "อยู่ลำดับแรกหรือลำดับสุดท้ายแล้ว" });
+      }
+
+      const currentOrder = current.order;
+      const siblingOrder = sibling.order;
+
+      await prisma.$transaction([
+        prisma.checklistItem.update({ where: { id: current.id }, data: { order: -9999 } }),
+        prisma.checklistItem.update({ where: { id: sibling.id }, data: { order: currentOrder } }),
+        prisma.checklistItem.update({ where: { id: current.id }, data: { order: siblingOrder } }),
+      ]);
+
+      return res.json({ success: true, message: "จัดลำดับข้อใหม่เรียบร้อยแล้ว" });
+    }
+
+    res.status(400).json({ success: false, message: "ประเภทไม่ถูกต้อง" });
+  } catch (err) {
+    console.error("POST /api/admin/checklist-reorder error:", err);
+    res.status(500).json({ success: false, message: "จัดลำดับไม่สำเร็จ" });
+  }
+});
+
 export default router;
