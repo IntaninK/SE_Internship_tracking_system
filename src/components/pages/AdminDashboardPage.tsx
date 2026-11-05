@@ -582,6 +582,25 @@ const PAGE_STYLES: string[] = [`
       padding: 15px !important;
     }
   }
+  .status-option {
+    padding: 6px 12px;
+    font-size: 13px;
+    font-weight: 400;
+    color: #1E1B4B;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.1s ease, color 0.1s ease;
+    white-space: nowrap;
+    line-height: 1.4;
+  }
+  .status-option:hover {
+    background-color: #F1F5F9;
+  }
+  .status-option.selected {
+    background-color: #2563EB !important;
+    color: #FFFFFF !important;
+    font-weight: 400 !important;
+  }
 `];
 const PAGE_SCRIPTS: string[] = [
   "../components/header.js",
@@ -756,23 +775,31 @@ const PAGE_BODY_HTML = `
               <option value="">ทุกชั้นปี</option>
             </select>
 
-            <select id="status-filter" class="input-field" style="width:auto; min-width:150px; font-size:13px; padding:7px 12px; cursor:pointer;">
-              <option value="">ทุกสถานะ</option>
-              <option value="training_passed">✓ ผ่านการตรวจชม.ครบ</option>
-              <option value="training_not_checked">⏳ ชม.ครบ ยังไม่ตรวจ</option>
-              <option value="training_failed">✗ ตรวจแล้ว ยังไม่ผ่าน</option>
-              <option value="training_incomplete">⏳ ชั่วโมงยังไม่ครบ</option>
-              <option value="cv_approved">✓ ตรวจCVผ่าน</option>
-              <option value="cv_pending">⏳ ยังไม่ได้รีวิว CV</option>
-              <option value="cv_rejected">✗ ไม่ผ่าน CV</option>
-              <option value="cv_none">— ยังไม่ทำ CV</option>
-              <option value="checklist_approved">✓ Checklist ผ่าน</option>
-              <option value="checklist_pending">⏳ รอตรวจ Checklist</option>
-              <option value="interview_passed">✓ สัมภาษณ์ผ่านแล้ว</option>
-              <option value="placement_approved">✓ อนุมัติที่ฝึกงานแล้ว</option>
-              <option value="placement_pending">⏳ รออนุมัติที่ฝึกงาน</option>
-              <option value="placement_rejected">✗ ไม่อนุมัติที่ฝึกงาน</option>
-            </select>
+            <!-- Custom Status Filter Dropdown (กางลงด้านล่างเสมอ ขนาด/ฟอนต์ตรงตามมาตรฐานภาพที่ 2) -->
+            <div id="status-dropdown-container" style="position:relative; display:inline-block; width:195px; min-width:195px;">
+              <input type="hidden" id="status-filter" value="" data-label="ทุกสถานะ" />
+              <button type="button" id="status-filter-btn" onclick="window.toggleStatusDropdown ? window.toggleStatusDropdown() : (function(){ var m=document.getElementById('status-dropdown-menu'); if(m) m.style.display=m.style.display==='none'||!m.style.display?'block':'none'; })()" class="input-field" style="width:100%; min-width:195px; height:auto; min-height:36px; display:inline-flex; align-items:center; justify-content:space-between; gap:6px; font-size:13px; font-weight:400; color:#1E1B4B; padding:7px 12px; cursor:pointer; background:#FFFFFF; border:1px solid #CBD5E1; border-radius:8px; box-sizing:border-box;">
+                <span id="status-filter-label" style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-weight:400;">ทุกสถานะ</span>
+                <span id="status-arrow-icon" class="material-icons" style="font-size:18px; color:#64748B; pointer-events:none;">keyboard_arrow_down</span>
+              </button>
+              <div id="status-dropdown-menu" style="display:none; position:absolute; top:calc(100% + 4px); left:0; width:100%; min-width:195px; box-sizing:border-box; z-index:1050; background:#FFFFFF; border:1px solid #CBD5E1; border-radius:8px; box-shadow:0 8px 24px -4px rgba(15,23,42,0.12), 0 2px 6px -1px rgba(15,23,42,0.06); padding:4px 0; max-height:260px; overflow-y:auto;">
+                <div class="status-option selected" data-val="" onclick="window.selectStatusFilter('', 'ทุกสถานะ')">ทุกสถานะ</div>
+                <div class="status-option" data-val="training_passed" onclick="window.selectStatusFilter('training_passed', '✓ ผ่านการตรวจชม.ครบ')">✓ ผ่านการตรวจชม.ครบ</div>
+                <div class="status-option" data-val="training_not_checked" onclick="window.selectStatusFilter('training_not_checked', '⏳ ชม.ครบ ยังไม่ตรวจ')">⏳ ชม.ครบ ยังไม่ตรวจ</div>
+                <div class="status-option" data-val="training_failed" onclick="window.selectStatusFilter('training_failed', '✗ ตรวจแล้ว ยังไม่ผ่าน')">✗ ตรวจแล้ว ยังไม่ผ่าน</div>
+                <div class="status-option" data-val="training_incomplete" onclick="window.selectStatusFilter('training_incomplete', '⏳ ชั่วโมงยังไม่ครบ')">⏳ ชั่วโมงยังไม่ครบ</div>
+                <div class="status-option" data-val="cv_approved" onclick="window.selectStatusFilter('cv_approved', '✓ ตรวจ CV ผ่าน')">✓ ตรวจ CV ผ่าน</div>
+                <div class="status-option" data-val="cv_pending" onclick="window.selectStatusFilter('cv_pending', '⏳ ยังไม่ได้รีวิว CV')">⏳ ยังไม่ได้รีวิว CV</div>
+                <div class="status-option" data-val="cv_rejected" onclick="window.selectStatusFilter('cv_rejected', '✗ ไม่ผ่าน CV')">✗ ไม่ผ่าน CV</div>
+                <div class="status-option" data-val="cv_none" onclick="window.selectStatusFilter('cv_none', '— ยังไม่ทำ CV')">— ยังไม่ทำ CV</div>
+                <div class="status-option" data-val="checklist_approved" onclick="window.selectStatusFilter('checklist_approved', '✓ Checklist ผ่าน')">✓ Checklist ผ่าน</div>
+                <div class="status-option" data-val="checklist_pending" onclick="window.selectStatusFilter('checklist_pending', '⏳ รอตรวจ Checklist')">⏳ รอตรวจ Checklist</div>
+                <div class="status-option" data-val="interview_passed" onclick="window.selectStatusFilter('interview_passed', '✓ สัมภาษณ์ผ่านแล้ว')">✓ สัมภาษณ์ผ่านแล้ว</div>
+                <div class="status-option" data-val="placement_approved" onclick="window.selectStatusFilter('placement_approved', '✓ อนุมัติที่ฝึกงานแล้ว')">✓ อนุมัติที่ฝึกงานแล้ว</div>
+                <div class="status-option" data-val="placement_pending" onclick="window.selectStatusFilter('placement_pending', '⏳ รออนุมัติที่ฝึกงาน')">⏳ รออนุมัติที่ฝึกงาน</div>
+                <div class="status-option" data-val="placement_rejected" onclick="window.selectStatusFilter('placement_rejected', '✗ ไม่อนุมัติที่ฝึกงาน')">✗ ไม่อนุมัติที่ฝึกงาน</div>
+              </div>
+            </div>
 
             <select id="advisor-filter" class="input-field" style="width:auto; min-width:145px; font-size:13px; padding:7px 12px; cursor:pointer;">
               <option value="">ทุกอาจารย์ที่ปรึกษา</option>

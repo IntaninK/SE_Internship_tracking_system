@@ -1159,21 +1159,70 @@ function clearSearchBox() {
   if (searchEl) searchEl.value = '';
 }
 
+// Custom Dropdown: สถานะนิสิต
+window.toggleStatusDropdown = function() {
+  const menu = document.getElementById('status-dropdown-menu');
+  const arrow = document.getElementById('status-arrow-icon');
+  if (menu) {
+    const isHidden = menu.style.display === 'none' || !menu.style.display;
+    menu.style.display = isHidden ? 'block' : 'none';
+    if (arrow) {
+      arrow.textContent = isHidden ? 'keyboard_arrow_up' : 'keyboard_arrow_down';
+    }
+  }
+};
+
+window.selectStatusFilter = function(value: string, label: string) {
+  const hiddenInput = document.getElementById('status-filter') as HTMLInputElement | null;
+  const labelEl = document.getElementById('status-filter-label');
+  const menu = document.getElementById('status-dropdown-menu');
+  const arrow = document.getElementById('status-arrow-icon');
+
+  if (hiddenInput) {
+    hiddenInput.value = value;
+    hiddenInput.dataset.label = label;
+  }
+  if (labelEl) {
+    labelEl.textContent = label;
+  }
+  if (menu) {
+    menu.style.display = 'none';
+    const items = menu.querySelectorAll('.status-option');
+    items.forEach(it => {
+      if ((it.getAttribute('data-val') || '') === value) {
+        it.classList.add('selected');
+      } else {
+        it.classList.remove('selected');
+      }
+    });
+  }
+  if (arrow) arrow.textContent = 'keyboard_arrow_down';
+
+  clearSearchBox();
+  currentPage = 1;
+  updateFilterUI();
+  loadStudents();
+};
+
 function updateFilterUI() {
   const badge = document.getElementById('active-filter-badge');
   const btn = document.getElementById('btn-clear-filter');
 
   // เช็คว่ามี filter ไหนที่เลือกอยู่บ้าง
-  const statusVal = document.getElementById('status-filter')?.value;
-  const advisorVal = document.getElementById('advisor-filter')?.value;
-  const skillVal = document.getElementById('skill-filter')?.value;
-  const hasDropdownFilter = statusVal || advisorVal || skillVal;
+  const statusEl = document.getElementById('status-filter') as HTMLInputElement | HTMLSelectElement | null;
+  const statusVal = statusEl?.value;
+  const advisorVal = (document.getElementById('advisor-filter') as HTMLSelectElement | null)?.value;
+  const skillVal = (document.getElementById('skill-filter') as HTMLSelectElement | null)?.value;
+  const hasDropdownFilter = Boolean(statusVal || advisorVal || skillVal);
 
   if (hasDropdownFilter) {
     const parts = [];
-    if (statusVal) parts.push(document.getElementById('status-filter').selectedOptions[0]?.text);
+    if (statusVal) {
+      const statusLabel = statusEl?.dataset?.label || (statusEl as HTMLSelectElement).selectedOptions?.[0]?.text || statusVal;
+      parts.push(statusLabel);
+    }
     if (advisorVal) parts.push(advisorVal);
-    if (skillVal) parts.push(document.getElementById('skill-filter').selectedOptions[0]?.text);
+    if (skillVal) parts.push((document.getElementById('skill-filter') as HTMLSelectElement).selectedOptions?.[0]?.text);
     if (badge) {
       badge.textContent = `กรอง: ${parts.join(', ')}`;
       badge.style.display = 'inline-block';
@@ -1189,11 +1238,26 @@ function updateFilterUI() {
 window.clearAllFilters = function() {
   currentPage = 1;
   ['status-filter', 'advisor-filter', 'skill-filter', 'year-filter'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.value = '';
+    const el = document.getElementById(id) as HTMLInputElement | HTMLSelectElement | null;
+    if (el) {
+      el.value = '';
+      if ('dataset' in el && el.dataset) el.dataset.label = 'ทุกสถานะ';
+    }
   });
+  const statusLabelEl = document.getElementById('status-filter-label');
+  if (statusLabelEl) statusLabelEl.textContent = 'ทุกสถานะ';
+  const statusMenu = document.getElementById('status-dropdown-menu');
+  if (statusMenu) {
+    statusMenu.querySelectorAll('.status-option').forEach(it => {
+      if ((it.getAttribute('data-val') || '') === '') {
+        it.classList.add('selected');
+      } else {
+        it.classList.remove('selected');
+      }
+    });
+  }
   const searchEl = document.getElementById('student-search');
-  if (searchEl) searchEl.value = '';
+  if (searchEl) (searchEl as HTMLInputElement).value = '';
   updateFilterUI();
   loadStudents();
 };
@@ -1980,6 +2044,14 @@ window.updateSelectedYears = function() {
 };
 
 document.addEventListener('click', (e) => {
+  const statusContainer = document.getElementById('status-dropdown-container');
+  const statusMenu = document.getElementById('status-dropdown-menu');
+  const statusArrow = document.getElementById('status-arrow-icon');
+  if (statusContainer && statusMenu && statusMenu.style.display !== 'none' && !statusContainer.contains(e.target as Node)) {
+    statusMenu.style.display = 'none';
+    if (statusArrow) statusArrow.textContent = 'keyboard_arrow_down';
+  }
+
   const majorContainer = document.getElementById('evt-major-dropdown-container');
   const majorMenu = document.getElementById('evt-major-dropdown-menu');
   const majorArrow = document.getElementById('evt-major-arrow-icon');

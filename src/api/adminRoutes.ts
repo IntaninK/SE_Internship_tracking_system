@@ -489,26 +489,48 @@ router.get("/students", async (req: Request, res: Response) => {
         case "training_passed":
           mapped = mapped.filter((s) => s.isTrainingComplete);
           break;
-        case "training_failed":
-          mapped = mapped.filter((s) => !s.isTrainingComplete);
+        case "training_not_checked":
+          mapped = mapped.filter((s) => s.trainingCategory === "completeNotChecked");
           break;
+        case "training_failed":
+          mapped = mapped.filter((s) => s.trainingCategory === "checkedNotPass" || !s.isTrainingComplete);
+          break;
+        case "training_incomplete":
+          mapped = mapped.filter((s) => s.trainingCategory === "hoursNotComplete");
+          break;
+        case "cv_approved":
         case "cv_passed":
           mapped = mapped.filter((s) => s.cvStatus === "APPROVED");
           break;
-        case "cv_failed":
-          mapped = mapped.filter((s) => s.cvStatus !== "APPROVED");
+        case "cv_pending":
+          mapped = mapped.filter((s) => s.cvStatus === "PENDING" || s.cvCategory === "notReviewed");
           break;
+        case "cv_rejected":
+        case "cv_failed":
+          mapped = mapped.filter((s) => s.cvStatus === "REJECTED");
+          break;
+        case "cv_none":
+          mapped = mapped.filter((s) => !s.cvStatus || s.cvCategory === "noCv");
+          break;
+        case "checklist_approved":
         case "checklist_passed":
           mapped = mapped.filter((s) => s.hasChecklistApproved);
           break;
+        case "checklist_pending":
         case "checklist_failed":
           mapped = mapped.filter((s) => !s.hasChecklistApproved);
+          break;
+        case "interview_passed":
+          mapped = mapped.filter((s) => s.placementStatus === "APPROVED" || s.hasChecklistApproved);
           break;
         case "placement_approved":
           mapped = mapped.filter((s) => s.placementStatus === "APPROVED");
           break;
         case "placement_pending":
           mapped = mapped.filter((s) => s.placementStatus !== "APPROVED");
+          break;
+        case "placement_rejected":
+          mapped = mapped.filter((s) => s.placementStatus === "REJECTED");
           break;
       }
     }
