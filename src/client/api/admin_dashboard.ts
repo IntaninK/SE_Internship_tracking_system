@@ -2820,6 +2820,10 @@ let pendingCompaniesPage = 1;
 let pendingCompaniesSearch = '';
 let pendingCompaniesSearchTimeout: ReturnType<typeof setTimeout> | null = null;
 let pendingCompaniesExpanded = true;
+const selectedPendingCompanyIds = new Set<string>();
+const pendingCompanyMergeTargets = new Map<string, string>();
+let pendingCompanyBulkInProgress = false;
+let pendingCompanyBulkToastTimeout: ReturnType<typeof setTimeout> | null = null;
 
 function escapePendingCompanyHtml(value: unknown) {
   return String(value ?? '').replace(/[&<>"']/g, character => {
@@ -2880,11 +2884,230 @@ window.togglePendingCompanies = function(event) {
   renderPendingCompaniesTable();
 };
 
+function updatePendingCompanySelectionUi() {
+  const tbody = document.getElementById('pending-companies-tbody');
+  const visibleCheckboxes = tbody?.querySelectorAll<HTMLInputElement>('.pending-company-checkbox') || [];
+  const headerCheckbox = document.getElementById('select-all-pending-companies') as HTMLInputElement | null;
+  const selectedVisibleCount = [...visibleCheckboxes].filter(checkbox => checkbox.checked).length;
+  visibleCheckboxes.forEach(checkbox => {
+    checkbox.disabled = pendingCompanyBulkInProgress;
+  });
+  if (headerCheckbox) {
+    headerCheckbox.checked = visibleCheckboxes.length > 0 && selectedVisibleCount === visibleCheckboxes.length;
+    headerCheckbox.indeterminate = selectedVisibleCount > 0 && selectedVisibleCount < visibleCheckboxes.length;
+    headerCheckbox.disabled = pendingCompanyBulkInProgress;
+  }
+
+  const bulkActions = document.getElementById('pending-companies-bulk-actions');
+  const selectedCount = document.getElementById('pending-companies-selected-count');
+  const confirmLabel = document.getElementById('pending-companies-bulk-confirm-label');
+  const confirmButton = document.getElementById('pending-companies-bulk-confirm') as HTMLButtonElement | null;
+  const mergeLabel = document.getElementById('pending-companies-bulk-merge-label');
+  const mergeButton = document.getElementById('pending-companies-bulk-merge') as HTMLButtonElement | null;
+  const clearButton = document.getElementById('pending-companies-clear-selection') as HTMLButtonElement | null;
+  tbody?.querySelectorAll<HTMLButtonElement>('[data-pending-action]').forEach(button => {
+    button.disabled = pendingCompanyBulkInProgress;
+  });
+  if (bulkActions) bulkActions.style.display = selectedPendingCompanyIds.size ? 'flex' : 'none';
+  if (selectedCount) selectedCount.textContent = `เลือกแล้ว ${selectedPendingCompanyIds.size} รายการ`;
+  if (confirmLabel) confirmLabel.textContent = `ยืนยันเข้า Master Data (${selectedPendingCompanyIds.size})`;
+  if (mergeLabel) mergeLabel.textContent = `ยุบรวมชื่อซ้ำ (${selectedPendingCompanyIds.size})`;
+  if (confirmButton) confirmButton.disabled = pendingCompanyBulkInProgress || selectedPendingCompanyIds.size === 0;
+  if (mergeButton) mergeButton.disabled = pendingCompanyBulkInProgress || selectedPendingCompanyIds.size === 0;
+  if (clearButton) clearButton.disabled = pendingCompanyBulkInProgress;
+}
+
+window.togglePendingCompanySelection = function(event, companyId) {
+  event.stopPropagation();
+  const checkbox = event.currentTarget as HTMLInputElement;
+  if (checkbox.checked) {
+    selectedPendingCompanyIds.add(companyId);
+  } else {
+    selectedPendingCompanyIds.delete(companyId);
+  }
+
+  const row = checkbox.closest('tr');
+  if (row) row.classList.toggle('bg-blue-50/50', checkbox.checked);
+  updatePendingCompanySelectionUi();
+};
+
+window.selectAllPendingCompanies = function(event, companyIds) {
+  event.stopPropagation();
+  const checkbox = event.currentTarget as HTMLInputElement;
+  companyIds.forEach(id => {
+    if (checkbox.checked) {
+      selectedPendingCompanyIds.add(id);
+    } else {
+      selectedPendingCompanyIds.delete(id);
+    }
+  });
+
+  document.querySelectorAll<HTMLInputElement>('#pending-companies-tbody .pending-company-checkbox').forEach(rowCheckbox => {
+    rowCheckbox.checked = checkbox.checked;
+    rowCheckbox.closest('tr')?.classList.toggle('bg-blue-50/50', checkbox.checked);
+  });
+  updatePendingCompanySelectionUi();
+};
+
+window.clearPendingCompanySelection = function(event) {
+  event.stopPropagation();
+  if (pendingCompanyBulkInProgress) return;
+  selectedPendingCompanyIds.clear();
+  pendingCompanyMergeTargets.clear();
+  document.querySelectorAll<HTMLInputElement>('#pending-companies-tbody .pending-company-checkbox').forEach(checkbox => {
+    checkbox.checked = false;
+    checkbox.closest('tr')?.classList.remove('bg-blue-50/50');
+  });
+  updatePendingCompanySelectionUi();
+};
+
+function showPendingCompanyBulkToast(message: string, hasFailures: boolean) {
+  const toast = document.getElementById('pending-companies-bulk-toast');
+  if (!toast) return;
+  toast.textContent = message;
+  toast.style.display = 'block';
+  toast.style.background = hasFailures ? '#FEF2F2' : '#ECFDF5';
+  toast.style.border = `1px solid ${hasFailures ? '#FECACA' : '#A7F3D0'}`;
+  toast.style.color = hasFailures ? '#991B1B' : '#065F46';
+  if (pendingCompanyBulkToastTimeout) clearTimeout(pendingCompanyBulkToastTimeout);
+  pendingCompanyBulkToastTimeout = setTimeout(() => {
+    pendingCompanyBulkToastTimeout = null;
+    toast.style.display = 'none';
+  }, 5000);
+}
+
+async function submitPendingCompanyConfirmation(id: string) {
+  const standardizedNameTh = document.getElementById(`std-name-${id}`)?.value?.trim();
+  try {
+    const res = await fetch(`/api/admin/super-admin/companies/${encodeURIComponent(id)}/confirm`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ standardizedNameTh, status: 'VERIFIED' }),
+    });
+    const data = await res.json();
+    return {
+      success: Boolean(data.success),
+      message: data.message || 'ไม่สามารถยืนยันได้',
+    };
+  } catch (err) {
+    console.error(`Failed to confirm pending company ${id}:`, err);
+    return { success: false, message: 'เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์' };
+  }
+}
+
+async function submitPendingCompanyMerge(id: string, mergeIntoCompanyId: string) {
+  try {
+    const res = await fetch(`/api/admin/super-admin/companies/${encodeURIComponent(id)}/confirm`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mergeIntoCompanyId }),
+    });
+    const data = await res.json();
+    return {
+      success: Boolean(data.success),
+      message: data.message || 'ไม่สามารถยุบรวมได้',
+    };
+  } catch (err) {
+    console.error(`Failed to merge pending company ${id}:`, err);
+    return { success: false, message: 'เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์' };
+  }
+}
+
+window.confirmSelectedPendingCompanies = async function(event) {
+  event.stopPropagation();
+  if (pendingCompanyBulkInProgress || selectedPendingCompanyIds.size === 0) return;
+  const companyIds = [...selectedPendingCompanyIds];
+  if (!window.confirm(`ยืนยันเพิ่ม ${companyIds.length} บริษัทเข้า Master Data ใช่หรือไม่?`)) return;
+
+  pendingCompanyBulkInProgress = true;
+  updatePendingCompanySelectionUi();
+  let successCount = 0;
+  let failureCount = 0;
+  try {
+    for (const id of companyIds) {
+      const result = await submitPendingCompanyConfirmation(id);
+      if (result.success) {
+        successCount += 1;
+        selectedPendingCompanyIds.delete(id);
+      } else {
+        failureCount += 1;
+        console.error(`Could not confirm pending company ${id}: ${result.message}`);
+      }
+    }
+
+    if (successCount > 0) await window.loadSuperAdminOverview();
+    showPendingCompanyBulkToast(
+      failureCount > 0
+        ? `เพิ่มสำเร็จ ${successCount} รายการ และไม่สำเร็จ ${failureCount} รายการ`
+        : `เพิ่มสำเร็จ ${successCount} รายการ`,
+      failureCount > 0
+    );
+  } finally {
+    pendingCompanyBulkInProgress = false;
+    updatePendingCompanySelectionUi();
+  }
+};
+
+window.mergeSelectedPendingCompanies = async function(event) {
+  event.stopPropagation();
+  if (pendingCompanyBulkInProgress || selectedPendingCompanyIds.size === 0) return;
+  const companyIds = [...selectedPendingCompanyIds];
+  const readyCount = companyIds.filter(id => pendingCompanyMergeTargets.get(id)).length;
+  const missingTargetCount = companyIds.length - readyCount;
+  if (readyCount === 0) {
+    showPendingCompanyBulkToast('กรุณาเลือกบริษัทปลายทางใน Dropdown ของแต่ละรายการก่อนยุบรวม', true);
+    return;
+  }
+  const confirmationMessage = missingTargetCount > 0
+    ? `ยุบรวมชื่อซ้ำ ${readyCount} บริษัทใช่หรือไม่? (ข้าม ${missingTargetCount} รายการที่ยังไม่ได้เลือกบริษัทปลายทาง)`
+    : `ยุบรวมชื่อซ้ำ ${readyCount} บริษัทใช่หรือไม่?`;
+  if (!window.confirm(confirmationMessage)) return;
+
+  pendingCompanyBulkInProgress = true;
+  updatePendingCompanySelectionUi();
+  let successCount = 0;
+  let failureCount = missingTargetCount;
+  try {
+    for (const id of companyIds) {
+      const mergeIntoCompanyId = pendingCompanyMergeTargets.get(id);
+      if (!mergeIntoCompanyId) continue;
+
+      const result = await submitPendingCompanyMerge(id, mergeIntoCompanyId);
+      if (result.success) {
+        successCount += 1;
+        selectedPendingCompanyIds.delete(id);
+        pendingCompanyMergeTargets.delete(id);
+      } else {
+        failureCount += 1;
+        console.error(`Could not merge pending company ${id}: ${result.message}`);
+      }
+    }
+
+    if (successCount > 0) await window.loadSuperAdminOverview();
+    showPendingCompanyBulkToast(
+      failureCount > 0
+        ? `ยุบรวมสำเร็จ ${successCount} รายการ และไม่สำเร็จ ${failureCount} รายการ`
+        : `ยุบรวมสำเร็จ ${successCount} รายการ`,
+      failureCount > 0
+    );
+  } finally {
+    pendingCompanyBulkInProgress = false;
+    updatePendingCompanySelectionUi();
+  }
+};
+
 function renderPendingCompaniesTable() {
   const tbody = document.getElementById('pending-companies-tbody');
   if (!tbody) return;
   const allCompanies = superAdminData.companyMasterData || [];
   const pendingList = allCompanies.filter(c => c.status === 'PENDING_REVIEW');
+  const pendingCompanyIds = new Set(pendingList.map(company => String(company.id)));
+  selectedPendingCompanyIds.forEach(id => {
+    if (!pendingCompanyIds.has(id)) {
+      selectedPendingCompanyIds.delete(id);
+      pendingCompanyMergeTargets.delete(id);
+    }
+  });
   const verifiedList = allCompanies.filter(c => c.status === 'VERIFIED' || c.status === 'PARTNER');
   const filteredList = pendingCompaniesSearch
     ? pendingList.filter(company => [
@@ -2907,7 +3130,7 @@ function renderPendingCompaniesTable() {
       ? 'ไม่พบบริษัทที่ตรงกับคำค้นหา'
       : '✅ ไม่มีรายการบริษัทใหม่ค้างตรวจสอบ (บริษัททั้งหมดในระบบได้รับการยืนยันเข้า Master Data แล้ว)';
     const messageClass = pendingCompaniesSearch ? 'text-gray-400' : 'text-emerald-700 font-semibold';
-    tbody.innerHTML = `<tr><td colspan="4" class="text-center py-6 ${messageClass}">${message}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="5" class="text-center py-6 ${messageClass}">${message}</td></tr>`;
   } else {
     const mergeOptions = `<option value="">-- หรือเลือกยุบรวมเข้ากับบริษัทเดิมที่มีอยู่แล้ว --</option>` +
       verifiedList.map(company => `<option value="${escapePendingCompanyHtml(company.id)}">${escapePendingCompanyHtml(company.nameTh)} (${escapePendingCompanyHtml(company.province)})</option>`).join('');
@@ -2917,8 +3140,10 @@ function renderPendingCompaniesTable() {
       const name = escapePendingCompanyHtml(company.nameTh);
       const studentName = escapePendingCompanyHtml(company.submittedByStudentName || 'นิสิตในระบบ');
       const studentCode = escapePendingCompanyHtml(company.submittedByStudentCode || '-');
+      const isSelected = selectedPendingCompanyIds.has(String(company.id));
+      const selectedMergeTarget = pendingCompanyMergeTargets.get(String(company.id)) || '';
       return `
-        <tr>
+        <tr class="${isSelected ? 'bg-blue-50/50' : ''}">
           <td>
             <div title="${name}" style="font-weight:500; color:#0F172A; font-size:20px; line-height:1.35; overflow-wrap:anywhere;">${name}</div>
             <div style="margin-top:2px; font-size:12px; color:#64748B;">รหัสอ้างอิง: ${id}</div>
@@ -2929,8 +3154,11 @@ function renderPendingCompaniesTable() {
           </td>
           <td>
             <input type="text" id="std-name-${id}" class="input-field" value="${name}" placeholder="ปรับชื่อบริษัทให้เป็นมาตรฐาน..." style="font-size:12px; padding:6px 10px !important; margin-bottom:6px; font-weight:700;" />
-            <select id="merge-into-${id}" class="input-field" style="font-size:11.5px; padding:5px 8px !important;">
-              ${mergeOptions}
+            <select id="merge-into-${id}" data-merge-company-id="${id}" class="input-field" style="font-size:11.5px; padding:5px 8px !important;">
+              ${mergeOptions.replace(
+                `<option value="${selectedMergeTarget}">`,
+                `<option value="${selectedMergeTarget}" selected>`
+              )}
             </select>
           </td>
           <td class="text-center">
@@ -2944,6 +3172,11 @@ function renderPendingCompaniesTable() {
                 <span class="material-icons" style="font-size:15px;">merge_type</span> ยุบรวมชื่อซ้ำ
               </button>
             </div>
+          </td>
+          <td class="text-center">
+            <input type="checkbox" class="pending-company-checkbox" data-company-id="${id}"
+              aria-label="เลือกบริษัท ${name}" ${isSelected ? 'checked' : ''}
+              style="width:16px;height:16px;cursor:pointer;" />
           </td>
         </tr>
       `;
@@ -2959,7 +3192,37 @@ function renderPendingCompaniesTable() {
         }
       });
     });
+
+    tbody.querySelectorAll<HTMLInputElement>('.pending-company-checkbox').forEach(checkbox => {
+      checkbox.addEventListener('click', event => event.stopPropagation());
+      checkbox.addEventListener('change', event => {
+        const companyId = (event.currentTarget as HTMLInputElement).dataset.companyId || '';
+        window.togglePendingCompanySelection(event, companyId);
+      });
+    });
+
+    tbody.querySelectorAll<HTMLSelectElement>('[data-merge-company-id]').forEach(select => {
+      select.addEventListener('change', event => {
+        event.stopPropagation();
+        const mergeSelect = event.currentTarget as HTMLSelectElement;
+        const companyId = mergeSelect.dataset.mergeCompanyId || '';
+        if (mergeSelect.value) {
+          pendingCompanyMergeTargets.set(companyId, mergeSelect.value);
+        } else {
+          pendingCompanyMergeTargets.delete(companyId);
+        }
+      });
+    });
   }
+
+  const selectAllCheckbox = document.getElementById('select-all-pending-companies') as HTMLInputElement | null;
+  if (selectAllCheckbox) {
+    selectAllCheckbox.onclick = event => event.stopPropagation();
+    selectAllCheckbox.onchange = event => {
+      window.selectAllPendingCompanies(event, pageCompanies.map(company => String(company.id)));
+    };
+  }
+  updatePendingCompanySelectionUi();
 
   const pagination = document.getElementById('pending-companies-pagination');
   if (pagination) {
@@ -2992,22 +3255,12 @@ function renderPendingCompaniesTable() {
 }
 
 window.confirmPendingCompany = async function(id) {
-  const standardizedNameTh = document.getElementById(`std-name-${id}`)?.value?.trim();
-  try {
-    const res = await fetch(`/api/admin/super-admin/companies/${encodeURIComponent(id)}/confirm`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ standardizedNameTh, status: 'VERIFIED' }),
-    });
-    const data = await res.json();
-    if (data.success) {
-      alert('✅ ' + data.message);
-      await window.loadSuperAdminOverview();
-    } else {
-      alert('เกิดข้อผิดพลาด: ' + (data.message || 'ไม่สามารถยืนยันได้'));
-    }
-  } catch (err) {
-    console.error(err);
+  const result = await submitPendingCompanyConfirmation(id);
+  if (result.success) {
+    alert('✅ ' + result.message);
+    await window.loadSuperAdminOverview();
+  } else {
+    alert('เกิดข้อผิดพลาด: ' + result.message);
   }
 };
 
@@ -3017,21 +3270,14 @@ window.mergePendingCompany = async function(id) {
     alert('กรุณาเลือกบริษัทหลักใน Dropdown ที่ต้องการยุบรวมชื่อเข้าด้วยกัน');
     return;
   }
-  try {
-    const res = await fetch(`/api/admin/super-admin/companies/${encodeURIComponent(id)}/confirm`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ mergeIntoCompanyId }),
-    });
-    const data = await res.json();
-    if (data.success) {
-      alert('✅ ' + data.message);
-      await window.loadSuperAdminOverview();
-    } else {
-      alert('เกิดข้อผิดพลาด: ' + (data.message || 'ไม่สามารถยุบรวมได้'));
-    }
-  } catch (err) {
-    console.error(err);
+  const result = await submitPendingCompanyMerge(id, mergeIntoCompanyId);
+  if (result.success) {
+    selectedPendingCompanyIds.delete(id);
+    pendingCompanyMergeTargets.delete(id);
+    alert('✅ ' + result.message);
+    await window.loadSuperAdminOverview();
+  } else {
+    alert('เกิดข้อผิดพลาด: ' + result.message);
   }
 };
 

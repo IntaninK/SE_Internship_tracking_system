@@ -1414,6 +1414,24 @@ const PAGE_BODY_HTML = `
         </div>
         <div id="pending-companies-content" style="overflow:hidden; opacity:1; max-height:5000px; transition:max-height 220ms ease, opacity 180ms ease;">
           <div class="card-body">
+            <div id="pending-companies-bulk-actions" style="display:none; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom:12px; padding:10px 12px; background:#EFF6FF; border:1px solid #BFDBFE; border-radius:8px;">
+              <span id="pending-companies-selected-count" style="font-size:13px; font-weight:600; color:#1E40AF;"></span>
+              <div style="display:flex; align-items:center; gap:12px;">
+                <button type="button" id="pending-companies-bulk-confirm" onclick="window.confirmSelectedPendingCompanies(event)"
+                  style="background:#10B981; color:white; border:none; padding:7px 12px; border-radius:8px; font-size:12px; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:4px;">
+                  <span class="material-icons" style="font-size:15px;">check_circle</span>
+                  <span id="pending-companies-bulk-confirm-label"></span>
+                </button>
+                <button type="button" id="pending-companies-bulk-merge" onclick="window.mergeSelectedPendingCompanies(event)"
+                  style="background:#4338CA; color:white; border:none; padding:7px 12px; border-radius:8px; font-size:12px; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:4px;">
+                  <span class="material-icons" style="font-size:15px;">merge_type</span>
+                  <span id="pending-companies-bulk-merge-label"></span>
+                </button>
+                <button type="button" id="pending-companies-clear-selection" onclick="window.clearPendingCompanySelection(event)"
+                  style="border:0; background:transparent; color:#2563EB; font-size:12px; font-weight:600; cursor:pointer; padding:6px;">ล้างการเลือก</button>
+              </div>
+            </div>
+            <div id="pending-companies-bulk-toast" role="status" aria-live="polite" style="display:none; margin-bottom:12px; padding:9px 12px; border-radius:8px; font-size:13px;"></div>
             <table class="data-table">
               <thead>
                 <tr>
@@ -1421,10 +1439,16 @@ const PAGE_BODY_HTML = `
                   <th style="width:20%;">นิสิตที่ยื่นเพิ่ม</th>
                   <th style="width:28%;">ปรับชื่อมาตรฐาน / ยุบรวมกับบริษัทเดิม</th>
                   <th style="width:26%;" class="text-center">การอนุมัติเข้า Master Data</th>
+                  <th style="width:90px; min-width:90px;" class="text-center">
+                    <label style="display:inline-flex;align-items:center;gap:4px;cursor:pointer;white-space:nowrap;" title="เลือกบริษัททั้งหมดในหน้านี้">
+                      <span style="font-size:12px;">เลือกทั้งหมด</span>
+                      <input type="checkbox" id="select-all-pending-companies" aria-label="เลือกทั้งหมด" style="width:16px;height:16px;cursor:pointer;" />
+                    </label>
+                  </th>
                 </tr>
               </thead>
               <tbody id="pending-companies-tbody">
-                <tr><td colspan="4" class="text-center py-6 text-gray-400">ไม่มีรายการบริษัทใหม่รออนุมัติ</td></tr>
+                <tr><td colspan="5" class="text-center py-6 text-gray-400">ไม่มีรายการบริษัทใหม่รออนุมัติ</td></tr>
               </tbody>
             </table>
             <div id="pending-companies-pagination" style="display:flex; align-items:center; justify-content:flex-end; gap:12px; margin-top:12px; color:#475569; font-size:12px;"></div>
