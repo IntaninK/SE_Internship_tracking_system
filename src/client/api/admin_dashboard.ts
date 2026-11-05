@@ -319,9 +319,9 @@ function renderStudentTable(students, total, page, totalPages) {
         <td class="text-gray-500 text-xs">${dropDateFormatted}</td>
         <td class="text-center">
           <div style="display: flex; align-items: center; gap: 8px; justify-content: center;">
-            ${currentUserRole !== 'STAFF' ? `<button class="btn-detail-dots" title="ดูรายละเอียด" onclick="window.location.href='/pages/admin_student_detail.html?id=${s.id}'" style="background:none;border:none;cursor:pointer;padding:4px;">
+            <button class="btn-detail-dots" title="ดูรายละเอียด" onclick="window.location.href='/pages/admin_student_detail.html?id=${s.id}'" style="background:none;border:none;cursor:pointer;padding:4px;">
               <span class="material-icons text-gray-500 hover:text-blue-600" style="font-size:18px;">more_vert</span>
-            </button>` : ''}
+            </button>
             <input type="checkbox" class="student-checkbox" data-id="${s.id}" ${isChecked ? 'checked' : ''} style="width:16px;height:16px;cursor:pointer;" />
           </div>
         </td>
@@ -381,9 +381,9 @@ function renderStudentTable(students, total, page, totalPages) {
         </td>
         <td class="text-center">
           <div style="display: flex; align-items: center; gap: 8px; justify-content: center;">
-            ${currentUserRole !== 'STAFF' ? `<button class="btn-detail-dots" title="ดูรายละเอียด" onclick="window.location.href='/pages/admin_student_detail.html?id=${s.id}'" style="background:none;border:none;cursor:pointer;padding:4px;">
+            <button class="btn-detail-dots" title="ดูรายละเอียด" onclick="window.location.href='/pages/admin_student_detail.html?id=${s.id}'" style="background:none;border:none;cursor:pointer;padding:4px;">
               <span class="material-icons text-gray-500 hover:text-blue-600" style="font-size:18px;">more_vert</span>
-            </button>` : ''}
+            </button>
             <input type="checkbox" class="student-checkbox" data-id="${s.id}" ${isChecked ? 'checked' : ''} style="width:16px;height:16px;cursor:pointer;" />
           </div>
         </td>

@@ -14,11 +14,11 @@
       "prepSchedule": "ปี 3 เทอม 1",
       "internSchedule": "ปี 3 เทอม 2 (ออกฝึกงานเทอมถัดไปทันที)",
       "targetTerm": "2/2568",
-      "isUnlocked": true,
+      "isUnlocked": false,
       "openDate": "2026-01-01",
       "closeDate": "2026-04-30",
       "note": "เรียนเตรียมความพร้อมเทอมนี้ และออกฝึกงานในเทอมถัดไปทันที",
-      "updatedAt": "2026-11-04T02:20:53.142Z"
+      "updatedAt": "2026-11-05T02:28:07.178Z"
     },
     {
       "code": "CS",
@@ -30,7 +30,7 @@
       "openDate": "2026-06-01",
       "closeDate": "2026-08-31",
       "note": "เรียนเตรียมความพร้อมตอนปี 3 รอปลดล็อกยื่นขอฝึกงานตอนขึ้นปี 4",
-      "updatedAt": "2026-11-04T02:20:53.142Z"
+      "updatedAt": "2026-11-05T02:28:07.178Z"
     },
     {
       "code": "CPE",
@@ -42,7 +42,7 @@
       "openDate": "2026-06-01",
       "closeDate": "2026-08-31",
       "note": "เรียนเตรียมความพร้อมตอนปี 3 รอปลดล็อกยื่นขอฝึกงานตอนขึ้นปี 4",
-      "updatedAt": "2026-11-04T02:20:53.142Z"
+      "updatedAt": "2026-11-05T02:28:07.178Z"
     },
     {
       "code": "IT",
@@ -50,11 +50,11 @@
       "prepSchedule": "ปี 3 เทอม 2",
       "internSchedule": "ปี 4 เทอม 1",
       "targetTerm": "1/2569",
-      "isUnlocked": true,
+      "isUnlocked": false,
       "openDate": "2026-01-15",
       "closeDate": "2026-05-15",
       "note": "เปิดให้ยื่น Checklist และขอหนังสือขอความอนุเคราะห์รอบ 1/2569",
-      "updatedAt": "2026-11-04T02:20:53.142Z"
+      "updatedAt": "2026-11-05T02:28:07.178Z"
     },
     {
       "code": "DB",
@@ -62,11 +62,11 @@
       "prepSchedule": "ปี 3 เทอม 2",
       "internSchedule": "ปี 4 เทอม 1",
       "targetTerm": "1/2569",
-      "isUnlocked": true,
+      "isUnlocked": false,
       "openDate": "2026-01-15",
       "closeDate": "2026-05-15",
       "note": "เปิดให้ยื่น Checklist และขอหนังสือขอความอนุเคราะห์รอบ 1/2569",
-      "updatedAt": "2026-11-04T02:20:53.142Z"
+      "updatedAt": "2026-11-05T02:28:07.178Z"
     },
     {
       "code": "CGM",
@@ -78,7 +78,7 @@
       "openDate": "2026-06-01",
       "closeDate": "2026-08-31",
       "note": "อยู่ระหว่างสะสมชั่วโมงเตรียมความพร้อม รอปลดล็อกระบบยื่นบริษัท",
-      "updatedAt": "2026-11-04T02:20:53.142Z"
+      "updatedAt": "2026-11-05T02:28:07.178Z"
     },
     {
       "code": "GIS",
@@ -86,11 +86,11 @@
       "prepSchedule": "ปี 3 เทอม 2",
       "internSchedule": "ปี 4 เทอม 1",
       "targetTerm": "1/2569",
-      "isUnlocked": true,
+      "isUnlocked": false,
       "openDate": "2026-01-15",
       "closeDate": "2026-05-15",
       "note": "เปิดให้ยื่น Checklist สถานประกอบการตามกำหนดการหลักสูตร",
-      "updatedAt": "2026-11-04T02:20:53.142Z"
+      "updatedAt": "2026-11-05T02:28:07.178Z"
     },
     {
       "code": "DSA",
@@ -102,7 +102,7 @@
       "openDate": "2026-06-01",
       "closeDate": "2026-08-31",
       "note": "เรียนเตรียมความพร้อมปี 3 รอปลดล็อกยื่นสถานประกอบการตอนปี 4",
-      "updatedAt": "2026-11-04T02:20:53.142Z"
+      "updatedAt": "2026-11-05T02:28:07.178Z"
     }
   ],
   "trainingEvents": [

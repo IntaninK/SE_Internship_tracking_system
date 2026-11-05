@@ -47,25 +47,24 @@ async function initStudentDetail() {
 
     const addTrainingBox = document.getElementById('admin-add-training-box');
     if (addTrainingBox) {
-      addTrainingBox.style.display = (currentUserFlags.isCourseAdmin || currentUserFlags.isStaff) ? 'block' : 'none';
+      addTrainingBox.style.display = currentUserFlags.isCourseAdmin ? 'block' : 'none';
     }
 
+    const trainingApproval = document.getElementById('training-approval-area');
+    const trainingSave = document.getElementById('training-save-area');
+    const cvStatusSelect = document.getElementById('cv-admin-status');
+
     if (!currentUserFlags.isCourseAdmin) {
-      const trainingApproval = document.getElementById('training-approval-area');
-      const trainingSave = document.getElementById('training-save-area');
       if (trainingApproval) trainingApproval.style.display = 'none';
       if (trainingSave) trainingSave.style.display = 'none';
-
-      const cvStatusSelect = document.getElementById('cv-admin-status');
       if (cvStatusSelect && cvStatusSelect.parentElement) {
         cvStatusSelect.parentElement.style.display = 'none';
       }
+    }
 
-      const placementApproval = document.getElementById('placement-approval-area');
-      if (placementApproval) placementApproval.style.display = 'flex';
-    } else {
-      const placementApproval = document.getElementById('placement-approval-area');
-      if (placementApproval) placementApproval.style.display = currentUserFlags.isAdvisor ? 'flex' : 'none';
+    const placementApproval = document.getElementById('placement-approval-area');
+    if (placementApproval) {
+      placementApproval.style.display = currentUserFlags.isAdvisor ? 'flex' : 'none';
     }
   } catch (err) {
     console.error('Load student detail error:', err);
