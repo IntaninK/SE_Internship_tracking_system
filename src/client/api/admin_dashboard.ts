@@ -1577,65 +1577,238 @@ const ICT_MAJORS_LIST = [
   'วิทยาการข้อมูลและการประยุกต์',
 ];
 
+interface StaffRoleRecord {
+  id: number;
+  userId?: number;
+  name: string;
+  email: string;
+  department: string | null;
+  isCourseAdmin: boolean;
+  isAdvisor: boolean;
+  isSupervisor: boolean;
+  isStaff: boolean;
+}
+
+let staffRolesCache: StaffRoleRecord[] = [];
+
+// ซิงค์ค่าจาก DOM กลับเข้าไปเก็บใน staffRolesCache ของบุคลากรแต่ละคน
+(window as any).syncStaffInputToMemory = function(staffId: number) {
+  const item = staffRolesCache.find(s => s.id === staffId);
+  if (!item) return;
+
+  const deptEl = document.getElementById(`staff-dept-${staffId}`) as HTMLSelectElement | null;
+  if (deptEl) item.department = deptEl.value ? deptEl.value.trim() : null;
+
+  const advEl = document.getElementById(`staff-adv-${staffId}`) as HTMLInputElement | null;
+  if (advEl) item.isAdvisor = advEl.checked;
+
+  const supEl = document.getElementById(`staff-sup-${staffId}`) as HTMLInputElement | null;
+  if (supEl) item.isSupervisor = supEl.checked;
+
+  const courseEl = document.getElementById(`staff-course-${staffId}`) as HTMLInputElement | null;
+  if (courseEl) item.isCourseAdmin = courseEl.checked;
+
+  const facEl = document.getElementById(`staff-fac-${staffId}`) as HTMLInputElement | null;
+  if (facEl) item.isStaff = facEl.checked;
+};
+
+// ซิงค์ทุกแถวที่กำลังแสดงใน DOM กลับเข้าแคช เพื่อไม่ให้ข้อมูลที่ผู้ใช้ติ๊กไว้หายไปเวลาพิมพ์ค้นหาหรือกรอง
+function syncCurrentDomRowsToMemory() {
+  const tbody = document.getElementById('staff-roles-tbody');
+  if (!tbody) return;
+  const rows = tbody.querySelectorAll('tr[id^="staff-row-"]');
+  rows.forEach((row) => {
+    const id = parseInt(row.id.replace('staff-row-', ''), 10);
+    if (!isNaN(id)) (window as any).syncStaffInputToMemory(id);
+  });
+}
+
+function renderStaffRolesRows(list: StaffRoleRecord[]) {
+  const tbody = document.getElementById('staff-roles-tbody');
+  if (!tbody) return;
+
+  if (list.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="7" class="text-center py-10" style="color:#64748B;">
+          <div style="display:flex; flex-direction:column; align-items:center; gap:8px;">
+            <span class="material-icons" style="font-size:36px; color:#94A3B8;">search_off</span>
+            <div style="font-size:14px; font-weight:600; color:#334155;">ไม่พบบุคลากรที่ตรงกับเงื่อนไขการค้นหา</div>
+            <div style="font-size:12px; color:#94A3B8;">ลองเปลี่ยนคำค้นหา หรือเลือกตัวกรองสาขา/บทบาทเป็น "ทั้งหมด"</div>
+            <button type="button" class="btn btn-outline btn-sm" onclick="clearStaffRolesFilters()" style="margin-top:4px; font-size:12px; border-radius:8px;">
+              ล้างตัวกรองทั้งหมด
+            </button>
+          </div>
+        </td>
+      </tr>
+    `;
+    return;
+  }
+
+  tbody.innerHTML = list.map(st => {
+    const deptOptions = `<option value="">ส่วนกลางทั้งคณะ ICT (8 สาขา)</option>` +
+      ICT_MAJORS_LIST.map(m => `<option value="${m}" ${st.department === m ? 'selected' : ''}>สาขา${m}</option>`).join('');
+
+    return `
+      <tr id="staff-row-${st.id}">
+        <td>
+          <div style="font-weight:700; color:#0F172A; font-size:13px;">${st.name}</div>
+          <div style="font-size:11.5px; color:#64748B;">${st.email}</div>
+        </td>
+        <td>
+          <select id="staff-dept-${st.id}" class="input-field" onchange="syncStaffInputToMemory(${st.id})" style="font-size:12px; padding:6px 10px !important; min-width:170px;">
+            ${deptOptions}
+          </select>
+        </td>
+        <td class="text-center">
+          <input type="checkbox" id="staff-adv-${st.id}" ${st.isAdvisor ? 'checked' : ''} onchange="syncStaffInputToMemory(${st.id})" style="width:17px; height:17px; accent-color:#2563EB; cursor:pointer;" />
+        </td>
+        <td class="text-center">
+          <input type="checkbox" id="staff-sup-${st.id}" ${st.isSupervisor ? 'checked' : ''} onchange="syncStaffInputToMemory(${st.id})" style="width:17px; height:17px; accent-color:#0284C7; cursor:pointer;" />
+        </td>
+        <td class="text-center">
+          <input type="checkbox" id="staff-course-${st.id}" ${st.isCourseAdmin ? 'checked' : ''} onchange="syncStaffInputToMemory(${st.id})" style="width:17px; height:17px; accent-color:#7C3AED; cursor:pointer;" />
+        </td>
+        <td class="text-center">
+          <input type="checkbox" id="staff-fac-${st.id}" ${st.isStaff ? 'checked' : ''} onchange="syncStaffInputToMemory(${st.id})" style="width:17px; height:17px; accent-color:#D97706; cursor:pointer;" />
+        </td>
+        <td class="text-center">
+          <button type="button" class="btn btn-primary btn-sm" onclick="saveStaffRoleRow(${st.id})" style="font-size:12px; padding:5px 12px; border-radius:8px;">
+            บันทึก
+          </button>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+(window as any).filterStaffRolesTable = function() {
+  syncCurrentDomRowsToMemory();
+
+  const searchInput = document.getElementById('staff-search-input') as HTMLInputElement | null;
+  const deptFilter = document.getElementById('staff-dept-filter') as HTMLSelectElement | null;
+  const roleFilter = document.getElementById('staff-role-filter') as HTMLSelectElement | null;
+  const clearBtn = document.getElementById('staff-search-clear-btn') as HTMLElement | null;
+  const countEl = document.getElementById('staff-filtered-count') as HTMLElement | null;
+
+  const q = (searchInput?.value || '').trim().toLowerCase();
+  const selectedDept = deptFilter?.value || 'ALL';
+  const selectedRole = roleFilter?.value || 'ALL';
+
+  if (clearBtn) {
+    clearBtn.style.display = q ? 'block' : 'none';
+  }
+
+  const filtered = staffRolesCache.filter(st => {
+    // 1. Text search: Name or Email
+    if (q) {
+      const matchName = (st.name || '').toLowerCase().includes(q);
+      const matchEmail = (st.email || '').toLowerCase().includes(q);
+      if (!matchName && !matchEmail) return false;
+    }
+
+    // 2. Department filter
+    if (selectedDept !== 'ALL') {
+      if (selectedDept === '__FACULTY__') {
+        if (st.department && st.department.trim() !== '') return false;
+      } else {
+        if (st.department !== selectedDept) return false;
+      }
+    }
+
+    // 3. Role filter
+    if (selectedRole !== 'ALL') {
+      if (selectedRole === 'ADVISOR' && !st.isAdvisor) return false;
+      if (selectedRole === 'SUPERVISOR' && !st.isSupervisor) return false;
+      if (selectedRole === 'COURSE_ADMIN' && !st.isCourseAdmin) return false;
+      if (selectedRole === 'STAFF' && !st.isStaff) return false;
+      if (selectedRole === 'NONE' && (st.isAdvisor || st.isSupervisor || st.isCourseAdmin || st.isStaff)) return false;
+    }
+
+    return true;
+  });
+
+  if (countEl) {
+    countEl.textContent = `แสดง ${filtered.length} จากทั้งหมด ${staffRolesCache.length} ท่าน`;
+  }
+
+  renderStaffRolesRows(filtered);
+};
+
+(window as any).clearStaffSearchInput = function() {
+  const searchInput = document.getElementById('staff-search-input') as HTMLInputElement | null;
+  if (searchInput) {
+    searchInput.value = '';
+    (window as any).filterStaffRolesTable();
+    searchInput.focus();
+  }
+};
+
+(window as any).clearStaffRolesFilters = function() {
+  const searchInput = document.getElementById('staff-search-input') as HTMLInputElement | null;
+  const deptFilter = document.getElementById('staff-dept-filter') as HTMLSelectElement | null;
+  const roleFilter = document.getElementById('staff-role-filter') as HTMLSelectElement | null;
+
+  if (searchInput) searchInput.value = '';
+  if (deptFilter) deptFilter.value = 'ALL';
+  if (roleFilter) roleFilter.value = 'ALL';
+
+  (window as any).filterStaffRolesTable();
+};
+
 window.openStaffRolesModal = async function() {
   const modal = document.getElementById('staff-roles-modal');
   const tbody = document.getElementById('staff-roles-tbody');
+  const countEl = document.getElementById('staff-filtered-count');
   if (!modal || !tbody) return;
 
   modal.style.display = 'flex';
   tbody.innerHTML = '<tr><td colspan="7" class="text-center py-6 text-gray-400">กำลังโหลดข้อมูลบุคลากร...</td></tr>';
+  if (countEl) countEl.textContent = 'กำลังโหลด...';
+
+  // Reset filters
+  const searchInput = document.getElementById('staff-search-input') as HTMLInputElement | null;
+  const deptFilter = document.getElementById('staff-dept-filter') as HTMLSelectElement | null;
+  const roleFilter = document.getElementById('staff-role-filter') as HTMLSelectElement | null;
+  const clearBtn = document.getElementById('staff-search-clear-btn') as HTMLElement | null;
+  if (searchInput) searchInput.value = '';
+  if (deptFilter) deptFilter.value = 'ALL';
+  if (roleFilter) roleFilter.value = 'ALL';
+  if (clearBtn) clearBtn.style.display = 'none';
 
   try {
     const res = await fetch('/api/admin/staff');
     const data = await res.json();
     if (!data.success || !Array.isArray(data.staff)) {
       tbody.innerHTML = '<tr><td colspan="7" class="text-center py-6 text-red-500">ไม่สามารถโหลดข้อมูลบุคลากรได้</td></tr>';
+      if (countEl) countEl.textContent = 'เกิดข้อผิดพลาด';
       return;
     }
 
     if (data.staff.length === 0) {
+      staffRolesCache = [];
       tbody.innerHTML = '<tr><td colspan="7" class="text-center py-6 text-gray-400">ยังไม่มีข้อมูลอาจารย์/บุคลากรในระบบ</td></tr>';
+      if (countEl) countEl.textContent = '0 ท่าน';
       return;
     }
 
-    tbody.innerHTML = data.staff.map(st => {
-      const deptOptions = `<option value="">ส่วนกลางทั้งคณะ ICT (8 สาขา)</option>` +
-        ICT_MAJORS_LIST.map(m => `<option value="${m}" ${st.department === m ? 'selected' : ''}>สาขา${m}</option>`).join('');
+    staffRolesCache = data.staff.map((st: any) => ({
+      id: Number(st.id),
+      userId: st.userId,
+      name: String(st.name || ''),
+      email: String(st.email || ''),
+      department: st.department ? String(st.department).trim() : null,
+      isCourseAdmin: Boolean(st.isCourseAdmin),
+      isAdvisor: Boolean(st.isAdvisor),
+      isSupervisor: Boolean(st.isSupervisor),
+      isStaff: Boolean(st.isStaff),
+    }));
 
-      return `
-        <tr id="staff-row-${st.id}">
-          <td>
-            <div style="font-weight:700; color:#0F172A;">${st.name}</div>
-            <div style="font-size:11.5px; color:#64748B;">${st.email}</div>
-          </td>
-          <td>
-            <select id="staff-dept-${st.id}" class="input-field" style="font-size:12px; padding:6px 10px !important; min-width:170px;">
-              ${deptOptions}
-            </select>
-          </td>
-          <td class="text-center">
-            <input type="checkbox" id="staff-adv-${st.id}" ${st.isAdvisor ? 'checked' : ''} style="width:17px; height:17px; accent-color:#2563EB; cursor:pointer;" />
-          </td>
-          <td class="text-center">
-            <input type="checkbox" id="staff-sup-${st.id}" ${st.isSupervisor ? 'checked' : ''} style="width:17px; height:17px; accent-color:#0284C7; cursor:pointer;" />
-          </td>
-          <td class="text-center">
-            <input type="checkbox" id="staff-course-${st.id}" ${st.isCourseAdmin ? 'checked' : ''} style="width:17px; height:17px; accent-color:#7C3AED; cursor:pointer;" />
-          </td>
-          <td class="text-center">
-            <input type="checkbox" id="staff-fac-${st.id}" ${st.isStaff ? 'checked' : ''} style="width:17px; height:17px; accent-color:#D97706; cursor:pointer;" />
-          </td>
-          <td class="text-center">
-            <button type="button" class="btn btn-primary btn-sm" onclick="saveStaffRoleRow(${st.id})" style="font-size:12px; padding:5px 12px; border-radius:8px;">
-              บันทึก
-            </button>
-          </td>
-        </tr>
-      `;
-    }).join('');
+    (window as any).filterStaffRolesTable();
   } catch (err) {
     console.error('Load staff roles error:', err);
     tbody.innerHTML = '<tr><td colspan="7" class="text-center py-6 text-red-500">เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์</td></tr>';
+    if (countEl) countEl.textContent = 'เกิดข้อผิดพลาด';
   }
 };
 
@@ -1644,28 +1817,26 @@ window.closeStaffRolesModal = function() {
   if (modal) modal.style.display = 'none';
 };
 
-window.saveStaffRoleRow = async function(staffId) {
-  const department = document.getElementById(`staff-dept-${staffId}`)?.value || null;
-  const isAdvisor = Boolean(document.getElementById(`staff-adv-${staffId}`)?.checked);
-  const isSupervisor = Boolean(document.getElementById(`staff-sup-${staffId}`)?.checked);
-  const isCourseAdmin = Boolean(document.getElementById(`staff-course-${staffId}`)?.checked);
-  const isStaff = Boolean(document.getElementById(`staff-fac-${staffId}`)?.checked);
+window.saveStaffRoleRow = async function(staffId: number) {
+  (window as any).syncStaffInputToMemory(staffId);
+  const cached = staffRolesCache.find(s => s.id === staffId);
+  if (!cached) return;
 
   try {
     const res = await fetch(`/api/admin/staff/${staffId}/roles`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        department,
-        isAdvisor,
-        isSupervisor,
-        isCourseAdmin,
-        isStaff,
+        department: cached.department,
+        isAdvisor: cached.isAdvisor,
+        isSupervisor: cached.isSupervisor,
+        isCourseAdmin: cached.isCourseAdmin,
+        isStaff: cached.isStaff,
       }),
     });
     const data = await res.json();
     if (data.success) {
-      alert(`✅ บันทึกสิทธิ์ของ ${data.staff?.name || 'บุคลากร'} เรียบร้อยแล้ว`);
+      alert(`✅ บันทึกสิทธิ์ของ ${data.staff?.name || cached.name || 'บุคลากร'} เรียบร้อยแล้ว`);
       await populateAdvisorFilter();
     } else {
       alert('เกิดข้อผิดพลาด: ' + (data.message || 'ไม่สามารถบันทึกได้'));
@@ -1676,8 +1847,54 @@ window.saveStaffRoleRow = async function(staffId) {
   }
 };
 
+(window as any).saveAllStaffRoles = async function() {
+  syncCurrentDomRowsToMemory();
 
-// =========================================================================
+  if (staffRolesCache.length === 0) {
+    alert('ไม่มีข้อมูลบุคลากรให้บันทึก');
+    return;
+  }
+
+  const saveBtns = document.querySelectorAll('#btn-save-all-staff, #btn-save-all-staff-footer');
+  saveBtns.forEach(b => {
+    (b as HTMLButtonElement).disabled = true;
+    b.innerHTML = '<span class="material-icons" style="font-size:16px;">sync</span> กำลังบันทึก...';
+  });
+
+  try {
+    const updates = staffRolesCache.map(st => ({
+      id: st.id,
+      department: st.department || null,
+      isAdvisor: Boolean(st.isAdvisor),
+      isSupervisor: Boolean(st.isSupervisor),
+      isCourseAdmin: Boolean(st.isCourseAdmin),
+      isStaff: Boolean(st.isStaff),
+    }));
+
+    const res = await fetch('/api/admin/staff/batch-roles', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ updates }),
+    });
+
+    const data = await res.json();
+    if (data.success) {
+      alert(`✅ ${data.message || 'บันทึกสิทธิ์บุคลากรทั้งหมดเรียบร้อยแล้ว'}`);
+      await populateAdvisorFilter();
+    } else {
+      alert('เกิดข้อผิดพลาด: ' + (data.message || 'ไม่สามารถบันทึกข้อมูลได้'));
+    }
+  } catch (err) {
+    console.error('Batch save staff roles error:', err);
+    alert('เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์');
+  } finally {
+    saveBtns.forEach(b => {
+      (b as HTMLButtonElement).disabled = false;
+      b.innerHTML = '<span class="material-icons" style="font-size:16px;">save</span> <span>บันทึกทั้งหมด</span>';
+    });
+  }
+};
+
 // SUPER ADMIN (พี่จอม - เจ้าหน้าที่คณะ) COMMAND CENTER — 6 WORKSPACE MODULES
 // =========================================================================
 let superAdminData = {

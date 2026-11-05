@@ -1284,6 +1284,39 @@ router.get("/staff", async (_req: Request, res: Response) => {
   }
 });
 
+// อัปเดตสิทธิ์บุคลากรพร้อมกันหลายคน (Batch Save Roles)
+router.put("/staff/batch-roles", async (req: Request, res: Response) => {
+  try {
+    const { updates } = req.body;
+    if (!Array.isArray(updates) || updates.length === 0) {
+      return res.status(400).json({ success: false, message: "ไม่มีข้อมูลที่ต้องการอัปเดต" });
+    }
+
+    await prisma.$transaction(
+      updates.map((u: any) =>
+        prisma.staff.update({
+          where: { id: parseInt(String(u.id), 10) },
+          data: {
+            isCourseAdmin: u.isCourseAdmin !== undefined ? Boolean(u.isCourseAdmin) : undefined,
+            isAdvisor: u.isAdvisor !== undefined ? Boolean(u.isAdvisor) : undefined,
+            isSupervisor: u.isSupervisor !== undefined ? Boolean(u.isSupervisor) : undefined,
+            isStaff: u.isStaff !== undefined ? Boolean(u.isStaff) : undefined,
+            department: u.department !== undefined ? (u.department ? String(u.department).trim() : null) : undefined,
+          },
+        })
+      )
+    );
+
+    res.json({
+      success: true,
+      message: `บันทึกสิทธิ์บุคลากรทั้งหมด ${updates.length} ท่านเรียบร้อยแล้ว`,
+    });
+  } catch (err) {
+    console.error("PUT /api/admin/staff/batch-roles error:", err);
+    res.status(500).json({ success: false, message: "บันทึกสิทธิ์บุคลากรไม่สำเร็จ" });
+  }
+});
+
 router.put("/staff/:staffId/roles", async (req: Request, res: Response) => {
   try {
     const staffId = parseInt(req.params.staffId as string, 10);

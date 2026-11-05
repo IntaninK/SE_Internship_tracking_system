@@ -1867,7 +1867,8 @@ const PAGE_BODY_HTML = `
 
     <!-- Modal: จัดการสิทธิ์อาจารย์ / บุคลากร (Multi-Role Staff Management) -->
     <div id="staff-roles-modal" style="display:none; position:fixed; inset:0; background:rgba(15,23,42,0.6); z-index:1000; justify-content:center; align-items:center; backdrop-filter:blur(4px);">
-      <div style="background:white; border-radius:20px; width:880px; max-width:95%; max-height:88vh; display:flex; flex-direction:column; box-shadow:0 25px 60px rgba(15,23,42,0.3); overflow:hidden;">
+      <div style="background:white; border-radius:20px; width:1000px; max-width:96%; max-height:90vh; display:flex; flex-direction:column; box-shadow:0 25px 60px rgba(15,23,42,0.3); overflow:hidden;">
+        <!-- Modal Header -->
         <div style="background:linear-gradient(135deg, #1E1B4B 0%, #4338CA 100%); padding:18px 24px; color:white; display:flex; align-items:center; justify-content:space-between;">
           <div style="display:flex; align-items:center; gap:10px;">
             <span class="material-icons" style="font-size:22px;">admin_panel_settings</span>
@@ -1876,21 +1877,113 @@ const PAGE_BODY_HTML = `
               <p style="font-size:11.5px; color:#E0E7FF; margin:2px 0 0 0;">อาจารย์ 1 ท่านสามารถถือครองได้หลายบทบาทพร้อมกัน (อาจารย์ประจำวิชา / ที่ปรึกษา / นิเทศก์ / เจ้าหน้าที่คณะ)</p>
             </div>
           </div>
-          <button onclick="closeStaffRolesModal()" style="background:none; border:none; color:white; cursor:pointer;">
+          <button onclick="closeStaffRolesModal()" style="background:none; border:none; color:white; cursor:pointer;" title="ปิดหน้าต่าง">
             <span class="material-icons">close</span>
           </button>
         </div>
-        <div style="padding:20px 24px; overflow-y:auto; flex:1;">
+
+        <!-- Filter & Search Toolbar -->
+        <div style="padding:12px 24px; background:#F8FAFC; border-bottom:1px solid #E2E8F0; display:flex; flex-wrap:wrap; gap:10px; align-items:center; justify-content:space-between;">
+          <div style="display:flex; flex-wrap:wrap; gap:8px; align-items:center; flex:1; min-width:320px;">
+            <!-- กล่องค้นหา (ชื่อ-นามสกุล หรือ อีเมล / Gmail) -->
+            <div style="position:relative; flex:1; min-width:210px; max-width:280px;">
+              <span class="material-icons" style="position:absolute; left:10px; top:50%; transform:translateY(-50%); color:#94A3B8; font-size:18px; pointer-events:none;">search</span>
+              <input
+                type="text"
+                id="staff-search-input"
+                class="input-field"
+                placeholder="ค้นหาชื่อ หรือ อีเมล/Gmail..."
+                oninput="filterStaffRolesTable()"
+                style="padding-left:34px !important; padding-right:28px !important; width:100%; font-size:12.5px; height:36px; border-radius:8px; border:1px solid #CBD5E1; background:#FFFFFF;"
+              />
+              <button
+                id="staff-search-clear-btn"
+                type="button"
+                onclick="clearStaffSearchInput()"
+                title="ล้างคำค้นหา"
+                style="display:none; position:absolute; right:6px; top:50%; transform:translateY(-50%); background:none; border:none; color:#94A3B8; cursor:pointer; padding:2px;"
+              >
+                <span class="material-icons" style="font-size:16px;">cancel</span>
+              </button>
+            </div>
+
+            <!-- ตัวกรองสาขา / สังกัด -->
+            <select
+              id="staff-dept-filter"
+              class="input-field"
+              onchange="filterStaffRolesTable()"
+              style="width:auto; min-width:180px; font-size:12px; height:36px; padding:4px 10px; border-radius:8px; border:1px solid #CBD5E1; cursor:pointer; background:#FFFFFF;"
+            >
+              <option value="ALL">ทุกสาขาวิชา / สังกัด</option>
+              <option value="__FACULTY__">ส่วนกลางทั้งคณะ ICT (8 สาขา)</option>
+              <option value="วิศวกรรมซอฟต์แวร์">สาขาวิศวกรรมซอฟต์แวร์ (SE)</option>
+              <option value="ธุรกิจดิจิทัล">สาขาธุรกิจดิจิทัล (DB)</option>
+              <option value="วิทยาการคอมพิวเตอร์">สาขาวิทยาการคอมพิวเตอร์ (CS)</option>
+              <option value="เทคโนโลยีสารสนเทศ">สาขาเทคโนโลยีสารสนเทศ (IT)</option>
+              <option value="วิศวกรรมคอมพิวเตอร์">สาขาวิศวกรรมคอมพิวเตอร์ (CPE)</option>
+              <option value="คอมพิวเตอร์กราฟิกและมัลติมีเดีย">สาขาคอมพิวเตอร์กราฟิกและมัลติมีเดีย (CG)</option>
+              <option value="ภูมิสารสนเทศศาสตร์">สาขาภูมิสารสนเทศศาสตร์ (GIS)</option>
+              <option value="วิทยาการข้อมูลและการประยุกต์">สาขาวิทยาการข้อมูลและการประยุกต์ (DSA)</option>
+            </select>
+
+            <!-- ตัวกรองบทบาท (Role) -->
+            <select
+              id="staff-role-filter"
+              class="input-field"
+              onchange="filterStaffRolesTable()"
+              style="width:auto; min-width:145px; font-size:12px; height:36px; padding:4px 10px; border-radius:8px; border:1px solid #CBD5E1; cursor:pointer; background:#FFFFFF;"
+            >
+              <option value="ALL">ทุกบทบาทหน้าที่</option>
+              <option value="ADVISOR">อาจารย์ที่ปรึกษา</option>
+              <option value="SUPERVISOR">อาจารย์นิเทศก์</option>
+              <option value="COURSE_ADMIN">อาจารย์ประจำวิชา</option>
+              <option value="STAFF">เจ้าหน้าที่คณะ</option>
+              <option value="NONE">ยังไม่มีบทบาทใดๆ</option>
+            </select>
+
+            <!-- ปุ่มล้างตัวกรอง -->
+            <button
+              type="button"
+              class="btn btn-outline btn-sm"
+              onclick="clearStaffRolesFilters()"
+              title="ล้างตัวกรองทั้งหมด"
+              style="height:36px; padding:0 10px; border-radius:8px; font-size:12px; display:inline-flex; align-items:center; gap:4px; color:#64748B; border-color:#CBD5E1; background:#FFFFFF;"
+            >
+              <span class="material-icons" style="font-size:15px;">filter_alt_off</span>
+              <span>ล้างตัวกรอง</span>
+            </button>
+          </div>
+
+          <!-- Counter & บันทึกทั้งหมด -->
+          <div style="display:flex; align-items:center; gap:12px;">
+            <span id="staff-filtered-count" style="font-size:12px; color:#475569; font-weight:600; white-space:nowrap;">
+              กำลังโหลด...
+            </span>
+            <button
+              type="button"
+              id="btn-save-all-staff"
+              class="btn btn-primary btn-sm"
+              onclick="saveAllStaffRoles()"
+              style="height:36px; padding:0 14px; border-radius:8px; font-size:12.5px; font-weight:600; display:inline-flex; align-items:center; gap:6px; background:#4338CA; border:none; box-shadow:0 2px 6px rgba(67,56,202,0.25); cursor:pointer;"
+            >
+              <span class="material-icons" style="font-size:16px;">save</span>
+              <span>บันทึกทั้งหมด</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Table Container -->
+        <div style="padding:16px 24px; overflow-y:auto; flex:1;">
           <table class="data-table">
             <thead>
               <tr>
                 <th>ชื่อ - นามสกุล / อีเมล</th>
                 <th>สาขาวิชา / สังกัด</th>
-                <th class="text-center">อาจารย์ที่ปรึกษา</th>
-                <th class="text-center">อาจารย์นิเทศก์</th>
-                <th class="text-center">อาจารย์ประจำวิชา</th>
-                <th class="text-center">เจ้าหน้าที่คณะ</th>
-                <th class="text-center">บันทึก</th>
+                <th class="text-center" style="width:110px;">อาจารย์ที่ปรึกษา</th>
+                <th class="text-center" style="width:110px;">อาจารย์นิเทศก์</th>
+                <th class="text-center" style="width:110px;">อาจารย์ประจำวิชา</th>
+                <th class="text-center" style="width:110px;">เจ้าหน้าที่คณะ</th>
+                <th class="text-center" style="width:85px;">บันทึก</th>
               </tr>
             </thead>
             <tbody id="staff-roles-tbody">
@@ -1898,8 +1991,26 @@ const PAGE_BODY_HTML = `
             </tbody>
           </table>
         </div>
-        <div style="padding:14px 24px; background:#F8FAFC; border-top:1px solid #E2E8F0; display:flex; justify-content:flex-end;">
-          <button class="btn btn-outline btn-sm" onclick="closeStaffRolesModal()">ปิดหน้าต่าง</button>
+
+        <!-- Modal Footer -->
+        <div style="padding:12px 24px; background:#F8FAFC; border-top:1px solid #E2E8F0; display:flex; justify-content:space-between; align-items:center;">
+          <div style="font-size:12px; color:#64748B; display:flex; align-items:center; gap:6px;">
+            <span class="material-icons" style="font-size:16px; color:#4F46E5;">info</span>
+            <span>สามารถเลือกปรับสิทธิ์พร้อมกันหลายคน แล้วกด <b>"บันทึกทั้งหมด"</b> ได้ในคลิกเดียว</span>
+          </div>
+          <div style="display:flex; align-items:center; gap:10px;">
+            <button class="btn btn-outline btn-sm" onclick="closeStaffRolesModal()" style="height:36px; padding:0 14px; border-radius:8px;">ปิดหน้าต่าง</button>
+            <button
+              type="button"
+              id="btn-save-all-staff-footer"
+              class="btn btn-primary btn-sm"
+              onclick="saveAllStaffRoles()"
+              style="height:36px; padding:0 16px; border-radius:8px; font-size:12.5px; font-weight:600; display:inline-flex; align-items:center; gap:6px; background:#4338CA; border:none; box-shadow:0 2px 6px rgba(67,56,202,0.25); cursor:pointer;"
+            >
+              <span class="material-icons" style="font-size:16px;">save</span>
+              <span>บันทึกทั้งหมด</span>
+            </button>
+          </div>
         </div>
       </div>
     </div>
