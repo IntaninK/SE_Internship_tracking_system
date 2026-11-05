@@ -8,6 +8,7 @@ export interface PageShellProps {
   styles: string[];
   scripts: string[];
   bodyHtml: string;
+  children?: React.ReactNode;
 }
 
 function resolveScriptUrl(src: string): string {
@@ -38,6 +39,7 @@ export default function PageShell({
   styles,
   scripts,
   bodyHtml,
+  children,
 }: PageShellProps) {
   const [authorized, setAuthorized] = useState<boolean>(false);
   const scriptsExecutedRef = useRef<boolean>(false);
@@ -135,7 +137,7 @@ export default function PageShell({
         <style key={idx} dangerouslySetInnerHTML={{ __html: css }} />
       ))}
       <div dangerouslySetInnerHTML={{ __html: bodyHtml }} />
+      {children}
     </>
   );
 }
-

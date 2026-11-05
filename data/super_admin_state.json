@@ -403,6 +403,19 @@
     }
   ],
   "docWorkflowMap": {
+    "1": {
+      "studentId": 1,
+      "studentCode": "67024964",
+      "companyName": "บริษัท กสิกร บิซิเนส-เทคโนโลยี กรุ๊ป (KBTG)",
+      "interviewDate": "2026-02-15",
+      "requestLetterIssued": true,
+      "requestLetterDocNo": "อว 7316/ว 517",
+      "requestLetterDate": "2026-11-05",
+      "requestLetterBatchId": "REQ-BATCH-913709",
+      "companyResponseStatus": "WAITING_RESPONSE",
+      "dispatchLetterIssued": false,
+      "isLocked": true
+    },
     "41": {
       "studentId": 41,
       "studentCode": "67099999",

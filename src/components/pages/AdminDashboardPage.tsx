@@ -2,6 +2,7 @@
 
 import React from "react";
 import PageShell from "./PageShell";
+import FloatingNotification from "../FloatingNotification";
 
 const PAGE_TITLE = "Super Admin (พี่จอม) & อาจารย์ประจำวิชา - คณะ ICT ม.พะเยา";
 const PAGE_STYLES: string[] = [`
@@ -1932,6 +1933,8 @@ export default function AdminDashboardPage() {
       styles={PAGE_STYLES}
       scripts={PAGE_SCRIPTS}
       bodyHtml={PAGE_BODY_HTML}
-    />
+    >
+      <FloatingNotification />
+    </PageShell>
   );
 }
