@@ -582,12 +582,17 @@ window.openSetAdvisorModal = async function() {
     return;
   }
 
-  // โหลดรายชื่ออาจารย์
+  // โหลดรายชื่ออาจารย์ (สัมพันธ์กับสาขาที่เลือก)
   try {
-    const res = await fetch('/api/admin/advisors');
+    const majorFilter = document.getElementById('major-filter') as HTMLSelectElement | null;
+    const selectedMajor = majorFilter ? majorFilter.value : 'ALL';
+    const advisorUrl = selectedMajor && selectedMajor !== 'ALL'
+      ? `/api/admin/advisors?major=${encodeURIComponent(selectedMajor)}`
+      : '/api/admin/advisors';
+    const res = await fetch(advisorUrl);
     const data = await res.json();
-    const select = document.getElementById('advisor-select');
-    if (select && data.success) {
+    const select = document.getElementById('advisor-select') as HTMLSelectElement | null;
+    if (select && data.success && Array.isArray(data.advisors)) {
       select.innerHTML = '<option value="">-- เลือกอาจารย์ที่ปรึกษา --</option>';
       data.advisors.forEach(a => {
         select.innerHTML += `<option value="${a.id}">${a.name} (ดูแล ${a.studentCount} คน)</option>`;
@@ -889,14 +894,16 @@ window.confirmExport = async function() {
       const statusFilter = document.getElementById('status-filter');
       const advisorFilter = document.getElementById('advisor-filter');
       const skillFilter = document.getElementById('skill-filter');
+      const majorFilter = document.getElementById('major-filter') as HTMLSelectElement | null;
 
       const params = new URLSearchParams();
-      params.set('viewDropped', currentTab === 'dropped');
+      params.set('viewDropped', String(currentTab === 'dropped'));
       if (searchVal) params.set('search', searchVal);
       if (selectedYear) params.set('yearPrefix', selectedYear);
-      if (statusFilter && statusFilter.value) params.set('statusFilter', statusFilter.value);
-      if (advisorFilter && advisorFilter.value) params.set('advisorFilter', advisorFilter.value);
-      if (skillFilter && skillFilter.value) params.set('skillFilter', skillFilter.value);
+      if (statusFilter && (statusFilter as HTMLSelectElement).value) params.set('statusFilter', (statusFilter as HTMLSelectElement).value);
+      if (advisorFilter && (advisorFilter as HTMLSelectElement).value) params.set('advisorFilter', (advisorFilter as HTMLSelectElement).value);
+      if (skillFilter && (skillFilter as HTMLSelectElement).value) params.set('skillFilter', (skillFilter as HTMLSelectElement).value);
+      if (majorFilter && majorFilter.value && majorFilter.value !== 'ALL') params.set('major', majorFilter.value);
       url += params.toString();
     } else {
       url += `viewDropped=${currentTab === 'dropped'}&all=true`;
@@ -1030,7 +1037,7 @@ if (yearFilterEl) {
 }
 
 // Dropdown filter events (สถานะ, อาจารย์, Skill)
-['status-filter', 'advisor-filter', 'skill-filter', 'major-filter'].forEach(id => {
+['status-filter', 'advisor-filter', 'skill-filter'].forEach(id => {
   const el = document.getElementById(id);
   if (el) {
     el.addEventListener('change', () => {
@@ -1041,6 +1048,19 @@ if (yearFilterEl) {
     });
   }
 });
+
+// Dropdown filter สาขาวิชา (สัมพันธ์กับตัวกรองอาจารย์ และ Dashboard Summary)
+const majorFilterEl = document.getElementById('major-filter');
+if (majorFilterEl) {
+  majorFilterEl.addEventListener('change', async () => {
+    clearSearchBox();
+    currentPage = 1;
+    await populateAdvisorFilter();
+    updateFilterUI();
+    loadStudents();
+    loadDashboardSummary();
+  });
+}
 
 // รหัสปีของนิสิตชั้นปี 3 ในปีการศึกษาปัจจุบัน (ตัดรอบปีการศึกษาที่เดือน มิ.ย. เหมือน studentImportParser)
 // เช่น ต.ค. 2569 → ปีการศึกษา 2569 → ปี 3 = รหัส 67 | ม.ค. 2570 → ยังเป็นปีการศึกษา 2569 → รหัส 67
@@ -1091,21 +1111,43 @@ async function populateYearFilter(apiUrl) {
   }
 }
 
-// ดึงรายชื่ออาจารย์มาใส่ Dropdown ฟิลเตอร์
-async function populateAdvisorFilter() {
+// ดึงรายชื่ออาจารย์มาใส่ Dropdown ฟิลเตอร์ (สัมพันธ์กับสาขาที่เลือก)
+async function populateAdvisorFilter(targetMajor?: string) {
   try {
-    const select = document.getElementById('advisor-filter');
+    const select = document.getElementById('advisor-filter') as HTMLSelectElement | null;
     if (!select) return;
-    const res = await fetch('/api/admin/advisors');
+
+    const majorSelect = document.getElementById('major-filter') as HTMLSelectElement | null;
+    const major = targetMajor ?? (majorSelect ? majorSelect.value : 'ALL');
+
+    const currentAdvisor = select.value;
+
+    const url = major && major !== 'ALL'
+      ? `/api/admin/advisors?major=${encodeURIComponent(major)}`
+      : '/api/admin/advisors';
+
+    const res = await fetch(url);
     const data = await res.json();
-    if (!data.success) return;
+    if (!data.success || !Array.isArray(data.advisors)) return;
+
     select.innerHTML = '<option value="">ทุกอาจารย์</option>';
-    data.advisors.forEach(a => {
+    let advisorFound = false;
+
+    data.advisors.forEach((a: any) => {
       const opt = document.createElement('option');
       opt.value = a.name;
       opt.textContent = `${a.name} (${a.studentCount} คน)`;
+      if (currentAdvisor && a.name === currentAdvisor) {
+        opt.selected = true;
+        advisorFound = true;
+      }
       select.appendChild(opt);
     });
+
+    // หากอาจารย์ที่เคยเลือกไว้ ไม่ได้อยู่ในสาขานี้แล้ว ให้รีเซ็ตค่าเป็นทุกอาจารย์
+    if (currentAdvisor && !advisorFound) {
+      select.value = '';
+    }
   } catch (err) {
     console.error('Populate advisor filter error:', err);
   }
@@ -1560,6 +1602,7 @@ window.saveStaffRoleRow = async function(staffId) {
     const data = await res.json();
     if (data.success) {
       alert(`✅ บันทึกสิทธิ์ของ ${data.staff?.name || 'บุคลากร'} เรียบร้อยแล้ว`);
+      await populateAdvisorFilter();
     } else {
       alert('เกิดข้อผิดพลาด: ' + (data.message || 'ไม่สามารถบันทึกได้'));
     }

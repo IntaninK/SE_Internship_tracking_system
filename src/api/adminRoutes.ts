@@ -1081,10 +1081,27 @@ router.put("/students/restore", async (req: Request, res: Response) => {
 });
 
 // ==========================================
-// 9. ดึงรายชื่ออาจารย์ที่ปรึกษาทั้งหมด (สำหรับ Modal)
+// 9. ดึงรายชื่ออาจารย์ที่ปรึกษาทั้งหมด (สำหรับ Filter & Modal ตามสาขาวิชา)
 // ==========================================
-router.get("/advisors", async (_req: Request, res: Response) => {
+router.get("/advisors", async (req: Request, res: Response) => {
   try {
+    const isCentralOrStaff = Boolean(
+      req.staff?.isStaff ||
+        req.session.user?.role === "STAFF" ||
+        (req.session.user?.role === "ADMIN" && !req.staff?.department)
+    );
+    const dept = req.staff?.department;
+    const majorQuery = (req.query.major as string | undefined)?.trim();
+
+    // หากระบุ query major มา ให้ใช้ค่านั้น (ถ้าไม่ใช่ ALL)
+    // หากไม่ระบุ หรือเป็น ALL แต่ user ไม่ใช่ส่วนกลางและมี dept (เช่น อาจารย์ประจำวิชา) ให้ใช้ dept ของ user
+    let targetMajor: string | null = null;
+    if (majorQuery && majorQuery !== "ALL") {
+      targetMajor = majorQuery;
+    } else if (!isCentralOrStaff && dept) {
+      targetMajor = dept;
+    }
+
     const advisorUsers = await prisma.user.findMany({
       where: { role: { in: ["ADVISOR", "STAFF", "ADMIN"] } },
       include: { staff: true },
@@ -1109,18 +1126,71 @@ router.get("/advisors", async (_req: Request, res: Response) => {
       where: {
         OR: [{ isAdvisor: true }, { user: { role: "ADVISOR" } }],
       },
-      include: { user: true, studentsAdvised: true },
+      include: {
+        user: true,
+        studentsAdvised: {
+          select: {
+            id: true,
+            major: true,
+            curriculum: true,
+            isDropped: true,
+          },
+        },
+      },
+      orderBy: { name: "asc" },
     });
 
-    res.json({
-      success: true,
-      advisors: advisors.map((a) => ({
+    let resultAdvisors: Array<{
+      id: number;
+      name: string;
+      email: string;
+      department: string | null;
+      studentCount: number;
+    }> = [];
+
+    if (targetMajor) {
+      const targetLower = targetMajor.toLowerCase();
+      const matchesTarget = (str?: string | null) => {
+        if (!str) return false;
+        const s = str.toLowerCase();
+        return s.includes(targetLower) || targetLower.includes(s);
+      };
+
+      resultAdvisors = advisors
+        .map((a) => {
+          const advisedInMajor = a.studentsAdvised.filter(
+            (s) => !s.isDropped && (matchesTarget(s.major) || matchesTarget(s.curriculum))
+          );
+          const belongsToDept = matchesTarget(a.department);
+          const hasStudentsInMajor = advisedInMajor.length > 0;
+
+          // ถ้าอาจารย์ไม่ได้สังกัดสาขานี้ และไม่ได้มีนิสิตในสาขานี้ ไม่ต้องแสดงในตัวกรอง
+          if (!belongsToDept && !hasStudentsInMajor) {
+            return null;
+          }
+
+          return {
+            id: a.id,
+            name: a.name,
+            email: a.user.email,
+            department: a.department,
+            studentCount: advisedInMajor.length,
+          };
+        })
+        .filter((a): a is NonNullable<typeof a> => a !== null);
+    } else {
+      resultAdvisors = advisors.map((a) => ({
         id: a.id,
         name: a.name,
         email: a.user.email,
         department: a.department,
-        studentCount: a.studentsAdvised.length,
-      })),
+        studentCount: a.studentsAdvised.filter((s) => !s.isDropped).length,
+      }));
+    }
+
+    res.json({
+      success: true,
+      advisors: resultAdvisors,
     });
   } catch (err) {
     console.error("GET /api/admin/advisors error:", err);
