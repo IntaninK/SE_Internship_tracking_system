@@ -987,6 +987,20 @@ const PAGE_BODY_HTML = `
               <p style="margin:2px 0 0 0; font-size:12px; color:#E0E7FF;">กำหนดปีการศึกษาปัจจุบันและเลขที่หนังสือ อว สำหรับใช้ในการออกหนังสือขอความอนุเคราะห์และหนังสือส่งตัว</p>
             </div>
           </div>
+          <div id="cfg-signature-panel" style="display:flex; align-items:center; gap:8px; width:300px; min-height:48px; margin-left:auto; padding:4px 8px; box-sizing:border-box; flex:0 0 300px; background:#FFFFFF; border-radius:8px; color:#1E3A8A;">
+            <img id="cfg-signature-preview" alt="ตัวอย่างลายเซ็น" style="display:none; max-width:110px; max-height:40px; object-fit:contain; flex:0 1 auto;" />
+            <span id="cfg-signature-empty" style="display:inline; font-size:12px; font-weight:600; white-space:nowrap;">ยังไม่ได้อัปโหลดลายเซ็น</span>
+            <div style="display:flex; align-items:center; gap:4px; margin-left:auto; flex:0 0 auto;">
+              <button type="button" id="cfg-signature-upload-button" onclick="document.getElementById('cfg-signature-file').click()"
+                style="border:0; border-radius:6px; background:#EEF2FF; color:#3730A3; padding:6px 8px; font-size:11px; font-weight:700; cursor:pointer; white-space:nowrap;">อัปโหลดลายเซ็น</button>
+              <button type="button" id="cfg-signature-change-button" onclick="document.getElementById('cfg-signature-file').click()"
+                style="display:none; border:0; border-radius:6px; background:#EEF2FF; color:#3730A3; padding:6px 8px; font-size:11px; font-weight:700; cursor:pointer; white-space:nowrap;">เปลี่ยนรูป</button>
+              <button type="button" id="cfg-signature-delete-button" onclick="window.deleteAcademicSignature(event)"
+                style="display:none; border:0; border-radius:6px; background:#FEF2F2; color:#B91C1C; padding:6px 8px; font-size:11px; font-weight:700; cursor:pointer;">ลบ</button>
+            </div>
+            <input type="file" id="cfg-signature-file" accept=".png,.jpg,.jpeg,image/png,image/jpeg"
+              onchange="window.uploadAcademicSignature(event)" style="display:none;" />
+          </div>
           <button type="button" onclick="saveAcademicConfig()" style="background:#10B981; color:white; border:none; padding:8px 16px; border-radius:10px; font-size:12.5px; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:6px;">
             <span class="material-icons" style="font-size:16px;">save</span> บันทึกการตั้งค่าระบบ
           </button>

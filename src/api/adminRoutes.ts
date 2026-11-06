@@ -1,4 +1,4 @@
-import express, { Request, Response } from "express";
+import express, { NextFunction, Request, Response } from "express";
 import multer from "multer";
 import prisma from "../db";
 import requireAdmin from "../auth/requireAdmin";
@@ -6,6 +6,7 @@ import { parseStudentSpreadsheet } from "../utils/studentImportParser";
 import {
   loadSuperAdminState,
   saveSuperAdminState,
+  saveSuperAdminStateOrThrow,
   calculateEventHours,
   EventSessionItem,
   EventCheckInItem,
@@ -15,6 +16,34 @@ const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 15 * 1024 * 1024 }, // 15MB
 });
+
+const signatureUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 2 * 1024 * 1024 },
+  fileFilter: (_req, file, callback) => {
+    const fileName = file.originalname.toLowerCase();
+    const isPng = fileName.endsWith(".png") && file.mimetype === "image/png";
+    const isJpeg = /\.(jpe?g)$/.test(fileName) && file.mimetype === "image/jpeg";
+    if (!isPng && !isJpeg) {
+      callback(new Error("รองรับเฉพาะไฟล์ PNG, JPG หรือ JPEG"));
+      return;
+    }
+    callback(null, true);
+  },
+});
+
+const parseAcademicSignatureUpload = (req: Request, res: Response, next: NextFunction) => {
+  signatureUpload.single("signature")(req, res, error => {
+    if (error) {
+      const message = error instanceof multer.MulterError && error.code === "LIMIT_FILE_SIZE"
+        ? "ไฟล์ลายเซ็นต้องมีขนาดไม่เกิน 2 MB"
+        : error.message || "ไฟล์ลายเซ็นไม่ถูกต้อง";
+      res.status(400).json({ success: false, message });
+      return;
+    }
+    next();
+  });
+};
 
 const router = express.Router();
 
@@ -2087,6 +2116,7 @@ router.get("/super-admin/overview", async (req: Request, res: Response) => {
         requestLetterIssued: Boolean(wf.requestLetterIssued),
         requestLetterDocNo: wf.requestLetterDocNo || "",
         requestLetterDate: wf.requestLetterDate || "",
+        requestLetterSignatureSnapshot: wf.requestLetterSignatureSnapshot || "",
         companyResponseStatus: wf.companyResponseStatus || "NOT_SENT",
         companyResponseFileName: wf.companyResponseFileName || "",
         companyResponseFileUrl: wf.companyResponseFileUrl || "",
@@ -2094,6 +2124,7 @@ router.get("/super-admin/overview", async (req: Request, res: Response) => {
         dispatchLetterIssued: Boolean(wf.dispatchLetterIssued),
         dispatchLetterDocNo: wf.dispatchLetterDocNo || "",
         dispatchLetterDate: wf.dispatchLetterDate || "",
+        dispatchLetterSignatureSnapshot: wf.dispatchLetterSignatureSnapshot || "",
         isLocked: Boolean(wf.isLocked),
         unlockedByAdmin: Boolean(wf.unlockedByAdmin),
         archiveCount: studentArchives.length,
@@ -2180,6 +2211,46 @@ router.post("/super-admin/academic-config", async (req: Request, res: Response) 
   } catch (err) {
     console.error("POST /api/admin/super-admin/academic-config error:", err);
     res.status(500).json({ success: false, message: "บันทึกการตั้งค่าไม่สำเร็จ" });
+  }
+});
+
+router.post("/super-admin/academic-config/signature", parseAcademicSignatureUpload, (req: Request, res: Response) => {
+  try {
+    if (!req.file) {
+      res.status(400).json({ success: false, message: "กรุณาเลือกไฟล์ลายเซ็น" });
+      return;
+    }
+
+    const buffer = req.file.buffer;
+    const isPng = buffer.length >= 8 && buffer.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]));
+    const isJpeg = buffer.length >= 3 && buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff;
+    const detectedMimeType = isPng ? "image/png" : isJpeg ? "image/jpeg" : "";
+    if (!detectedMimeType || detectedMimeType !== req.file.mimetype) {
+      res.status(400).json({ success: false, message: "เนื้อหาไฟล์ไม่ใช่ภาพ PNG หรือ JPEG ที่รองรับ" });
+      return;
+    }
+
+    const state = loadSuperAdminState();
+    state.academicConfig.signatureDataUrl = `data:${detectedMimeType};base64,${buffer.toString("base64")}`;
+    state.academicConfig.updatedAt = new Date().toISOString();
+    saveSuperAdminStateOrThrow(state);
+    res.json({ success: true, message: "อัปโหลดลายเซ็นเรียบร้อยแล้ว", signatureDataUrl: state.academicConfig.signatureDataUrl });
+  } catch (err) {
+    console.error("POST /api/admin/super-admin/academic-config/signature error:", err);
+    res.status(500).json({ success: false, message: "บันทึกลายเซ็นไม่สำเร็จ" });
+  }
+});
+
+router.delete("/super-admin/academic-config/signature", (_req: Request, res: Response) => {
+  try {
+    const state = loadSuperAdminState();
+    state.academicConfig.signatureDataUrl = "";
+    state.academicConfig.updatedAt = new Date().toISOString();
+    saveSuperAdminStateOrThrow(state);
+    res.json({ success: true, message: "ลบลายเซ็นเรียบร้อยแล้ว" });
+  } catch (err) {
+    console.error("DELETE /api/admin/super-admin/academic-config/signature error:", err);
+    res.status(500).json({ success: false, message: "ลบลายเซ็นไม่สำเร็จ" });
   }
 });
 
@@ -2876,6 +2947,9 @@ router.post("/super-admin/documents/issue-request-letter", async (req: Request, 
         requestLetterDocNo: finalDocNo,
         requestLetterDate: finalDate,
         requestLetterBatchId: batchId,
+        requestLetterSignatureSnapshot: existingWf?.requestLetterIssued
+          ? existingWf.requestLetterSignatureSnapshot || ""
+          : state.academicConfig.signatureDataUrl || "",
         companyResponseStatus:
           existingWf?.companyResponseStatus && existingWf.companyResponseStatus !== "NOT_SENT"
             ? existingWf.companyResponseStatus
@@ -2883,11 +2957,12 @@ router.post("/super-admin/documents/issue-request-letter", async (req: Request, 
         dispatchLetterIssued: existingWf?.dispatchLetterIssued || false,
         dispatchLetterDocNo: existingWf?.dispatchLetterDocNo,
         dispatchLetterDate: existingWf?.dispatchLetterDate,
+        dispatchLetterSignatureSnapshot: existingWf?.dispatchLetterSignatureSnapshot || "",
         isLocked: true,
       };
     }
 
-    saveSuperAdminState(state);
+    saveSuperAdminStateOrThrow(state);
 
     res.json({
       success: true,
@@ -3061,6 +3136,9 @@ router.post("/super-admin/documents/issue-dispatch-letter", async (req: Request,
         dispatchLetterIssued: true,
         dispatchLetterDocNo: finalDocNo,
         dispatchLetterDate: finalDate,
+        dispatchLetterSignatureSnapshot: existingWf?.dispatchLetterIssued
+          ? existingWf.dispatchLetterSignatureSnapshot || ""
+          : state.academicConfig.signatureDataUrl || "",
         isLocked: true,
       };
 
@@ -3094,7 +3172,7 @@ router.post("/super-admin/documents/issue-dispatch-letter", async (req: Request,
       });
     }
 
-    saveSuperAdminState(state);
+    saveSuperAdminStateOrThrow(state);
 
     res.json({
       success: true,
