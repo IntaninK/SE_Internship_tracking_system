@@ -105,11 +105,20 @@ async function loadDashboardSummary() {
   };
 
   try {
-    const majorFilter = document.getElementById('major-filter');
+    const majorFilter = document.getElementById('major-filter') as HTMLSelectElement | null;
     const selectedMajor = majorFilter ? majorFilter.value : 'ALL';
-    const summaryUrl = selectedMajor && selectedMajor !== 'ALL'
-      ? `/api/admin/dashboard-summary?major=${encodeURIComponent(selectedMajor)}`
-      : '/api/admin/dashboard-summary';
+    const yearFilter = document.getElementById('year-filter') as HTMLSelectElement | null;
+    const selectedYear = yearFilter ? yearFilter.value : '';
+    const semesterFilter = document.getElementById('semester-filter') as HTMLSelectElement | null;
+    const selectedSemester = semesterFilter ? semesterFilter.value : '';
+
+    const summaryParams = new URLSearchParams();
+    if (selectedMajor && selectedMajor !== 'ALL') summaryParams.set('major', selectedMajor);
+    if (selectedYear) summaryParams.set('yearPrefix', selectedYear);
+    if (selectedSemester) summaryParams.set('semester', selectedSemester);
+
+    const summaryQuery = summaryParams.toString();
+    const summaryUrl = summaryQuery ? `/api/admin/dashboard-summary?${summaryQuery}` : '/api/admin/dashboard-summary';
     const res = await fetch(summaryUrl);
     if (res.redirected || !res.headers.get('content-type')?.includes('application/json')) {
       showSummaryError('โหลดข้อมูลสรุปไม่ได้ กรุณาเข้าสู่ระบบใหม่และตรวจสอบสิทธิ์การใช้งาน');
@@ -248,9 +257,13 @@ async function loadStudents() {
 
     let url = `/api/admin/students?page=${currentPage}&limit=${pageLimit}&viewDropped=${currentTab === 'dropped'}`;
     if (searchVal) url += `&search=${encodeURIComponent(searchVal)}`;
-    const yearFilter = document.getElementById('year-filter');
+    const yearFilter = document.getElementById('year-filter') as HTMLSelectElement | null;
     const selectedYear = yearFilter ? yearFilter.value : '';
     if (selectedYear) url += `&yearPrefix=${encodeURIComponent(selectedYear)}`;
+
+    const semesterFilter = document.getElementById('semester-filter') as HTMLSelectElement | null;
+    const selectedSemester = semesterFilter ? semesterFilter.value : '';
+    if (selectedSemester) url += `&semester=${encodeURIComponent(selectedSemester)}`;
 
     // Dropdown filters ใหม่
     const statusFilter = document.getElementById('status-filter');
@@ -271,6 +284,10 @@ async function loadStudents() {
     // Fallback: กรองฝั่ง client-side เพิ่มเติม
     if (selectedYear) {
       studentsToRender = studentsToRender.filter(s => s.studentCode && s.studentCode.startsWith(selectedYear));
+      totalToRender = studentsToRender.length;
+    }
+    if (selectedSemester) {
+      studentsToRender = studentsToRender.filter(s => (s.semester || '2') === selectedSemester);
       totalToRender = studentsToRender.length;
     }
     currentFilteredCount = totalToRender;
@@ -308,7 +325,12 @@ function renderStudentTable(students, total, page, totalPages) {
         : '-';
 
       tr.innerHTML = `
-        <td>${s.studentCode}</td>
+        <td>
+          <div style="display:flex; align-items:center; gap:6px;">
+            <span>${s.studentCode}</span>
+            <span class="inline-block px-1.5 py-0.2 text-[10.5px] font-semibold rounded bg-indigo-50 text-indigo-700 border border-indigo-200" title="รอบฝึกงาน: ${s.semester === 'SUMMER' ? 'Summer' : 'เทอม ' + (s.semester || '2')}">${(s.studentCode ? s.studentCode.substring(0, 2) : '67') + '/' + (s.semester || '2')}</span>
+          </div>
+        </td>
         <td>${s.nameTh}</td>
         <td>${s.advisorName || '<span class="text-gray-400">-</span>'}</td>
         <td>
@@ -900,6 +922,7 @@ window.confirmExport = async function() {
       params.set('viewDropped', String(currentTab === 'dropped'));
       if (searchVal) params.set('search', searchVal);
       if (selectedYear) params.set('yearPrefix', selectedYear);
+      if (selectedSemester) params.set('semester', selectedSemester);
       if (statusFilter && (statusFilter as HTMLSelectElement).value) params.set('statusFilter', (statusFilter as HTMLSelectElement).value);
       if (advisorFilter && (advisorFilter as HTMLSelectElement).value) params.set('advisorFilter', (advisorFilter as HTMLSelectElement).value);
       if (skillFilter && (skillFilter as HTMLSelectElement).value) params.set('skillFilter', (skillFilter as HTMLSelectElement).value);
@@ -1033,7 +1056,21 @@ window.onYearFilterChange = function() {
 
 const yearFilterEl = document.getElementById('year-filter');
 if (yearFilterEl) {
-  yearFilterEl.addEventListener('change', window.onYearFilterChange);
+  yearFilterEl.addEventListener('change', () => {
+    (window as any).onYearFilterChange();
+    loadDashboardSummary();
+  });
+}
+
+const semesterFilterEl = document.getElementById('semester-filter');
+if (semesterFilterEl) {
+  semesterFilterEl.addEventListener('change', () => {
+    clearSearchBox();
+    currentPage = 1;
+    updateFilterUI();
+    loadStudents();
+    loadDashboardSummary();
+  });
 }
 
 // Dropdown filter events (สถานะ, อาจารย์, Skill)

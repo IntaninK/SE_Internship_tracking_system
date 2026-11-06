@@ -781,6 +781,13 @@ const PAGE_BODY_HTML = `
               <option value="">ทุกชั้นปี</option>
             </select>
 
+            <select id="semester-filter" class="input-field" style="width:auto; min-width:125px; font-size:13px; padding:7px 12px; cursor:pointer;">
+              <option value="">ทุกภาคเรียน</option>
+              <option value="1">ภาคเรียนที่ 1</option>
+              <option value="2" selected>ภาคเรียนที่ 2</option>
+              <option value="SUMMER">ภาคฤดูร้อน</option>
+            </select>
+
             <!-- Custom Status Filter Dropdown (กางลงด้านล่างเสมอ ขนาด/ฟอนต์ตรงตามมาตรฐานภาพที่ 2) -->
             <div id="status-dropdown-container" style="position:relative; display:inline-block; width:195px; min-width:195px;">
               <input type="hidden" id="status-filter" value="" data-label="ทุกสถานะ" />

@@ -55,6 +55,7 @@ model Student {
   faculty         String          @default("คณะเทคโนโลยีสารสนเทศและการสื่อสาร") // คณะ
   curriculum      String?         // หลักสูตร / สาขาวิชา
   academicYear    String?         // ปีการศึกษา เช่น "2567" หรือ "2568"
+  semester        String?         @default("2") // ภาคเรียนที่ออกฝึกงาน เช่น "1", "2", "SUMMER"
   studentStatus   String?         @default("กำลังศึกษา") // สถานะนิสิต เช่น กำลังศึกษา, พักการเรียน
   internshipType  String?         @default("NEW")       // ประเภทการฝึก เช่น NEW (ฝึกรอบแรก), RETEST (ฝึกรอบใหม่/ตกค้าง)
   year            Int             // ชั้นปีที่

@@ -213,6 +213,8 @@ router.get("/students", async (req: Request, res: Response) => {
         nickname: s.nickname || (s.major ? `ปี ${s.year}` : "-"),
         email: s.user.email,
         phone: s.phone,
+        semester: s.semester || "2",
+        academicYear: s.academicYear,
         advisorName: req.staff!.name,
         checklistStatusKey: cStatus.key,
         checklistStatusLabel: cStatus.label,

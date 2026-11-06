@@ -141,6 +141,13 @@ const PAGE_BODY_HTML = `
             <option value="">ทุกชั้นปี</option>
           </select>
 
+          <select id="semester-filter" class="input-field" style="width:auto; min-width:125px; font-size:13px; padding:7px 12px; cursor:pointer;">
+            <option value="">ทุกภาคเรียน</option>
+            <option value="1">ภาคเรียนที่ 1</option>
+            <option value="2" selected>ภาคเรียนที่ 2</option>
+            <option value="SUMMER">ภาคฤดูร้อน</option>
+          </select>
+
           <select id="status-filter" class="input-field" style="width:auto; min-width:155px; font-size:13px; padding:7px 12px; cursor:pointer;">
             <option value="">ทุกสถานะ Checklist</option>
             <option value="checklist_approved">✓ อาจารย์รีวิวแล้ว</option>

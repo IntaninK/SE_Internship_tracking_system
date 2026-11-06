@@ -249,9 +249,13 @@ async function loadStudents() {
     if (currentFilter) {
       url += `&chartType=${encodeURIComponent(currentFilter.chartType)}&chartKey=${encodeURIComponent(currentFilter.chartKey)}`;
     }
-    const yearFilter = document.getElementById('year-filter');
+    const yearFilter = document.getElementById('year-filter') as HTMLSelectElement | null;
     const selectedYear = yearFilter ? yearFilter.value : '';
     if (selectedYear) url += `&yearPrefix=${encodeURIComponent(selectedYear)}`;
+
+    const semesterFilter = document.getElementById('semester-filter') as HTMLSelectElement | null;
+    const selectedSemester = semesterFilter ? semesterFilter.value : '';
+    if (selectedSemester) url += `&semester=${encodeURIComponent(selectedSemester)}`;
 
     // Dropdown filters ใหม่
     const statusFilter = document.getElementById('status-filter');
@@ -272,6 +276,10 @@ async function loadStudents() {
     // Fallback: กรองฝั่ง client-side
     if (selectedYear) {
       studentsToRender = studentsToRender.filter(s => s.studentCode && s.studentCode.startsWith(selectedYear));
+      totalToRender = studentsToRender.length;
+    }
+    if (selectedSemester) {
+      studentsToRender = studentsToRender.filter(s => (s.semester || '2') === selectedSemester);
       totalToRender = studentsToRender.length;
     }
     currentFilteredCount = totalToRender;
@@ -359,7 +367,12 @@ function renderStudentTable(students, total, page, totalPages) {
 
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td>${s.studentCode}</td>
+      <td>
+        <div style="display:flex; align-items:center; gap:6px;">
+          <span>${s.studentCode}</span>
+          <span class="inline-block px-1.5 py-0.2 text-[10.5px] font-semibold rounded bg-indigo-50 text-indigo-700 border border-indigo-200" title="รอบฝึกงาน: ${s.semester === 'SUMMER' ? 'Summer' : 'เทอม ' + (s.semester || '2')}">${(s.studentCode ? s.studentCode.substring(0, 2) : '67') + '/' + (s.semester || '2')}</span>
+        </div>
+      </td>
       <td>${s.nameTh}</td>
       <td>${s.advisorName || '<span class="text-gray-400">-</span>'}</td>
       <td>
@@ -611,6 +624,7 @@ window.confirmExport = async function() {
       const params = new URLSearchParams();
       if (searchVal) params.set('search', searchVal);
       if (selectedYear) params.set('yearPrefix', selectedYear);
+      if (selectedSemester) params.set('semester', selectedSemester);
       if (statusFilter && statusFilter.value) params.set('statusFilter', statusFilter.value);
       if (skillFilter && skillFilter.value) params.set('skillFilter', skillFilter.value);
       if (currentFilter) {
@@ -776,7 +790,7 @@ window.clearAllFilters = function() {
   currentFilter = null;
   currentPage = 1;
   document.querySelectorAll('.chart-status-row').forEach(r => r.classList.remove('bg-purple-100', 'font-bold'));
-  ['status-filter', 'skill-filter', 'year-filter'].forEach(id => {
+  ['status-filter', 'skill-filter', 'year-filter', 'semester-filter'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.value = '';
   });

@@ -235,7 +235,13 @@ router.get("/dashboard-summary", async (req: Request, res: Response) => {
       },
     });
 
-    const students = filterStudentsByScope(allStudentsRaw, req);
+    let students = filterStudentsByScope(allStudentsRaw, req);
+    if (req.query.yearPrefix) {
+      students = students.filter((s) => s.studentCode && s.studentCode.startsWith(String(req.query.yearPrefix)));
+    }
+    if (req.query.semester) {
+      students = students.filter((s) => (s.semester || "2") === String(req.query.semester));
+    }
 
     // ตรวจสอบและสร้างข้อมูล Staff ให้อัตโนมัติสำหรับ User ที่มี role ADVISOR / STAFF / ADMIN (ถ้ายังไม่มีในตาราง Staff)
     const staffUsers = await prisma.user.findMany({
@@ -418,6 +424,8 @@ router.get("/students", async (req: Request, res: Response) => {
         nickname: s.nickname,
         major: s.major,
         year: s.year,
+        semester: s.semester || "2",
+        academicYear: s.academicYear,
         advisorName: s.advisor ? s.advisor.name : null,
         advisorId: s.advisorId,
         supervisorName: s.supervisor ? s.supervisor.name : null,
