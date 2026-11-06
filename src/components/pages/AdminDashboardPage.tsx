@@ -932,9 +932,14 @@ const PAGE_BODY_HTML = `
       <!-- 3. รายชื่ออาจารย์ที่ปรึกษา + จำนวนนิสิต -->
       <div style="display:grid; grid-template-columns:1fr 320px; gap:24px;" class="max-md:!grid-cols-1">
         <section class="card" style="margin-bottom:0;">
-          <div class="card-header">
-            <span class="material-icons header-icon">supervisor_account</span>
-            <h2 class="card-title">รายชื่ออาจารย์ที่ปรึกษาและภาระงานตรวจ Checklist</h2>
+          <div class="card-header" style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px;">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span class="material-icons header-icon">supervisor_account</span>
+              <h2 class="card-title">รายชื่ออาจารย์ที่ปรึกษาและภาระงานตรวจ Checklist</h2>
+            </div>
+            <span style="font-size:12px; color:#475569; font-weight:500; background:#F1F5F9; padding:3px 10px; border-radius:9999px; border:1px solid #CBD5E1;">
+              แยกกลุ่มตามสาขาวิชา
+            </span>
           </div>
           <div class="card-body">
             <table class="data-table">

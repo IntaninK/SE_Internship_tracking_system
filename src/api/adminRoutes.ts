@@ -377,32 +377,95 @@ router.get("/dashboard-summary", async (req: Request, res: Response) => {
       }
     });
 
-    // --- สรุปอาจารย์ที่ปรึกษา ---
-    const advisorSummary = advisors.map((adv) => {
-      const activeAdvised = adv.studentsAdvised.filter((stu) => !stu.isDropped);
-      const totalAdvised = activeAdvised.length;
-      let checklistReviewed = 0;
-      let checklistNotReviewed = 0;
+    // ตรวจสอบขอบเขตสาขาวิชา (targetMajor) สำหรับอาจารย์ที่ปรึกษา:
+    // 1. ถ้าเป็นอาจารย์ประจำวิชา (Course Instructor) จะถูกจำกัดเฉพาะสาขาของตนเองเสมอ
+    // 2. ถ้าเป็น Staff / Super Admin แล้วเลือกสาขาจาก Filter (req.query.major) จะกรองตามสาขานั้น
+    // 3. ถ้าเลือก ALL หรือไม่ได้ระบุ จะแสดงทุกสาขา
+    const isCentralOrStaff = Boolean(
+      req.staff?.isStaff ||
+        req.session.user?.role === "STAFF" ||
+        (req.session.user?.role === "ADMIN" && !req.staff?.department)
+    );
+    const dept = req.staff?.department;
+    const majorQuery = (req.query.major as string | undefined)?.trim();
 
-      activeAdvised.forEach((stu) => {
-        stu.companies.forEach((c) => {
-          if (c.checklistStatus === "APPROVED" || c.checklistStatus === "REJECTED") {
-            checklistReviewed++;
-          } else {
-            checklistNotReviewed++;
-          }
+    let targetMajor: string | null = null;
+    if (majorQuery && majorQuery !== "ALL") {
+      targetMajor = majorQuery;
+    } else if (!isCentralOrStaff && dept) {
+      targetMajor = dept;
+    }
+
+    const targetLower = targetMajor ? targetMajor.toLowerCase() : "";
+    const matchesTarget = (str?: string | null) => {
+      if (!str || !targetLower) return false;
+      const s = str.toLowerCase();
+      return s.includes(targetLower) || targetLower.includes(s);
+    };
+
+    const getAdvisorDepartment = (adv: any): string | null => {
+      if (adv.department && adv.department.trim()) return adv.department.trim();
+      const sWithMajor = adv.studentsAdvised.find((s: any) => s.major || s.curriculum);
+      if (sWithMajor) return sWithMajor.major || sWithMajor.curriculum || null;
+      return null;
+    };
+
+    // --- สรุปอาจารย์ที่ปรึกษา (แยกตามสาขาวิชา และสัมพันธ์กับตัวกรอง) ---
+    const advisorSummary = advisors
+      .map((adv) => {
+        const advisorDept = getAdvisorDepartment(adv);
+        const belongsToDept = targetMajor ? matchesTarget(advisorDept) : true;
+
+        let relevantAdvised = adv.studentsAdvised.filter((stu: any) => !stu.isDropped);
+        if (targetMajor) {
+          relevantAdvised = relevantAdvised.filter(
+            (s: any) => matchesTarget(s.major) || matchesTarget(s.curriculum)
+          );
+        }
+        if (req.query.yearPrefix) {
+          relevantAdvised = relevantAdvised.filter(
+            (s: any) => s.studentCode && s.studentCode.startsWith(String(req.query.yearPrefix))
+          );
+        }
+        if (req.query.semester) {
+          relevantAdvised = relevantAdvised.filter(
+            (s: any) => (s.semester || "2") === String(req.query.semester)
+          );
+        }
+
+        const hasStudentsInTarget = targetMajor ? relevantAdvised.length > 0 : true;
+
+        // ถ้ามีการเลือกกรองสาขาเจาะจง แล้วอาจารย์ไม่ได้สังกัดสาขานี้ และไม่มีนิสิตในสาขานี้ ให้ข้าม
+        if (targetMajor && !belongsToDept && !hasStudentsInTarget) {
+          return null;
+        }
+
+        const totalAdvised = relevantAdvised.length;
+        let checklistReviewed = 0;
+        let checklistNotReviewed = 0;
+
+        relevantAdvised.forEach((stu: any) => {
+          stu.companies.forEach((c: any) => {
+            if (c.checklistStatus === "APPROVED" || c.checklistStatus === "REJECTED") {
+              checklistReviewed++;
+            } else {
+              checklistNotReviewed++;
+            }
+          });
         });
-      });
 
-      return {
-        id: adv.id,
-        name: adv.name,
-        department: adv.department,
-        totalAdvised,
-        checklistReviewed,
-        checklistNotReviewed,
-      };
-    });
+        const displayDept = targetMajor && hasStudentsInTarget && !belongsToDept ? targetMajor : advisorDept;
+
+        return {
+          id: adv.id,
+          name: adv.name,
+          department: displayDept,
+          totalAdvised,
+          checklistReviewed,
+          checklistNotReviewed,
+        };
+      })
+      .filter((a): a is NonNullable<typeof a> => a !== null);
 
     // จำนวนนิสิตที่มี/ไม่มีอาจารย์ที่ปรึกษา (คำนวณจากนิสิตปกติที่ยังไม่ดรอป)
     const studentsWithAdvisor = activeStudents.filter((s) => s.advisorId !== null).length;

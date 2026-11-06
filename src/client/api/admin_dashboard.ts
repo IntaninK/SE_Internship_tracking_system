@@ -535,28 +535,124 @@ function renderPagination(page, totalPages, total) {
 }
 
 // ==========================================
-// ตารางอาจารย์ที่ปรึกษา
+// ตารางอาจารย์ที่ปรึกษา (จัดกลุ่มแยกตามสาขาวิชา + รองรับ Filter)
 // ==========================================
+function getDepartmentGroupTitle(department?: string | null): string {
+  if (!department || department === '-' || department === 'OTHER') {
+    return 'สาขาวิชาอื่นๆ / ยังไม่ระบุสาขา';
+  }
+  const formatted = formatMajorName(department);
+  if (formatted === '-') return 'สาขาวิชาอื่นๆ / ยังไม่ระบุสาขา';
+  if (formatted.startsWith('สาขา')) return formatted;
+  return `สาขาวิชา${formatted}`;
+}
+
 function renderAdvisorTable(advisors) {
   const tbody = document.getElementById('advisor-tbody');
   if (!tbody) return;
   tbody.innerHTML = '';
 
-  if (advisors.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="4" class="text-center py-4 text-gray-400">ยังไม่มีข้อมูลอาจารย์ที่ปรึกษา</td></tr>';
+  if (!advisors || advisors.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="4" class="text-center py-6 text-gray-400 font-medium">ไม่พบข้อมูลอาจารย์ที่ปรึกษาตามเงื่อนไขที่เลือก</td></tr>';
     return;
   }
 
+  // 1. Group advisors by department
+  const groups: Record<string, any[]> = {};
   advisors.forEach((a) => {
-    const notCheckedColor = a.checklistNotReviewed > 5 ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-700';
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td>${a.name}</td>
-      <td>${a.totalAdvised}</td>
-      <td>${a.checklistReviewed}</td>
-      <td><span class="inline-block px-2 py-0.5 text-xs font-medium rounded-full ${notCheckedColor}">${a.checklistNotReviewed}</span></td>
+    const title = getDepartmentGroupTitle(a.department);
+    if (!groups[title]) {
+      groups[title] = [];
+    }
+    groups[title].push(a);
+  });
+
+  const MAJOR_ORDER = [
+    'วิศวกรรมซอฟต์แวร์',
+    'ธุรกิจดิจิทัล',
+    'วิทยาการคอมพิวเตอร์',
+    'เทคโนโลยีสารสนเทศ',
+    'วิศวกรรมคอมพิวเตอร์',
+    'คอมพิวเตอร์กราฟิก',
+    'ภูมิสารสนเทศ',
+    'วิทยาการข้อมูล',
+  ];
+
+  const sortedGroups = Object.keys(groups).sort((a, b) => {
+    const idxA = MAJOR_ORDER.findIndex((m) => a.includes(m));
+    const idxB = MAJOR_ORDER.findIndex((m) => b.includes(m));
+    if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+    if (idxA !== -1) return -1;
+    if (idxB !== -1) return 1;
+    return a.localeCompare(b, 'th');
+  });
+
+  sortedGroups.forEach((deptTitle) => {
+    const deptAdvisors = groups[deptTitle];
+    // Sort advisors alphabetically
+    deptAdvisors.sort((a, b) => (a.name || '').localeCompare(b.name || '', 'th'));
+
+    const totalAdvisedInDept = deptAdvisors.reduce((sum, a) => sum + (Number(a.totalAdvised) || 0), 0);
+    const totalPendingInDept = deptAdvisors.reduce((sum, a) => sum + (Number(a.checklistNotReviewed) || 0), 0);
+
+    // Group Header Row
+    const headerTr = document.createElement('tr');
+    headerTr.className = 'advisor-dept-header-row';
+    headerTr.innerHTML = `
+      <td colspan="4" style="background: #F1F5F9; border-top: 2px solid #E2E8F0; border-bottom: 1px solid #CBD5E1; padding: 9px 14px;">
+        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
+          <div style="display: flex; align-items: center; gap: 7px; font-weight: 700; color: #1E3A8A; font-size: 13.5px;">
+            <span class="material-icons" style="font-size: 18px; color: #2563EB;">school</span>
+            <span>${deptTitle}</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 6px; font-size: 11.5px;">
+            <span style="background: #FFFFFF; color: #334155; padding: 2px 8px; border-radius: 9999px; font-weight: 600; border: 1px solid #CBD5E1;">
+              อาจารย์ ${deptAdvisors.length} ท่าน
+            </span>
+            <span style="background: #EFF6FF; color: #1D4ED8; padding: 2px 8px; border-radius: 9999px; font-weight: 600; border: 1px solid #BFDBFE;">
+              นิสิตในสังกัด ${totalAdvisedInDept} คน
+            </span>
+            ${
+              totalPendingInDept > 0
+                ? `<span style="background: #FEF2F2; color: #DC2626; padding: 2px 8px; border-radius: 9999px; font-weight: 600; border: 1px solid #FECACA;">
+                    รอตรวจ ${totalPendingInDept} รายการ
+                  </span>`
+                : ''
+            }
+          </div>
+        </div>
+      </td>
     `;
-    tbody.appendChild(tr);
+    tbody.appendChild(headerTr);
+
+    // Advisor Rows in this department
+    deptAdvisors.forEach((a) => {
+      const notCheckedColor =
+        a.checklistNotReviewed > 5
+          ? 'bg-red-100 text-red-600'
+          : a.checklistNotReviewed > 0
+          ? 'bg-amber-100 text-amber-700'
+          : 'bg-green-100 text-green-700';
+
+      const tr = document.createElement('tr');
+      tr.style.transition = 'background-color 0.15s ease';
+      tr.innerHTML = `
+        <td style="padding-left: 22px;">
+          <div style="display: flex; align-items: center; gap: 7px;">
+            <span class="material-icons" style="font-size: 16px; color: #94A3B8;">person_outline</span>
+            <span style="font-weight: 500; color: #1E293B; font-size: 13px;">${a.name}</span>
+          </div>
+        </td>
+        <td style="font-weight: 600; color: #334155; font-size: 13px;">${a.totalAdvised}</td>
+        <td style="color: #059669; font-weight: 600; font-size: 13px;">${a.checklistReviewed}</td>
+        <td>
+          <span class="inline-block px-2.5 py-0.5 text-xs font-semibold rounded-full ${notCheckedColor}">
+            ${a.checklistNotReviewed}
+          </span>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
   });
 }
 
