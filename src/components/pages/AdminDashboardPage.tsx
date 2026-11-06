@@ -408,6 +408,35 @@ const PAGE_STYLES: string[] = [`
     gap: 10px !important;
   }
 
+  #admin-dashboard #pending-companies-bulk-actions {
+    flex-wrap: nowrap !important;
+    overflow-x: auto;
+    scrollbar-width: thin;
+  }
+
+  #admin-dashboard #pending-companies-selected-count {
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
+
+  #admin-dashboard #pending-companies-bulk-actions > div {
+    flex: 1 0 auto;
+    flex-wrap: nowrap !important;
+    justify-content: flex-end;
+    gap: 8px !important;
+  }
+
+  #admin-dashboard #pending-companies-bulk-actions button,
+  #admin-dashboard #pending-companies-bulk-merge-target {
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
+
+  #admin-dashboard #pending-companies-bulk-merge-target {
+    width: 356px;
+    max-width: 356px;
+  }
+
   #admin-dashboard .admin-main #active-action-buttons,
   #admin-dashboard .admin-main #dropped-action-buttons {
     gap: 9px !important;
@@ -1474,7 +1503,7 @@ const PAGE_BODY_HTML = `
         </div>
         <div id="pending-companies-content" style="overflow:hidden; opacity:1; max-height:5000px; transition:max-height 220ms ease, opacity 180ms ease;">
           <div class="card-body">
-            <div id="pending-companies-bulk-actions" style="display:none; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom:12px; padding:10px 12px; background:#EFF6FF; border:1px solid #BFDBFE; border-radius:8px;">
+            <div id="pending-companies-bulk-actions" style="display:none; align-items:center; gap:12px; flex-wrap:nowrap; margin-bottom:12px; padding:10px 12px; background:#EFF6FF; border:1px solid #BFDBFE; border-radius:8px;">
               <span id="pending-companies-selected-count" style="font-size:13px; font-weight:600; color:#1E40AF;"></span>
               <div style="display:flex; align-items:center; gap:12px;">
                 <button type="button" id="pending-companies-bulk-confirm" onclick="window.confirmSelectedPendingCompanies(event)"
@@ -1487,6 +1516,10 @@ const PAGE_BODY_HTML = `
                   <span class="material-icons" style="font-size:15px;">merge_type</span>
                   <span id="pending-companies-bulk-merge-label"></span>
                 </button>
+                <select id="pending-companies-bulk-merge-target" class="input-field" aria-label="เลือกบริษัทปลายทางสำหรับยุบรวมรายการที่เลือก"
+                  style="font-size:12px; width:356px; min-width:356px; max-width:356px; padding:7px 10px !important;">
+                  <option value="">-- หรือเลือกยุบรวมเข้ากับบริษัทเดิมที่มีอยู่แล้ว --</option>
+                </select>
                 <button type="button" id="pending-companies-clear-selection" onclick="window.clearPendingCompanySelection(event)"
                   style="border:0; background:transparent; color:#2563EB; font-size:12px; font-weight:600; cursor:pointer; padding:6px;">ล้างการเลือก</button>
               </div>

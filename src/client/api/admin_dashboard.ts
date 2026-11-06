@@ -3224,6 +3224,7 @@ function updatePendingCompanySelectionUi() {
   const confirmButton = document.getElementById('pending-companies-bulk-confirm') as HTMLButtonElement | null;
   const mergeLabel = document.getElementById('pending-companies-bulk-merge-label');
   const mergeButton = document.getElementById('pending-companies-bulk-merge') as HTMLButtonElement | null;
+  const mergeTargetSelect = document.getElementById('pending-companies-bulk-merge-target') as HTMLSelectElement | null;
   const clearButton = document.getElementById('pending-companies-clear-selection') as HTMLButtonElement | null;
   tbody?.querySelectorAll<HTMLButtonElement>('[data-pending-action]').forEach(button => {
     button.disabled = pendingCompanyBulkInProgress;
@@ -3234,6 +3235,12 @@ function updatePendingCompanySelectionUi() {
   if (mergeLabel) mergeLabel.textContent = `ยุบรวมชื่อซ้ำ (${selectedPendingCompanyIds.size})`;
   if (confirmButton) confirmButton.disabled = pendingCompanyBulkInProgress || selectedPendingCompanyIds.size === 0;
   if (mergeButton) mergeButton.disabled = pendingCompanyBulkInProgress || selectedPendingCompanyIds.size === 0;
+  if (mergeTargetSelect) {
+    const selectedTargets = [...selectedPendingCompanyIds].map(id => pendingCompanyMergeTargets.get(id) || '');
+    const firstTarget = selectedTargets[0] || '';
+    mergeTargetSelect.value = firstTarget && selectedTargets.every(target => target === firstTarget) ? firstTarget : '';
+    mergeTargetSelect.disabled = pendingCompanyBulkInProgress || selectedPendingCompanyIds.size === 0;
+  }
   if (clearButton) clearButton.disabled = pendingCompanyBulkInProgress;
 }
 
@@ -3265,6 +3272,25 @@ window.selectAllPendingCompanies = function(event, companyIds) {
   document.querySelectorAll<HTMLInputElement>('#pending-companies-tbody .pending-company-checkbox').forEach(rowCheckbox => {
     rowCheckbox.checked = checkbox.checked;
     rowCheckbox.closest('tr')?.classList.toggle('bg-blue-50/50', checkbox.checked);
+  });
+  updatePendingCompanySelectionUi();
+};
+
+window.setPendingCompanyBulkMergeTarget = function(event) {
+  event.stopPropagation();
+  if (pendingCompanyBulkInProgress) return;
+  const mergeTargetSelect = event.currentTarget as HTMLSelectElement;
+  const mergeIntoCompanyId = mergeTargetSelect.value;
+  selectedPendingCompanyIds.forEach(id => {
+    if (mergeIntoCompanyId) {
+      pendingCompanyMergeTargets.set(id, mergeIntoCompanyId);
+    } else {
+      pendingCompanyMergeTargets.delete(id);
+    }
+  });
+  document.querySelectorAll<HTMLSelectElement>('#pending-companies-tbody [data-merge-company-id]').forEach(select => {
+    const companyId = select.dataset.mergeCompanyId || '';
+    if (selectedPendingCompanyIds.has(companyId)) select.value = mergeIntoCompanyId;
   });
   updatePendingCompanySelectionUi();
 };
@@ -3375,7 +3401,7 @@ window.mergeSelectedPendingCompanies = async function(event) {
   const readyCount = companyIds.filter(id => pendingCompanyMergeTargets.get(id)).length;
   const missingTargetCount = companyIds.length - readyCount;
   if (readyCount === 0) {
-    showPendingCompanyBulkToast('กรุณาเลือกบริษัทปลายทางใน Dropdown ของแต่ละรายการก่อนยุบรวม', true);
+    showPendingCompanyBulkToast('กรุณาเลือกบริษัทปลายทางจาก Dropdown ด้านบนหรือในแต่ละรายการก่อนยุบรวม', true);
     return;
   }
   const confirmationMessage = missingTargetCount > 0
@@ -3429,6 +3455,10 @@ function renderPendingCompaniesTable() {
     }
   });
   const verifiedList = allCompanies.filter(c => c.status === 'VERIFIED' || c.status === 'PARTNER');
+  const mergeOptions = `<option value="">-- หรือเลือกยุบรวมเข้ากับบริษัทเดิมที่มีอยู่แล้ว --</option>` +
+    verifiedList.map(company => `<option value="${escapePendingCompanyHtml(company.id)}">${escapePendingCompanyHtml(company.nameTh)} (${escapePendingCompanyHtml(company.province)})</option>`).join('');
+  const bulkMergeTargetSelect = document.getElementById('pending-companies-bulk-merge-target') as HTMLSelectElement | null;
+  if (bulkMergeTargetSelect) bulkMergeTargetSelect.innerHTML = mergeOptions;
   const filteredList = pendingCompaniesSearch
     ? pendingList.filter(company => [
         company.nameTh,
@@ -3452,9 +3482,6 @@ function renderPendingCompaniesTable() {
     const messageClass = pendingCompaniesSearch ? 'text-gray-400' : 'text-emerald-700 font-semibold';
     tbody.innerHTML = `<tr><td colspan="5" class="text-center py-6 ${messageClass}">${message}</td></tr>`;
   } else {
-    const mergeOptions = `<option value="">-- หรือเลือกยุบรวมเข้ากับบริษัทเดิมที่มีอยู่แล้ว --</option>` +
-      verifiedList.map(company => `<option value="${escapePendingCompanyHtml(company.id)}">${escapePendingCompanyHtml(company.nameTh)} (${escapePendingCompanyHtml(company.province)})</option>`).join('');
-
     tbody.innerHTML = pageCompanies.map(company => {
       const id = escapePendingCompanyHtml(company.id);
       const name = escapePendingCompanyHtml(company.nameTh);
@@ -3474,7 +3501,7 @@ function renderPendingCompaniesTable() {
           </td>
           <td>
             <input type="text" id="std-name-${id}" class="input-field" value="${name}" placeholder="ปรับชื่อบริษัทให้เป็นมาตรฐาน..." style="font-size:12px; padding:6px 10px !important; margin-bottom:6px; font-weight:700;" />
-            <select id="merge-into-${id}" data-merge-company-id="${id}" class="input-field" style="font-size:11.5px; padding:5px 8px !important;">
+            <select id="merge-into-${id}" data-merge-company-id="${id}" class="input-field" aria-label="เลือกบริษัทปลายทางสำหรับ ${name}" style="font-size:12px; padding:6px 10px !important;">
               ${mergeOptions.replace(
                 `<option value="${selectedMergeTarget}">`,
                 `<option value="${selectedMergeTarget}" selected>`
@@ -3505,10 +3532,10 @@ function renderPendingCompaniesTable() {
     tbody.querySelectorAll<HTMLButtonElement>('[data-pending-action]').forEach(button => {
       button.addEventListener('click', () => {
         const id = button.dataset.companyId || '';
-        if (button.dataset.pendingAction === 'confirm') {
-          window.confirmPendingCompany(id);
-        } else {
+        if (button.dataset.pendingAction === 'merge') {
           window.mergePendingCompany(id);
+        } else {
+          window.confirmPendingCompany(id);
         }
       });
     });
@@ -3531,8 +3558,13 @@ function renderPendingCompaniesTable() {
         } else {
           pendingCompanyMergeTargets.delete(companyId);
         }
+        updatePendingCompanySelectionUi();
       });
     });
+  }
+
+  if (bulkMergeTargetSelect) {
+    bulkMergeTargetSelect.onchange = event => window.setPendingCompanyBulkMergeTarget(event);
   }
 
   const selectAllCheckbox = document.getElementById('select-all-pending-companies') as HTMLInputElement | null;
@@ -3585,19 +3617,32 @@ window.confirmPendingCompany = async function(id) {
 };
 
 window.mergePendingCompany = async function(id) {
-  const mergeIntoCompanyId = document.getElementById(`merge-into-${id}`)?.value;
+  const mergeTargetSelect = document.getElementById('pending-companies-bulk-merge-target') as HTMLSelectElement | null;
+  const mergeIntoCompanyId = mergeTargetSelect?.value || pendingCompanyMergeTargets.get(id);
   if (!mergeIntoCompanyId) {
-    alert('กรุณาเลือกบริษัทหลักใน Dropdown ที่ต้องการยุบรวมชื่อเข้าด้วยกัน');
+    showPendingCompanyBulkToast('กรุณาเลือกบริษัทปลายทางจาก Dropdown ก่อนกดยุบรวม', true);
     return;
   }
-  const result = await submitPendingCompanyMerge(id, mergeIntoCompanyId);
-  if (result.success) {
+  if (pendingCompanyBulkInProgress) return;
+  if (!window.confirm('ยืนยันยุบรวมบริษัทนี้เข้ากับบริษัทปลายทางที่เลือกใช่หรือไม่?')) return;
+
+  pendingCompanyBulkInProgress = true;
+  updatePendingCompanySelectionUi();
+  try {
+    const result = await submitPendingCompanyMerge(id, mergeIntoCompanyId);
+    if (!result.success) {
+      console.error(`Could not merge pending company ${id}: ${result.message}`);
+      showPendingCompanyBulkToast(`ยุบรวมไม่สำเร็จ: ${result.message}`, true);
+      return;
+    }
+
     selectedPendingCompanyIds.delete(id);
     pendingCompanyMergeTargets.delete(id);
-    alert('✅ ' + result.message);
     await window.loadSuperAdminOverview();
-  } else {
-    alert('เกิดข้อผิดพลาด: ' + result.message);
+    showPendingCompanyBulkToast('ยุบรวมบริษัทสำเร็จ', false);
+  } finally {
+    pendingCompanyBulkInProgress = false;
+    updatePendingCompanySelectionUi();
   }
 };
 
