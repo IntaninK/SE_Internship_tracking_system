@@ -1011,7 +1011,7 @@ const PAGE_BODY_HTML = `
             <span class="material-icons header-icon">add_task</span>
             <div>
               <h2 class="card-title" style="margin:0;">สร้างกิจกรรมอบรมภายในคณะ</h2>
-              <p style="margin:2px 0 0 0; font-size:11.5px; color:#E0E7FF;">คำนวณชั่วโมงอัตโนมัติ (สูงสุดไม่เกิน 6 ชม./วัน)</p>
+              <p style="margin:2px 0 0 0; font-size:11.5px; color:#E0E7FF;">กำหนดได้หลายช่วงเวลา/หลายวัน และกรอกชั่วโมงแต่ละช่วงเองได้</p>
             </div>
           </div>
           <div class="card-body" style="overflow:visible !important;">
@@ -1023,38 +1023,40 @@ const PAGE_BODY_HTML = `
 
               <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
                 <div>
-                  <label style="font-size:12.5px; font-weight:700; color:#334155;">ประเภทชั่วโมงทักษะ</label>
-                  <select id="evt-skill-type" class="input-field" style="margin-top:4px;">
-                    <option value="SOFT">Soft Skill (เกณฑ์ 12 ชม.)</option>
-                    <option value="HARD">Hard Skill (เกณฑ์ 18 ชม.)</option>
-                  </select>
-                </div>
-                <div>
-                  <label style="font-size:12.5px; font-weight:700; color:#334155;">วันที่จัดกิจกรรม</label>
-                  <input type="date" id="evt-date" class="input-field" style="margin-top:4px;" />
-                </div>
+                <label style="font-size:12.5px; font-weight:700; color:#334155;">ประเภทชั่วโมงทักษะ</label>
+                <select id="evt-skill-type" class="input-field" style="margin-top:4px;">
+                  <option value="SOFT">Soft Skill (เกณฑ์ 12 ชม.)</option>
+                  <option value="HARD">Hard Skill (เกณฑ์ 18 ชม.)</option>
+                </select>
               </div>
 
-              <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
-                <div>
-                  <label style="font-size:12.5px; font-weight:700; color:#334155;">เวลาเริ่ม</label>
-                  <input type="time" id="evt-start-time" class="input-field" value="09:00" onchange="previewEventHours()" style="margin-top:4px;" />
+              <!-- รายการช่วงเวลา / วันที่จัด และจำนวนชั่วโมง (Dynamic List) -->
+              <div style="background:#F8FAFC; border:1px solid #E2E8F0; border-radius:12px; padding:12px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                  <label style="font-size:12.5px; font-weight:700; color:#1E293B; display:flex; align-items:center; gap:5px;">
+                    <span class="material-icons" style="font-size:16px; color:#4338CA;">date_range</span>
+                    <span>ช่วงเวลา / วันที่อบรม &amp; ชั่วโมง</span>
+                  </label>
+                  <button type="button" onclick="window.addEventSession()" style="background:#EEF2FF; border:1px solid #C7D2FE; color:#4338CA; border-radius:8px; padding:4px 10px; font-size:11.5px; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:4px;" class="hover:bg-indigo-100">
+                    <span class="material-icons" style="font-size:14px;">add</span>
+                    <span>เพิ่มช่วงเวลา / วัน</span>
+                  </button>
                 </div>
-                <div>
-                  <label style="font-size:12.5px; font-weight:700; color:#334155;">เวลาสิ้นสุด</label>
-                  <input type="time" id="evt-end-time" class="input-field" value="16:00" onchange="previewEventHours()" style="margin-top:4px;" />
-                </div>
-              </div>
 
-              <!-- กล่องแสดงผลการคำนวณชั่วโมงอัตโนมัติ (เพดานสูงสุด 6 ชม./วัน) -->
-              <div style="padding:12px 14px; background:#ECFDF5; border:1px solid #A7F3D0; border-radius:12px; display:flex; align-items:center; justify-content:space-between;">
-                <div>
-                  <div style="font-size:12px; font-weight:700; color:#065F46;">ชั่วโมงที่ระบบคำนวณให้อัตโนมัติ:</div>
-                  <div id="evt-hours-note" style="font-size:11px; color:#047857;">ระยะเวลาจริง 7 ชม. (จำกัดเพดานสูงสุดไม่เกิน 6 ชม./วัน)</div>
+                <div id="evt-sessions-list" style="display:flex; flex-direction:column; gap:8px;">
+                  <!-- Dynamic sessions injected by JS -->
                 </div>
-                <div style="text-align:right;">
-                  <span id="evt-credited-hours-badge" style="font-size:20px; font-weight:800; color:#059669;">6</span>
-                  <span style="font-size:12px; font-weight:700; color:#065F46;"> ชม.</span>
+
+                <!-- กล่องสรุปชั่วโมงรวมทั้งกิจกรรม -->
+                <div style="margin-top:10px; padding:10px 14px; background:#ECFDF5; border:1px solid #A7F3D0; border-radius:10px; display:flex; align-items:center; justify-content:space-between;">
+                  <div>
+                    <div style="font-size:12px; font-weight:700; color:#065F46;">ชั่วโมงรวมทั้งกิจกรรม:</div>
+                    <div id="evt-hours-summary-note" style="font-size:11px; color:#047857;">รวม 1 ช่วงเวลา (กรอกชั่วโมงแต่ละช่วงเองได้)</div>
+                  </div>
+                  <div style="text-align:right;">
+                    <span id="evt-total-hours-badge" style="font-size:22px; font-weight:800; color:#059669;">6</span>
+                    <span style="font-size:12px; font-weight:700; color:#065F46;"> ชม.</span>
+                  </div>
                 </div>
               </div>
 
@@ -1256,6 +1258,20 @@ const PAGE_BODY_HTML = `
 
               <select id="checkin-event-select" class="input-field" onchange="renderSelectedEventCheckins()" style="font-weight:700; color:#1E1B4B;"></select>
               <div id="checkin-selected-event-meta" style="margin-top:8px; font-size:12px; color:#475569;"></div>
+
+              <!-- เลือกช่วงเวลา/วันที่ ที่ต้องการ Check-in (รองรับ Option 1 แยกวัน/แยกช่วง) -->
+              <div id="checkin-session-select-container" style="margin-top:10px; padding-top:10px; border-top:1px dashed #CBD5E1;">
+                <label style="font-size:12px; font-weight:700; color:#1E293B; display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                  <span>เลือกรอบวันที่ / ช่วงเวลาที่ Check-in:</span>
+                  <span id="checkin-session-hours-badge" style="font-size:11px; font-weight:700; background:#E0E7FF; color:#3730A3; padding:2px 8px; border-radius:999px;"></span>
+                </label>
+                <select id="checkin-session-select" class="input-field" onchange="window.handleCheckInSessionChange()" style="font-size:12.5px; font-weight:600; color:#1E1B4B;">
+                  <option value="ALL">🌟 เช็คอินทั้งกิจกรรม (ทุกช่วงพร้อมกัน)</option>
+                </select>
+                <div id="checkin-session-hint" style="font-size:11px; color:#64748B; margin-top:3px;">
+                  * สามารถเลือกบันทึกเฉพาะวันที่ 1 หรือ วันที่ 2 ตามที่นิสิตมาเข้าร่วมจริง (ชั่วโมงจะคิดแยกตามช่วง)
+                </div>
+              </div>
             </div>
 
             <!-- กล่องกรอก/วางรหัสนิสิตจากใบเซ็นชื่อหน้างาน -->
@@ -1325,7 +1341,7 @@ const PAGE_BODY_HTML = `
                     </tr>
                   </thead>
                   <tbody id="checkin-history-tbody">
-                    <tr><td colspan="6" class="text-center py-6 text-gray-400">ยังไม่มีรายการ Check-in ในกิจกรรมนี้</td></tr>
+                    <tr><td colspan="7" class="text-center py-6 text-gray-400">ยังไม่มีรายการ Check-in ในกิจกรรมนี้</td></tr>
                   </tbody>
                 </table>
               </div>

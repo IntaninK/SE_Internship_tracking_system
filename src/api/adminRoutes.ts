@@ -7,6 +7,8 @@ import {
   loadSuperAdminState,
   saveSuperAdminState,
   calculateEventHours,
+  EventSessionItem,
+  EventCheckInItem,
 } from "../utils/superAdminStore";
 
 const upload = multer({
@@ -2148,46 +2150,117 @@ router.post("/super-admin/major-unlock", async (req: Request, res: Response) => 
   }
 });
 
-// 9.3 สร้างกิจกรรมอบรมภายในคณะ (คำนวณชั่วโมงอัตโนมัติ สูงสุดไม่เกิน 6 ชม./วัน)
+// 9.3 สร้างกิจกรรมอบรมภายในคณะ (รองรับหลายช่วงเวลา / หลายวัน และกำหนดชั่วโมงแต่ละช่วงเองได้)
 router.post("/super-admin/events", async (req: Request, res: Response) => {
   try {
     const state = loadSuperAdminState();
-    const { title, skillType, eventDate, startTime, endTime, targetMajor, targetYear, location, academicYear } =
-      req.body;
+    const {
+      title,
+      skillType,
+      sessions,
+      eventDate,
+      startTime,
+      endTime,
+      creditedHours: manualCreditedHours,
+      targetMajor,
+      targetYear,
+      location,
+      academicYear,
+    } = req.body;
 
-    if (!title || ! String(title).trim()) {
+    if (!title || !String(title).trim()) {
       return res.status(400).json({ success: false, message: "กรุณาระบุชื่อกิจกรรมอบรม" });
     }
 
-    const { rawHours, creditedHours } = calculateEventHours(
-      startTime || "09:00",
-      endTime || "16:00"
-    );
+    let parsedSessions: EventSessionItem[] = [];
+    let finalCreditedHours = 0;
+    let finalRawHours = 0;
+    let finalEventDate = eventDate || new Date().toISOString().slice(0, 10);
+    let finalStartTime = startTime || "09:00";
+    let finalEndTime = endTime || "16:00";
+
+    if (Array.isArray(sessions) && sessions.length > 0) {
+      parsedSessions = sessions.map((s: any, idx: number) => {
+        const h = Math.max(1, Math.round(Number(s.hours) || 1));
+        const sDate = s.date ? String(s.date).trim() : new Date().toISOString().slice(0, 10);
+        const sStart = s.startTime ? String(s.startTime).trim() : "09:00";
+        const sEnd = s.endTime ? String(s.endTime).trim() : "16:00";
+        const sTitle = s.title && String(s.title).trim() ? String(s.title).trim() : `ช่วงที่ ${idx + 1}`;
+        return {
+          id: s.id || `SES-${idx + 1}`,
+          title: sTitle,
+          date: sDate,
+          startTime: sStart,
+          endTime: sEnd,
+          hours: h,
+        };
+      });
+
+      finalCreditedHours = parsedSessions.reduce((sum, s) => sum + s.hours, 0);
+      finalRawHours = finalCreditedHours;
+
+      if (parsedSessions.length === 1) {
+        finalEventDate = parsedSessions[0].date;
+        finalStartTime = parsedSessions[0].startTime;
+        finalEndTime = parsedSessions[0].endTime;
+      } else {
+        finalEventDate = `${parsedSessions[0].date} ถึง ${parsedSessions[parsedSessions.length - 1].date}`;
+        finalStartTime = parsedSessions[0].startTime;
+        finalEndTime = parsedSessions[parsedSessions.length - 1].endTime;
+      }
+    } else {
+      if (manualCreditedHours !== undefined && Number(manualCreditedHours) > 0) {
+        finalCreditedHours = Math.max(1, Math.round(Number(manualCreditedHours)));
+        finalRawHours = finalCreditedHours;
+      } else {
+        const { rawHours, creditedHours } = calculateEventHours(
+          startTime || "09:00",
+          endTime || "16:00"
+        );
+        finalCreditedHours = creditedHours;
+        finalRawHours = rawHours;
+      }
+      parsedSessions = [
+        {
+          id: "SES-1",
+          title: "ช่วงที่ 1",
+          date: finalEventDate,
+          startTime: finalStartTime,
+          endTime: finalEndTime,
+          hours: finalCreditedHours,
+        },
+      ];
+    }
 
     const newEvent = {
       id: `EVT-${Date.now().toString().slice(-6)}`,
       title: String(title).trim(),
       skillType: (skillType === "HARD" ? "HARD" : "SOFT") as "SOFT" | "HARD",
-      eventDate: eventDate || new Date().toISOString().slice(0, 10),
-      startTime: startTime || "09:00",
-      endTime: endTime || "16:00",
-      rawHours,
-      creditedHours,
+      eventDate: finalEventDate,
+      startTime: finalStartTime,
+      endTime: finalEndTime,
+      rawHours: finalRawHours,
+      creditedHours: finalCreditedHours,
       targetMajor: targetMajor || "ALL",
       targetYear: targetYear || "ALL",
       location: location || "คณะเทคโนโลยีสารสนเทศและการสื่อสาร ม.พะเยา",
       academicYear: academicYear || state.academicConfig.currentAcademicYear,
       createdBy: req.session?.user?.username || "พี่จอม (Super Admin)",
       createdAt: new Date().toISOString(),
+      sessions: parsedSessions,
       checkIns: [],
     };
 
     state.trainingEvents.unshift(newEvent);
     saveSuperAdminState(state);
 
+    const sessionSummary = parsedSessions.length > 1
+      ? `จำนวน ${parsedSessions.length} ช่วงเวลา รวม ${finalCreditedHours} ชม.`
+      : `${finalCreditedHours} ชม.`;
+
     res.json({
       success: true,
-      message: `สร้างกิจกรรม "${newEvent.title}" สำเร็จ (คำนวณชั่วโมงสุทธิ ${creditedHours} ชม. จากเวลาจริง ${rawHours} ชม. ตามเกณฑ์สูงสุดไม่เกิน 6 ชม./วัน)`,
+      message: `สร้างกิจกรรม "${newEvent.title}" สำเร็จ (${sessionSummary})`,
       event: newEvent,
     });
   } catch (err) {
@@ -2210,16 +2283,30 @@ router.delete("/super-admin/events/:eventId", async (req: Request, res: Response
   }
 });
 
-// 9.5 บันทึก Check-in นิสิตเข้ากิจกรรมด้วยรหัสนิสิต (จากใบเซ็นชื่อหน้างาน -> เข้าระบบและบวกชั่วโมงเข้า Dashboard ทันที)
+// 9.5 บันทึก Check-in นิสิตเข้ากิจกรรมด้วยรหัสนิสิต (รองรับการเลือกช่วงเวลา/วันที่ หรือทั้งกิจกรรม ตามแบบที่ 1)
 router.post("/super-admin/events/:eventId/checkin", async (req: Request, res: Response) => {
   try {
     const state = loadSuperAdminState();
     const { eventId } = req.params;
-    const { studentCodesInput } = req.body;
+    const { studentCodesInput, sessionId } = req.body;
 
     const event = state.trainingEvents.find((e) => e.id === eventId);
     if (!event) {
       return res.status(404).json({ success: false, message: "ไม่พบกิจกรรมอบรมนี้" });
+    }
+
+    // กำหนด sessions ถ้ายังไม่มีสำหรับกิจกรรมเก่า
+    if (!event.sessions || event.sessions.length === 0) {
+      event.sessions = [
+        {
+          id: "SES-1",
+          title: "ทั้งกิจกรรม",
+          date: event.eventDate,
+          startTime: event.startTime,
+          endTime: event.endTime,
+          hours: event.creditedHours,
+        },
+      ];
     }
 
     const rawText = Array.isArray(studentCodesInput)
@@ -2241,6 +2328,19 @@ router.post("/super-admin/events/:eventId/checkin", async (req: Request, res: Re
       });
     }
 
+    // ตรวจสอบ target session ที่เลือก Check-in
+    const targetSessionId = sessionId || (event.sessions.length === 1 ? event.sessions[0].id : "ALL");
+    let targetSession = event.sessions.find((s) => s.id === targetSessionId);
+    let creditedHoursForCheckIn = event.creditedHours;
+    let sessionTitleForCheckIn = "ทั้งกิจกรรม";
+    let sessionNoteDate = `${event.eventDate} (${event.startTime}-${event.endTime} น.)`;
+
+    if (targetSessionId !== "ALL" && targetSession) {
+      creditedHoursForCheckIn = targetSession.hours;
+      sessionTitleForCheckIn = `${targetSession.title} (${targetSession.date})`;
+      sessionNoteDate = `${targetSession.date} (${targetSession.startTime}-${targetSession.endTime} น.)`;
+    }
+
     const matchedStudents = await prisma.student.findMany({
       where: { studentCode: { in: codes } },
     });
@@ -2249,10 +2349,25 @@ router.post("/super-admin/events/:eventId/checkin", async (req: Request, res: Re
     let addedCount = 0;
     let duplicateCount = 0;
     const notFoundCodes: string[] = [];
-    const checkedInDetails: Array<{ studentCode: string; nameTh: string; major: string; hours: number }> = [];
+    const checkedInDetails: Array<{
+      studentCode: string;
+      nameTh: string;
+      major: string;
+      hours: number;
+      sessionTitle: string;
+    }> = [];
 
     for (const code of codes) {
-      if (event.checkIns.some((c) => c.studentCode === code)) {
+      // ตรวจสอบการ Check-in ซ้ำ:
+      // - ถ้าเช็คอินช่วงเฉพาะ: ป้องกันไม่ให้ซ้ำในรอบช่วงเดิม หรือเคยเช็คอิน "ALL" แล้ว
+      // - ถ้าเช็คอิน "ALL": ป้องกันถ้าเคยเช็คอินแล้ว
+      const alreadyCheckedIn = event.checkIns.some((c) => {
+        if (c.studentCode !== code) return false;
+        if (targetSessionId === "ALL") return true;
+        return c.sessionId === targetSessionId || c.sessionId === "ALL";
+      });
+
+      if (alreadyCheckedIn) {
         duplicateCount++;
         continue;
       }
@@ -2263,28 +2378,31 @@ router.post("/super-admin/events/:eventId/checkin", async (req: Request, res: Re
         continue;
       }
 
-      // บันทึกชั่วโมงอบรมเข้าตาราง TrainingRecord จริงในฐานข้อมูลพร้อมสถานะ APPROVED ทันที!
+      // บันทึกชั่วโมงอบรมเข้าตาราง TrainingRecord จริงในฐานข้อมูลพร้อมสถานะ APPROVED ทันที
       const record = await prisma.trainingRecord.create({
         data: {
           studentId: dbStudent.id,
-          title: `[Check-in กิจกรรมคณะ] ${event.title}`,
+          title: `[Check-in กิจกรรมคณะ] ${event.title} - ${sessionTitleForCheckIn}`,
           skillType: event.skillType,
-          hours: event.creditedHours,
+          hours: creditedHoursForCheckIn,
           academicYear: event.academicYear,
           source: "STAFF_IMPORT",
           status: "APPROVED",
-          note: `บันทึก Check-in หน้างานโดยพี่จอม เมื่อวันที่ ${event.eventDate} (${event.startTime}-${event.endTime} น.)`,
+          note: `บันทึก Check-in หน้างาน (${sessionTitleForCheckIn}) โดยพี่จอม เมื่อวันที่ ${sessionNoteDate}`,
           reviewedById: req.session?.user?.id || null,
           reviewedAt: new Date(),
         },
       });
 
-      const checkInItem = {
+      const checkInItem: EventCheckInItem = {
         studentCode: dbStudent.studentCode,
         nameTh: dbStudent.nameTh,
         major: dbStudent.major || "วิศวกรรมซอฟต์แวร์",
         checkedInAt: new Date().toISOString(),
         trainingRecordId: record.id,
+        sessionId: targetSessionId,
+        sessionTitle: sessionTitleForCheckIn,
+        creditedHours: creditedHoursForCheckIn,
       };
 
       event.checkIns.unshift(checkInItem);
@@ -2292,7 +2410,8 @@ router.post("/super-admin/events/:eventId/checkin", async (req: Request, res: Re
         studentCode: dbStudent.studentCode,
         nameTh: dbStudent.nameTh,
         major: checkInItem.major,
-        hours: event.creditedHours,
+        hours: creditedHoursForCheckIn,
+        sessionTitle: sessionTitleForCheckIn,
       });
       addedCount++;
     }
@@ -2301,7 +2420,7 @@ router.post("/super-admin/events/:eventId/checkin", async (req: Request, res: Re
 
     res.json({
       success: true,
-      message: `บันทึก Check-in สำเร็จ ${addedCount} คน (+${event.creditedHours} ชม. ${event.skillType} Skill เข้าแดชบอร์ดนิสิตทันที)`,
+      message: `บันทึก Check-in สำเร็จ ${addedCount} คน [${sessionTitleForCheckIn}] (+${creditedHoursForCheckIn} ชม. ${event.skillType} Skill เข้าแดชบอร์ดนิสิตทันที)`,
       addedCount,
       duplicateCount,
       notFoundCodes,
@@ -2314,21 +2433,25 @@ router.post("/super-admin/events/:eventId/checkin", async (req: Request, res: Re
   }
 });
 
-// [DELETE ALL / FILTERED Check-in] ลบนิสิตทั้งหมดในกิจกรรม หรือเฉพาะสาขาที่กำหนด พร้อมหักชั่วโมงคืน
+// [DELETE ALL / FILTERED Check-in] ลบนิสิตทั้งหมดในกิจกรรม หรือเฉพาะช่วง/สาขา/ชั้นปีที่กำหนด พร้อมหักชั่วโมงคืน
 router.delete("/super-admin/events/:eventId/checkin-all", async (req: Request, res: Response) => {
   try {
     const state = loadSuperAdminState();
     const eventId = String(req.params.eventId);
     const major = req.query.major ? String(req.query.major) : "ALL";
     const year = req.query.year ? String(req.query.year) : "ALL";
+    const sessionId = req.query.sessionId ? String(req.query.sessionId) : "ALL";
 
     const event = state.trainingEvents.find((e) => e.id === eventId);
     if (!event) {
       return res.status(404).json({ success: false, message: "ไม่พบกิจกรรมอบรมนี้" });
     }
 
-    // หานิสิตที่จะลบ (ทั้งหมด หรือ เฉพาะสาขา/ชั้นปีที่กรอง)
+    // หานิสิตที่จะลบ (ทั้งหมด หรือ เฉพาะช่วง/สาขา/ชั้นปีที่กรอง)
     const targetsToDelete = event.checkIns.filter((c) => {
+      if (sessionId && sessionId !== "ALL" && c.sessionId !== sessionId) {
+        return false;
+      }
       if (major && major !== "ALL" && c.major !== major) {
         return false;
       }
@@ -2365,21 +2488,26 @@ router.delete("/super-admin/events/:eventId/checkin-all", async (req: Request, r
       await prisma.trainingRecord.deleteMany({
         where: {
           studentId: { in: studentIds },
-          title: `[Check-in กิจกรรมคณะ] ${event.title}`,
+          title: { contains: event.title },
         },
       });
     }
 
     // 2. ลบออกจากอาเรย์ event.checkIns
-    const targetCodesSet = new Set(targetStudentCodes);
-    event.checkIns = event.checkIns.filter((c) => !targetCodesSet.has(c.studentCode));
+    const targetItemSet = new Set(targetsToDelete);
+    event.checkIns = event.checkIns.filter((c) => !targetItemSet.has(c));
 
     saveSuperAdminState(state);
 
-    const scopeDesc = major && major !== "ALL" ? `สาขา${major}` : "ทั้งหมด";
+    const descParts: string[] = [];
+    if (sessionId && sessionId !== "ALL") descParts.push(`ช่วง ${sessionId}`);
+    if (major && major !== "ALL") descParts.push(`สาขา ${major}`);
+    if (year && year !== "ALL") descParts.push(`ปี ${year}`);
+    const scopeDesc = descParts.length > 0 ? ` (${descParts.join(", ")})` : "";
+
     res.json({
       success: true,
-      message: `ยกเลิก Check-in นิสิต${scopeDesc} สำเร็จ ${targetsToDelete.length} คน (หักชั่วโมงคืนเรียบร้อย)`,
+      message: `ยกเลิก Check-in นิสิต${scopeDesc} สำเร็จ ${targetsToDelete.length} รายการ (หักชั่วโมงคืนเรียบร้อย)`,
       deletedCount: targetsToDelete.length,
       event,
     });
@@ -2395,13 +2523,29 @@ router.delete("/super-admin/events/:eventId/checkin/:studentCode", async (req: R
     const state = loadSuperAdminState();
     const eventId = String(req.params.eventId);
     const studentCode = String(req.params.studentCode);
+    const trainingRecordId = req.query.trainingRecordId ? Number(req.query.trainingRecordId) : undefined;
+    const sessionId = req.query.sessionId ? String(req.query.sessionId) : undefined;
 
     const event = state.trainingEvents.find((e) => e.id === eventId);
     if (!event) {
       return res.status(404).json({ success: false, message: "ไม่พบกิจกรรมอบรมนี้" });
     }
 
-    const checkInIdx = event.checkIns.findIndex((c) => c.studentCode === studentCode);
+    let checkInIdx = -1;
+    if (trainingRecordId) {
+      checkInIdx = event.checkIns.findIndex(
+        (c) => c.studentCode === studentCode && c.trainingRecordId === trainingRecordId
+      );
+    }
+    if (checkInIdx === -1 && sessionId) {
+      checkInIdx = event.checkIns.findIndex(
+        (c) => c.studentCode === studentCode && c.sessionId === sessionId
+      );
+    }
+    if (checkInIdx === -1) {
+      checkInIdx = event.checkIns.findIndex((c) => c.studentCode === studentCode);
+    }
+
     if (checkInIdx === -1) {
       return res.status(404).json({ success: false, message: "ไม่พบนิสิตคนนี้ในรายการ Check-in ของกิจกรรมนี้" });
     }
@@ -2421,7 +2565,7 @@ router.delete("/super-admin/events/:eventId/checkin/:studentCode", async (req: R
           await prisma.trainingRecord.deleteMany({
             where: {
               studentId: student.id,
-              title: `[Check-in กิจกรรมคณะ] ${event.title}`,
+              title: { contains: event.title },
             },
           });
         }
@@ -2432,7 +2576,7 @@ router.delete("/super-admin/events/:eventId/checkin/:studentCode", async (req: R
         await prisma.trainingRecord.deleteMany({
           where: {
             studentId: student.id,
-            title: `[Check-in กิจกรรมคณะ] ${event.title}`,
+            title: { contains: event.title },
           },
         });
       }

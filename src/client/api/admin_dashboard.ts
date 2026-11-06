@@ -2045,6 +2045,7 @@ window.loadSuperAdminOverview = async function() {
     }
 
     renderMajorUnlockTable();
+    if (typeof window.initEventSessions === "function") window.initEventSessions();
     renderEventsDropdownAndCheckins();
     renderPendingCompaniesTable();
     renderMasterCompanyTable();
@@ -2193,24 +2194,148 @@ window.bulkToggleMajors = async function(bulkAction) {
 };
 
 // =========================================================================
-// WORKSPACE 3: สร้างกิจกรรมอบรมภายใน (สูงสุด 6 ชม./วัน) & Check-in รหัสนิสิต
+// WORKSPACE 3: สร้างกิจกรรมอบรมภายใน (หลายช่วงเวลา / กรอกชั่วโมงเอง) & Check-in รหัสนิสิต (Option 1)
 // =========================================================================
-window.previewEventHours = function() {
-  const start = document.getElementById('evt-start-time')?.value || '09:00';
-  const end = document.getElementById('evt-end-time')?.value || '16:00';
-  const [sh, sm] = start.split(':').map(n => parseInt(n, 10) || 0);
-  const [eh, em] = end.split(':').map(n => parseInt(n, 10) || 0);
-  const raw = Math.max(1, Math.round(((eh * 60 + em) - (sh * 60 + sm)) / 60));
-  const credited = Math.min(6, raw);
 
-  const badgeEl = document.getElementById('evt-credited-hours-badge');
-  const noteEl = document.getElementById('evt-hours-note');
-  if (badgeEl) badgeEl.textContent = String(credited);
-  if (noteEl) {
-    noteEl.textContent = raw > 6
-      ? `ระยะเวลาจริง ${raw} ชม. (จำกัดเพดานสูงสุดไม่เกิน 6 ชม./วัน ตามเกณฑ์คณะ)`
-      : `คำนวณตามเวลาจริง ${raw} ชม. (ไม่เกินเพดาน 6 ชม./วัน)`;
+window.eventSessions = window.eventSessions || [];
+
+window.initEventSessions = function() {
+  if (!Array.isArray(window.eventSessions) || window.eventSessions.length === 0) {
+    window.eventSessions = [
+      {
+        id: 'SES-1',
+        title: 'ช่วงที่ 1',
+        date: getTodayDateStr(),
+        startTime: '09:00',
+        endTime: '16:00',
+        hours: 6,
+      },
+    ];
   }
+  window.renderEventSessionsList();
+  window.calculateTotalEventHours();
+};
+
+window.renderEventSessionsList = function() {
+  const listEl = document.getElementById('evt-sessions-list');
+  if (!listEl) return;
+
+  if (!Array.isArray(window.eventSessions) || window.eventSessions.length === 0) {
+    window.eventSessions = [
+      {
+        id: 'SES-1',
+        title: 'ช่วงที่ 1',
+        date: getTodayDateStr(),
+        startTime: '09:00',
+        endTime: '16:00',
+        hours: 6,
+      },
+    ];
+  }
+
+  listEl.innerHTML = window.eventSessions.map((s: any, idx: number) => `
+    <div style="background:#FFFFFF; border:1px solid #CBD5E1; border-radius:10px; padding:10px; display:flex; flex-direction:column; gap:8px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
+        <div style="display:flex; align-items:center; gap:6px; flex:1;">
+          <span style="font-size:11px; font-weight:700; background:#E0E7FF; color:#3730A3; padding:2px 7px; border-radius:6px; white-space:nowrap;">ช่วงที่ ${idx + 1}</span>
+          <input type="text" class="input-field" value="${s.title || ''}" placeholder="เช่น วันที่ ${idx + 1} (บรรยาย)" oninput="window.updateSessionField(${idx}, 'title', this.value)" style="padding:4px 8px; font-size:12px; height:28px; margin:0;" />
+        </div>
+        ${window.eventSessions.length > 1 ? `
+          <button type="button" onclick="window.removeEventSession(${idx})" title="ลบช่วงเวลานี้" style="background:#FEE2E2; border:none; color:#DC2626; border-radius:6px; padding:3px 6px; cursor:pointer; display:inline-flex; align-items:center; transition:background 0.15s;" class="hover:bg-red-200">
+            <span class="material-icons" style="font-size:16px;">delete</span>
+          </button>
+        ` : ''}
+      </div>
+      <div style="display:grid; grid-template-columns:1.1fr 1fr 1fr; gap:6px;">
+        <div>
+          <label style="font-size:11px; font-weight:600; color:#475569;">วันที่จัด</label>
+          <input type="date" class="input-field" value="${s.date}" onchange="window.updateSessionField(${idx}, 'date', this.value)" style="padding:2px 6px; font-size:11.5px; height:28px; margin-top:2px;" />
+        </div>
+        <div>
+          <label style="font-size:11px; font-weight:600; color:#475569;">เวลาเริ่ม - สิ้นสุด</label>
+          <div style="display:flex; align-items:center; gap:2px; margin-top:2px;">
+            <input type="time" class="input-field" value="${s.startTime}" onchange="window.updateSessionField(${idx}, 'startTime', this.value)" style="padding:2px 4px; font-size:11px; height:28px; margin:0;" />
+            <span style="font-size:11px; color:#64748B;">-</span>
+            <input type="time" class="input-field" value="${s.endTime}" onchange="window.updateSessionField(${idx}, 'endTime', this.value)" style="padding:2px 4px; font-size:11px; height:28px; margin:0;" />
+          </div>
+        </div>
+        <div>
+          <label style="font-size:11px; font-weight:700; color:#1E293B;">ชั่วโมงที่ได้รับ (กรอกเอง)</label>
+          <div style="display:flex; align-items:center; gap:4px; margin-top:2px;">
+            <input type="number" min="1" max="24" step="1" class="input-field" value="${s.hours}" oninput="window.updateSessionField(${idx}, 'hours', this.value)" style="padding:2px 6px; font-size:12px; font-weight:700; color:#059669; height:28px; width:65px; margin:0;" />
+            <span style="font-size:11px; font-weight:700; color:#065F46;">ชม.</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  `).join('');
+};
+
+window.updateSessionField = function(idx: number, field: string, value: any) {
+  if (window.eventSessions && window.eventSessions[idx]) {
+    if (field === 'hours') {
+      window.eventSessions[idx].hours = Math.max(1, Math.round(Number(value) || 1));
+    } else {
+      window.eventSessions[idx][field] = value;
+    }
+    window.calculateTotalEventHours();
+  }
+};
+
+window.addEventSession = function() {
+  const currentSessions = window.eventSessions || [];
+  const nextIdx = currentSessions.length + 1;
+  const lastSession = currentSessions.length > 0 ? currentSessions[currentSessions.length - 1] : null;
+  let nextDate = getTodayDateStr();
+
+  if (lastSession && lastSession.date) {
+    const d = new Date(lastSession.date);
+    d.setDate(d.getDate() + 1);
+    if (!isNaN(d.getTime())) {
+      nextDate = d.toISOString().slice(0, 10);
+    }
+  }
+
+  currentSessions.push({
+    id: `SES-${nextIdx}`,
+    title: `ช่วงที่ ${nextIdx}`,
+    date: nextDate,
+    startTime: '09:00',
+    endTime: '16:00',
+    hours: 3,
+  });
+
+  window.eventSessions = currentSessions;
+  window.renderEventSessionsList();
+  window.calculateTotalEventHours();
+};
+
+window.removeEventSession = function(idx: number) {
+  if (window.eventSessions && window.eventSessions.length > 1) {
+    window.eventSessions.splice(idx, 1);
+    window.renderEventSessionsList();
+    window.calculateTotalEventHours();
+  }
+};
+
+window.calculateTotalEventHours = function() {
+  const sessions = window.eventSessions || [];
+  const total = sessions.reduce((sum: number, s: any) => sum + (Number(s.hours) || 0), 0);
+  const count = sessions.length;
+
+  const badgeEl = document.getElementById('evt-total-hours-badge');
+  const noteEl = document.getElementById('evt-hours-summary-note');
+
+  if (badgeEl) badgeEl.textContent = String(total);
+  if (noteEl) {
+    noteEl.textContent = count > 1
+      ? `รวม ${count} ช่วงเวลา (เฉลี่ยรอบละ ${Math.round((total / count) * 10) / 10} ชม. กรอกชั่วโมงแยกเองได้)`
+      : `รวม 1 ช่วงเวลา (กรอกชั่วโมงแต่ละช่วงเองได้)`;
+  }
+};
+
+window.previewEventHours = function() {
+  window.calculateTotalEventHours();
 };
 
 // ==========================================
@@ -2266,8 +2391,9 @@ window.updateSelectedMajors = function() {
       if (v === 'วิทยาการข้อมูลและการประยุกต์') return 'DSA';
       return v;
     });
-    if (labelEl) labelEl.textContent = `เลือก ${checkedItems.length} สาขา (${shortNames.join(', ')})`;
-    if (countEl) countEl.textContent = `(เลือก ${checkedItems.length}/${total} สาขา)`;
+
+    if (labelEl) labelEl.textContent = shortNames.join(', ');
+    if (countEl) countEl.textContent = `(เลือก ${checkedItems.length} สาขา)`;
     if (hiddenInput) hiddenInput.value = names.join(', ');
   }
 };
@@ -2312,23 +2438,17 @@ window.updateSelectedYears = function() {
     if (countEl) countEl.textContent = '(เลือกทุกชั้นปี)';
     if (hiddenInput) hiddenInput.value = 'ALL';
   } else {
-    const names = checkedItems.map(cb => cb.value);
-    const shortNames = checkedItems.map(cb => `ปี ${cb.value}`);
-    if (labelEl) labelEl.textContent = `เลือก ${checkedItems.length} ชั้นปี (${shortNames.join(', ')})`;
-    if (countEl) countEl.textContent = `(เลือก ${checkedItems.length}/${total} ชั้นปี)`;
-    if (hiddenInput) hiddenInput.value = names.join(', ');
+    const years = checkedItems.map(cb => cb.value);
+    const yearLabels = checkedItems.map(cb => `ปี ${cb.value}`);
+
+    if (labelEl) labelEl.textContent = yearLabels.join(', ');
+    if (countEl) countEl.textContent = `(เลือก ${checkedItems.length} ชั้นปี)`;
+    if (hiddenInput) hiddenInput.value = years.join(', ');
   }
 };
 
+// ปิด dropdown เมื่อคลิกภายนอก
 document.addEventListener('click', (e) => {
-  const statusContainer = document.getElementById('status-dropdown-container');
-  const statusMenu = document.getElementById('status-dropdown-menu');
-  const statusArrow = document.getElementById('status-arrow-icon');
-  if (statusContainer && statusMenu && statusMenu.style.display !== 'none' && !statusContainer.contains(e.target as Node)) {
-    statusMenu.style.display = 'none';
-    if (statusArrow) statusArrow.textContent = 'keyboard_arrow_down';
-  }
-
   const majorContainer = document.getElementById('evt-major-dropdown-container');
   const majorMenu = document.getElementById('evt-major-dropdown-menu');
   const majorArrow = document.getElementById('evt-major-arrow-icon');
@@ -2349,9 +2469,6 @@ document.addEventListener('click', (e) => {
 window.createTrainingEvent = async function() {
   const title = document.getElementById('evt-title')?.value?.trim();
   const skillType = document.getElementById('evt-skill-type')?.value || 'SOFT';
-  const eventDate = document.getElementById('evt-date')?.value || new Date().toISOString().slice(0, 10);
-  const startTime = document.getElementById('evt-start-time')?.value || '09:00';
-  const endTime = document.getElementById('evt-end-time')?.value || '16:00';
   const targetMajor = document.getElementById('evt-target-major')?.value || 'ALL';
   const targetYear = document.getElementById('evt-target-year')?.value || 'ALL';
   const location = document.getElementById('evt-location')?.value || '';
@@ -2361,6 +2478,15 @@ window.createTrainingEvent = async function() {
     return;
   }
 
+  const sessions = (window.eventSessions || []).map((s: any, idx: number) => ({
+    id: s.id || `SES-${idx + 1}`,
+    title: s.title && String(s.title).trim() ? String(s.title).trim() : `ช่วงที่ ${idx + 1}`,
+    date: s.date || getTodayDateStr(),
+    startTime: s.startTime || '09:00',
+    endTime: s.endTime || '16:00',
+    hours: Math.max(1, Math.round(Number(s.hours) || 1)),
+  }));
+
   try {
     const res = await fetch('/api/admin/super-admin/events', {
       method: 'POST',
@@ -2368,9 +2494,7 @@ window.createTrainingEvent = async function() {
       body: JSON.stringify({
         title,
         skillType,
-        eventDate,
-        startTime,
-        endTime,
+        sessions,
         targetMajor,
         targetYear,
         location,
@@ -2381,6 +2505,8 @@ window.createTrainingEvent = async function() {
       alert('✅ ' + data.message);
       const titleEl = document.getElementById('evt-title');
       if (titleEl) titleEl.value = '';
+      window.eventSessions = [];
+      window.initEventSessions();
       if (typeof window.resetEventFilters === 'function') {
         window.resetEventFilters();
       }
@@ -2498,11 +2624,11 @@ window.applyEventFilters = function() {
     }
     // 3. กรองวันที่จัดกิจกรรม
     if (datePreset === 'TODAY') {
-      if (e.eventDate !== todayStr) return false;
+      if (e.eventDate !== todayStr && !e.eventDate?.includes(todayStr)) return false;
     } else if (datePreset === 'THIS_MONTH') {
-      if (!e.eventDate || !e.eventDate.startsWith(thisMonthStr)) return false;
+      if (!e.eventDate || !e.eventDate.includes(thisMonthStr)) return false;
     } else if (datePreset === 'CUSTOM' && customDate) {
-      if (e.eventDate !== customDate) return false;
+      if (!e.eventDate || !e.eventDate.includes(customDate)) return false;
     }
     return true;
   });
@@ -2539,6 +2665,29 @@ function renderEventsDropdownAndCheckins() {
   window.applyEventFilters();
 }
 
+window.handleCheckInSessionChange = function() {
+  const selectEl = document.getElementById('checkin-event-select') as HTMLSelectElement | null;
+  const sessionSelectEl = document.getElementById('checkin-session-select') as HTMLSelectElement | null;
+  const badgeEl = document.getElementById('checkin-session-hours-badge');
+  const hintEl = document.getElementById('checkin-session-hint');
+
+  if (!selectEl || !sessionSelectEl) return;
+  const event = (superAdminData.trainingEvents || []).find((e: any) => e.id === selectEl.value);
+  if (!event) return;
+
+  const val = sessionSelectEl.value;
+  if (val === 'ALL') {
+    if (badgeEl) badgeEl.textContent = `+${event.creditedHours} ชม. (ทุกช่วง)`;
+    if (hintEl) hintEl.textContent = `* บันทึก Check-in ทั้งกิจกรรม ได้รับชั่วโมงรวม ${event.creditedHours} ชม.`;
+  } else {
+    const ses = (event.sessions || []).find((s: any) => s.id === val);
+    if (ses) {
+      if (badgeEl) badgeEl.textContent = `+${ses.hours} ชม.`;
+      if (hintEl) hintEl.textContent = `* บันทึก Check-in สำหรับ "${ses.title}" วันที่ ${ses.date} ได้รับ +${ses.hours} ชม.`;
+    }
+  }
+};
+
 window.renderSelectedEventCheckins = function() {
   const selectEl = document.getElementById('checkin-event-select') as HTMLSelectElement | null;
   const metaEl = document.getElementById('checkin-selected-event-meta');
@@ -2546,22 +2695,78 @@ window.renderSelectedEventCheckins = function() {
   const tbody = document.getElementById('checkin-history-tbody');
   const filterMajorEl = document.getElementById('checkin-filter-major') as HTMLSelectElement | null;
   const filterYearEl = document.getElementById('checkin-filter-year') as HTMLSelectElement | null;
+  const filterSessionEl = document.getElementById('checkin-filter-session') as HTMLSelectElement | null;
+  const sessionSelectEl = document.getElementById('checkin-session-select') as HTMLSelectElement | null;
   const btnDeleteAll = document.getElementById('btn-delete-all-checkin') as HTMLButtonElement | null;
   const btnDeleteAllText = document.getElementById('btn-delete-all-text');
 
   if (!selectEl || !tbody) return;
 
   const eventId = selectEl.value;
-  const event = (superAdminData.trainingEvents || []).find(e => e.id === eventId);
+  const event = (superAdminData.trainingEvents || []).find((e: any) => e.id === eventId);
   if (!event) {
     if (metaEl) metaEl.textContent = '';
     if (countEl) countEl.textContent = '0';
     if (btnDeleteAll) btnDeleteAll.style.display = 'none';
-    tbody.innerHTML = '<tr><td colspan="6" class="text-center py-6 text-gray-400">กรุณาเลือกกิจกรรมอบรม</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="7" class="text-center py-6 text-gray-400">กรุณาเลือกกิจกรรมอบรม</td></tr>';
     return;
   }
 
-  // แสดง Metadata กิจกรรม พร้อมสาขาและชั้นปีเป้าหมาย
+  // Ensure sessions exist
+  if (!event.sessions || event.sessions.length === 0) {
+    event.sessions = [
+      {
+        id: 'SES-1',
+        title: 'ทั้งกิจกรรม',
+        date: event.eventDate,
+        startTime: event.startTime,
+        endTime: event.endTime,
+        hours: event.creditedHours,
+      },
+    ];
+  }
+
+  // Update checkin session select dropdown
+  if (sessionSelectEl) {
+    const curVal = sessionSelectEl.value;
+    if (event.sessions.length > 1) {
+      sessionSelectEl.innerHTML = `
+        <option value="ALL">🌟 เช็คอินทั้งกิจกรรม (ทุกช่วงพร้อมกัน) [+${event.creditedHours} ชม.]</option>
+        ${event.sessions.map((s: any, idx: number) => `
+          <option value="${s.id}">ช่วงที่ ${idx + 1}: ${s.title || ''} (${s.date}) [+${s.hours} ชม.]</option>
+        `).join('')}
+      `;
+    } else {
+      sessionSelectEl.innerHTML = `
+        <option value="${event.sessions[0].id}">${event.sessions[0].title || 'ช่วงที่ 1'} (${event.sessions[0].date}) [+${event.sessions[0].hours} ชม.]</option>
+        <option value="ALL">🌟 เช็คอินทั้งกิจกรรม [+${event.creditedHours} ชม.]</option>
+      `;
+    }
+    if (curVal && (curVal === 'ALL' || event.sessions.some((s: any) => s.id === curVal))) {
+      sessionSelectEl.value = curVal;
+    } else {
+      sessionSelectEl.value = event.sessions.length > 1 ? event.sessions[0].id : 'ALL';
+    }
+    window.handleCheckInSessionChange();
+  }
+
+  // Update filter session dropdown
+  if (filterSessionEl) {
+    const curFilterVal = filterSessionEl.value || 'ALL';
+    filterSessionEl.innerHTML = `
+      <option value="ALL">ทุกช่วง (ทั้งหมด)</option>
+      ${event.sessions.map((s: any) => `
+        <option value="${s.id}">${s.title || s.id} (${s.date})</option>
+      `).join('')}
+    `;
+    if (event.sessions.some((s: any) => s.id === curFilterVal)) {
+      filterSessionEl.value = curFilterVal;
+    } else {
+      filterSessionEl.value = 'ALL';
+    }
+  }
+
+  // แสดง Metadata กิจกรรม พร้อมสาขา ชั้นปี และช่วงเวลา
   if (metaEl) {
     const targetMajorLabel = event.targetMajor === 'ALL' || !event.targetMajor
       ? 'ทุกสาขาวิชา (ทั้งคณะ ICT)'
@@ -2571,10 +2776,15 @@ window.renderSelectedEventCheckins = function() {
       ? 'ทุกชั้นปี'
       : event.targetYear.split(',').map((y: string) => `ปี ${y.trim()}`).join(', ');
 
+    const sessionsBadgeList = event.sessions.length > 1
+      ? `<span style="background:#EEF2FF; color:#4338CA; padding:2px 8px; border-radius:999px; font-weight:700; font-size:11.5px;">🗓️ มี ${event.sessions.length} ช่วงเวลา</span>`
+      : '';
+
     metaEl.innerHTML = `
       <span style="display:inline-flex; align-items:center; gap:6px; flex-wrap:wrap;">
         <span style="background:#DBEAFE; color:#1E40AF; padding:2px 8px; border-radius:999px; font-weight:700;">${event.skillType} SKILL (+${event.creditedHours} ชม.)</span>
-        <span>📅 วันที่ ${event.eventDate} (${event.startTime} - ${event.endTime} น.)</span>
+        ${sessionsBadgeList}
+        <span>📅 ${event.eventDate} (${event.startTime} - ${event.endTime} น.)</span>
         <span>📍 ${event.location}</span>
         <span style="background:#FEF3C7; color:#92400E; padding:2px 8px; border-radius:999px; font-weight:600; font-size:11.5px;">🎯 สาขาเป้าหมาย: ${targetMajorLabel}</span>
         <span style="background:#EDE9FE; color:#5B21B6; padding:2px 8px; border-radius:999px; font-weight:600; font-size:11.5px;">🎓 ชั้นปีเป้าหมาย: ${targetYearLabel}</span>
@@ -2587,11 +2797,11 @@ window.renderSelectedEventCheckins = function() {
   // 1. อัปเดตตัวเลือกสาขาวิชาใน Dropdown กรอง
   if (filterMajorEl) {
     const currentFilterVal = filterMajorEl.value || 'ALL';
-    const uniqueMajors = Array.from(new Set(allCheckIns.map(c => c.major).filter(Boolean)));
+    const uniqueMajors = Array.from(new Set(allCheckIns.map((c: any) => c.major).filter(Boolean)));
     uniqueMajors.sort();
 
     filterMajorEl.innerHTML = '<option value="ALL">ทุกสาขาวิชา (ทั้งหมด)</option>' +
-      uniqueMajors.map(m => `<option value="${m}">${m}</option>`).join('');
+      uniqueMajors.map((m: any) => `<option value="${m}">${m}</option>`).join('');
 
     if (uniqueMajors.includes(currentFilterVal)) {
       filterMajorEl.value = currentFilterVal;
@@ -2600,8 +2810,7 @@ window.renderSelectedEventCheckins = function() {
     }
   }
 
-  // 2. อัปเดตตัวเลือกชั้นปีใน Dropdown กรอง:
-  // "ถ้ามีปีเดียวให้เป็นตัวกรองนั้น ถ้าหลายปีก็ให้เพิ่มทั้งหมด"
+  // 2. อัปเดตตัวเลือกชั้นปีใน Dropdown กรอง
   if (filterYearEl) {
     const currentYearVal = filterYearEl.value || 'ALL';
     const uniqueYears = Array.from(new Set(
@@ -2630,9 +2839,12 @@ window.renderSelectedEventCheckins = function() {
 
   const selectedMajor = filterMajorEl ? filterMajorEl.value : 'ALL';
   const selectedYear = filterYearEl ? filterYearEl.value : 'ALL';
+  const selectedSession = filterSessionEl ? filterSessionEl.value : 'ALL';
+
   const isMajorFiltered = selectedMajor && selectedMajor !== 'ALL';
   const isYearFiltered = selectedYear && selectedYear !== 'ALL';
-  const isFiltered = isMajorFiltered || isYearFiltered;
+  const isSessionFiltered = selectedSession && selectedSession !== 'ALL';
+  const isFiltered = isMajorFiltered || isYearFiltered || isSessionFiltered;
 
   const filteredCheckIns = allCheckIns.filter((c: any) => {
     if (isMajorFiltered && c.major !== selectedMajor) {
@@ -2641,6 +2853,11 @@ window.renderSelectedEventCheckins = function() {
     if (isYearFiltered) {
       const y = c.studentCode ? c.studentCode.substring(0, 2) : '';
       if (y !== selectedYear) return false;
+    }
+    if (isSessionFiltered) {
+      if (c.sessionId !== selectedSession && c.sessionId !== 'ALL') {
+        return false;
+      }
     }
     return true;
   });
@@ -2666,6 +2883,7 @@ window.renderSelectedEventCheckins = function() {
           btnDeleteAll.title = `ลบนิสิตทั้งหมดในกิจกรรม (${allCheckIns.length} คน)`;
         } else {
           const descList: string[] = [];
+          if (isSessionFiltered) descList.push(`ช่วง ${selectedSession}`);
           if (isMajorFiltered) descList.push(selectedMajor);
           if (isYearFiltered) descList.push(`ปี ${selectedYear}`);
           btnDeleteAllText.textContent = `ลบเฉพาะ ${descList.join(' ')} (${filteredCheckIns.length})`;
@@ -2676,44 +2894,54 @@ window.renderSelectedEventCheckins = function() {
   }
 
   if (allCheckIns.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="6" class="text-center py-6 text-gray-400">ยังไม่มีรายชื่อนิสิตที่ Check-in ในกิจกรรมนี้ — สามารถกรอกหรือวางรหัสนิสิตด้านบนเพื่อบันทึกได้ทันที</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="7" class="text-center py-6 text-gray-400">ยังไม่มีรายชื่อนิสิตที่ Check-in ในกิจกรรมนี้ — สามารถกรอกหรือวางรหัสนิสิตด้านบนเพื่อบันทึกได้ทันที</td></tr>';
     return;
   }
 
   if (filteredCheckIns.length === 0) {
     const emptyDesc: string[] = [];
+    if (isSessionFiltered) emptyDesc.push(`ช่วง "${selectedSession}"`);
     if (isMajorFiltered) emptyDesc.push(`สาขา "${selectedMajor}"`);
     if (isYearFiltered) emptyDesc.push(`ชั้นปี "${selectedYear}"`);
-    tbody.innerHTML = `<tr><td colspan="6" class="text-center py-6 text-gray-400">ไม่พบนิสิต ${emptyDesc.join(' และ ')} ในรายการ Check-in กิจกรรมนี้</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="7" class="text-center py-6 text-gray-400">ไม่พบนิสิต ${emptyDesc.join(' และ ')} ในรายการ Check-in กิจกรรมนี้</td></tr>`;
     return;
   }
 
-  tbody.innerHTML = filteredCheckIns.map(c => `
-    <tr>
-      <td style="font-weight:700; color:#1E1B4B;">${c.studentCode}</td>
-      <td>${c.nameTh}</td>
-      <td><span style="font-weight:600; color:#334155;">${c.major}</span></td>
-      <td class="text-center">
-        <span style="background:#DCFCE7; color:#166534; padding:2px 9px; border-radius:999px; font-size:11.5px; font-weight:700;">
-          +${event.creditedHours} ชม. (${event.skillType})
-        </span>
-      </td>
-      <td style="font-size:11.5px; color:#64748B;">${new Date(c.checkedInAt).toLocaleString('th-TH')}</td>
-      <td class="text-center">
-        <button type="button" 
-          title="ยกเลิก Check-in และหักชั่วโมงคืน" 
-          onclick="window.deleteEventCheckIn('${event.id}', '${c.studentCode}', '${c.nameTh}')" 
-          style="background:#FEE2E2; border:1px solid #FECACA; color:#DC2626; border-radius:8px; padding:5px 8px; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; transition:background 0.15s ease;">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <polyline points="3 6 5 6 21 6"></polyline>
-            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-            <line x1="10" y1="11" x2="10" y2="17"></line>
-            <line x1="14" y1="11" x2="14" y2="17"></line>
-          </svg>
-        </button>
-      </td>
-    </tr>
-  `).join('');
+  tbody.innerHTML = filteredCheckIns.map((c: any) => {
+    const sessionLabel = c.sessionTitle || (c.sessionId && c.sessionId !== 'ALL' ? `ช่วง ${c.sessionId}` : 'ทั้งกิจกรรม');
+    const hoursEarned = c.creditedHours || event.creditedHours;
+    return `
+      <tr>
+        <td style="font-weight:700; color:#1E1B4B;">${c.studentCode}</td>
+        <td>${c.nameTh}</td>
+        <td><span style="font-weight:600; color:#334155;">${c.major}</span></td>
+        <td>
+          <span style="background:#EDE9FE; color:#5B21B6; padding:2px 8px; border-radius:6px; font-size:11.5px; font-weight:700; display:inline-block; max-width:180px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${sessionLabel}">
+            ${sessionLabel}
+          </span>
+        </td>
+        <td class="text-center">
+          <span style="background:#DCFCE7; color:#166534; padding:2px 9px; border-radius:999px; font-size:11.5px; font-weight:700;">
+            +${hoursEarned} ชม. (${event.skillType})
+          </span>
+        </td>
+        <td style="font-size:11.5px; color:#64748B;">${new Date(c.checkedInAt).toLocaleString('th-TH')}</td>
+        <td class="text-center">
+          <button type="button" 
+            title="ยกเลิก Check-in และหักชั่วโมงคืน" 
+            onclick="window.deleteEventCheckIn('${event.id}', '${c.studentCode}', '${c.nameTh}', ${c.trainingRecordId || 'null'}, '${c.sessionId || ''}')" 
+            style="background:#FEE2E2; border:1px solid #FECACA; color:#DC2626; border-radius:8px; padding:5px 8px; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; transition:background 0.15s ease;">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="3 6 5 6 21 6"></polyline>
+              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+              <line x1="10" y1="11" x2="10" y2="17"></line>
+              <line x1="14" y1="11" x2="14" y2="17"></line>
+            </svg>
+          </button>
+        </td>
+      </tr>
+    `;
+  }).join('');
 };
 
 window.filterCheckInList = function() {
@@ -2723,10 +2951,12 @@ window.filterCheckInListByMajor = window.filterCheckInList;
 
 window.submitEventCheckIn = async function() {
   const selectEl = document.getElementById('checkin-event-select') as HTMLSelectElement | null;
+  const sessionSelectEl = document.getElementById('checkin-session-select') as HTMLSelectElement | null;
   const codesEl = document.getElementById('checkin-student-codes') as HTMLTextAreaElement | null;
   const bannerEl = document.getElementById('checkin-result-banner');
 
   const eventId = selectEl?.value;
+  const sessionId = sessionSelectEl?.value || 'ALL';
   const studentCodesInput = codesEl?.value?.trim();
 
   if (!eventId) {
@@ -2742,7 +2972,7 @@ window.submitEventCheckIn = async function() {
     const res = await fetch(`/api/admin/super-admin/events/${encodeURIComponent(eventId)}/checkin`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ studentCodesInput }),
+      body: JSON.stringify({ studentCodesInput, sessionId }),
     });
     const data = await res.json();
     if (data.success) {
@@ -2753,7 +2983,7 @@ window.submitEventCheckIn = async function() {
         bannerEl.style.border = '1px solid #86EFAC';
         bannerEl.style.color = '#166534';
         let extra = '';
-        if (data.duplicateCount > 0) extra += ` (ซ้ำ ${data.duplicateCount} คน)`;
+        if (data.duplicateCount > 0) extra += ` (ซ้ำในรอบนี้ ${data.duplicateCount} คน)`;
         if (data.notFoundCodes && data.notFoundCodes.length > 0) {
           extra += ` | ⚠️ ไม่พบรหัสนิสิตในฐานข้อมูล: ${data.notFoundCodes.join(', ')}`;
         }
@@ -2775,12 +3005,16 @@ window.submitEventCheckIn = async function() {
   }
 };
 
-window.deleteEventCheckIn = async function(eventId, studentCode, nameTh) {
-  const confirmMsg = `ยืนยันการยกเลิก Check-in ของ "${nameTh}" (${studentCode}) หรือไม่?\n\n* ระบบจะลบรายชื่อออกจากกิจกรรมนี้ และหักชั่วโมงอบรมออกจากนิสิตทันที`;
+window.deleteEventCheckIn = async function(eventId, studentCode, nameTh, trainingRecordId, sessionId) {
+  const confirmMsg = `ยืนยันการยกเลิก Check-in ของ "${nameTh}" (${studentCode}) หรือไม่?\n\n* ระบบจะลบรายการนี้ออกจากกิจกรรม และหักชั่วโมงอบรมออกจากนิสิตทันที`;
   if (!confirm(confirmMsg)) return;
 
   try {
-    const res = await fetch(`/api/admin/super-admin/events/${encodeURIComponent(eventId)}/checkin/${encodeURIComponent(studentCode)}`, {
+    let url = `/api/admin/super-admin/events/${encodeURIComponent(eventId)}/checkin/${encodeURIComponent(studentCode)}?`;
+    if (trainingRecordId) url += `trainingRecordId=${trainingRecordId}&`;
+    if (sessionId) url += `sessionId=${encodeURIComponent(sessionId)}`;
+
+    const res = await fetch(url, {
       method: 'DELETE',
     });
     const data = await res.json();
@@ -2807,17 +3041,20 @@ window.deleteAllEventCheckIns = async function() {
   const selectEl = document.getElementById('checkin-event-select') as HTMLSelectElement | null;
   const filterMajorEl = document.getElementById('checkin-filter-major') as HTMLSelectElement | null;
   const filterYearEl = document.getElementById('checkin-filter-year') as HTMLSelectElement | null;
+  const filterSessionEl = document.getElementById('checkin-filter-session') as HTMLSelectElement | null;
   const eventId = selectEl?.value;
   if (!eventId) return;
 
-  const event = (superAdminData.trainingEvents || []).find(e => e.id === eventId);
+  const event = (superAdminData.trainingEvents || []).find((e: any) => e.id === eventId);
   if (!event) return;
 
   const selectedMajor = filterMajorEl ? filterMajorEl.value : 'ALL';
   const selectedYear = filterYearEl ? filterYearEl.value : 'ALL';
+  const selectedSession = filterSessionEl ? filterSessionEl.value : 'ALL';
   const isMajorFiltered = selectedMajor && selectedMajor !== 'ALL';
   const isYearFiltered = selectedYear && selectedYear !== 'ALL';
-  const isFiltered = isMajorFiltered || isYearFiltered;
+  const isSessionFiltered = selectedSession && selectedSession !== 'ALL';
+  const isFiltered = isMajorFiltered || isYearFiltered || isSessionFiltered;
 
   const targetCheckIns = (event.checkIns || []).filter((c: any) => {
     if (isMajorFiltered && c.major !== selectedMajor) return false;
@@ -2825,31 +3062,34 @@ window.deleteAllEventCheckIns = async function() {
       const y = c.studentCode ? c.studentCode.substring(0, 2) : '';
       if (y !== selectedYear) return false;
     }
+    if (isSessionFiltered) {
+      if (c.sessionId !== selectedSession && c.sessionId !== 'ALL') return false;
+    }
     return true;
   });
 
   if (targetCheckIns.length === 0) {
-    alert('ไม่มีรายชื่อนิสิตให้ลบ');
+    alert('ไม่พบนิสิตตามเงื่อนไขที่เลือก');
     return;
   }
 
   const descList: string[] = [];
-  if (isMajorFiltered) descList.push(`สาขา${selectedMajor}`);
-  if (isYearFiltered) descList.push(`ชั้นปี ${selectedYear}`);
-  const filterDescText = descList.join(' + ');
+  if (isSessionFiltered) descList.push(`ช่วง ${selectedSession}`);
+  if (isMajorFiltered) descList.push(selectedMajor);
+  if (isYearFiltered) descList.push(`ปี ${selectedYear}`);
+  const scopeMsg = isFiltered ? descList.join(' ') : 'ทั้งหมด';
 
-  const confirmTitle = isFiltered
-    ? `⚠️ ยืนยันการยกเลิก Check-in นิสิต "${filterDescText}" ทั้งหมด (${targetCheckIns.length} คน) ในกิจกรรมนี้ หรือไม่?\n\n* นิสิตกลุ่มอื่นจะไม่ได้รับผลกระทบ\n* ชั่วโมงอบรม (+${event.creditedHours} ชม.) จะถูกหักคืนจากนิสิตกลุ่มนี้ทันที`
-    : `⚠️ ยืนยันการยกเลิก Check-in นิสิต "ทั้งหมดทุกคน" (${targetCheckIns.length} คน) ในกิจกรรมนี้ หรือไม่?\n\n* ระบบจะลบรายชื่อทุกคนออกจากกิจกรรมนี้\n* ชั่วโมงอบรม (+${event.creditedHours} ชม.) จะถูกหักคืนจากนิสิตทุกคนทันที`;
-
-  if (!confirm(confirmTitle)) return;
+  const confirmMsg = `⚠️ ยืนยันการยกเลิก Check-in นิสิต ${scopeMsg} จำนวน ${targetCheckIns.length} รายการ หรือไม่?\n\n* ระบบจะลบรายการและหักชั่วโมงอบรมคืนให้นิสิตทุกคนในกลุ่มนี้ทันที`;
+  if (!confirm(confirmMsg)) return;
 
   try {
-    const url = `/api/admin/super-admin/events/${encodeURIComponent(eventId)}/checkin-all?major=${encodeURIComponent(selectedMajor)}&year=${encodeURIComponent(selectedYear)}`;
-    const res = await fetch(url, { method: 'DELETE' });
+    let url = `/api/admin/super-admin/events/${encodeURIComponent(eventId)}/checkin-all?major=${encodeURIComponent(selectedMajor)}&year=${encodeURIComponent(selectedYear)}&sessionId=${encodeURIComponent(selectedSession)}`;
+    const res = await fetch(url, {
+      method: 'DELETE',
+    });
     const data = await res.json();
     if (data.success) {
-      alert(`✅ ${data.message}`);
+      alert(`✅ ${data.message || 'ยกเลิก Check-in เรียบร้อยแล้ว'}`);
       await window.loadSuperAdminOverview();
       await loadDashboardSummary();
       await loadStudents();
@@ -2865,7 +3105,7 @@ window.deleteAllEventCheckIns = async function() {
     alert('เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์');
   }
 };
-// =========================================================================
+
 // WORKSPACE 4: ฐานข้อมูลสถานประกอบการกลาง (Company Master Data)
 // =========================================================================
 const PENDING_COMPANIES_COLLAPSED_PAGE_SIZE = 3;

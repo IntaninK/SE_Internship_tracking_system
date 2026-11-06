@@ -14,12 +14,24 @@ export interface MajorUnlockRule {
   updatedAt: string;
 }
 
+export interface EventSessionItem {
+  id: string;
+  title: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  hours: number;
+}
+
 export interface EventCheckInItem {
   studentCode: string;
   nameTh: string;
   major: string;
   checkedInAt: string;
   trainingRecordId?: number;
+  sessionId?: string;
+  sessionTitle?: string;
+  creditedHours?: number;
 }
 
 export interface InternalTrainingEvent {
@@ -30,12 +42,14 @@ export interface InternalTrainingEvent {
   startTime: string;
   endTime: string;
   rawHours: number;
-  creditedHours: number; // สูงสุดไม่เกิน 6 ชม./วัน
+  creditedHours: number; // ผลรวมชั่วโมงที่ได้รับ
   targetMajor: string;
+  targetYear?: string;
   location: string;
   academicYear: string;
   createdBy: string;
   createdAt: string;
+  sessions?: EventSessionItem[];
   checkIns: EventCheckInItem[];
 }
 
