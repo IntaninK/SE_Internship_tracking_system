@@ -595,14 +595,17 @@ function renderAdvisorTable(advisors) {
     const totalAdvisedInDept = deptAdvisors.reduce((sum, a) => sum + (Number(a.totalAdvised) || 0), 0);
     const totalPendingInDept = deptAdvisors.reduce((sum, a) => sum + (Number(a.checklistNotReviewed) || 0), 0);
 
-    // Group Header Row
+    // Group Header Row (คลิกเพื่อย่อ/ขยายพร้อมลูกศร)
     const headerTr = document.createElement('tr');
     headerTr.className = 'advisor-dept-header-row';
+    headerTr.style.cursor = 'pointer';
+    headerTr.title = 'คลิกเพื่อย่อ/ขยายรายชื่ออาจารย์ในสาขานี้';
     headerTr.innerHTML = `
-      <td colspan="4" style="background: #F1F5F9; border-top: 2px solid #E2E8F0; border-bottom: 1px solid #CBD5E1; padding: 9px 14px;">
+      <td colspan="4" style="background: #F1F5F9; border-top: 2px solid #E2E8F0; border-bottom: 1px solid #CBD5E1; padding: 9px 14px; user-select: none;">
         <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
           <div style="display: flex; align-items: center; gap: 7px; font-weight: 700; color: #1E3A8A; font-size: 13.5px;">
-            <span class="material-icons" style="font-size: 18px; color: #2563EB;">school</span>
+            <span class="material-icons dept-arrow" style="font-size: 20px; color: #2563EB; transition: transform 0.2s ease; display: inline-flex; align-items: center; justify-content: center;">keyboard_arrow_down</span>
+            <span class="material-icons" style="font-size: 18px; color: #3B82F6;">school</span>
             <span>${deptTitle}</span>
           </div>
           <div style="display: flex; align-items: center; gap: 6px; font-size: 11.5px;">
@@ -624,6 +627,30 @@ function renderAdvisorTable(advisors) {
       </td>
     `;
     tbody.appendChild(headerTr);
+
+    // Hover effect on header row
+    headerTr.addEventListener('mouseenter', () => {
+      const td = headerTr.querySelector('td');
+      if (td) td.style.background = '#E2E8F0';
+    });
+    headerTr.addEventListener('mouseleave', () => {
+      const td = headerTr.querySelector('td');
+      if (td) td.style.background = '#F1F5F9';
+    });
+
+    const advisorRows: HTMLTableRowElement[] = [];
+    let isExpanded = true;
+
+    headerTr.addEventListener('click', () => {
+      isExpanded = !isExpanded;
+      const arrow = headerTr.querySelector('.dept-arrow') as HTMLElement | null;
+      if (arrow) {
+        arrow.style.transform = isExpanded ? 'rotate(0deg)' : 'rotate(-90deg)';
+      }
+      advisorRows.forEach((row) => {
+        row.style.display = isExpanded ? '' : 'none';
+      });
+    });
 
     // Advisor Rows in this department
     deptAdvisors.forEach((a) => {
@@ -652,6 +679,7 @@ function renderAdvisorTable(advisors) {
         </td>
       `;
       tbody.appendChild(tr);
+      advisorRows.push(tr);
     });
   });
 }
