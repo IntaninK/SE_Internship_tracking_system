@@ -1004,7 +1004,7 @@ const PAGE_BODY_HTML = `
          WORKSPACE 3: จัดกิจกรรมอบรมภายในคณะ & ระบบ Check-in หน้างานด้วยรหัสนิสิต
          ===================================================================== -->
     <div id="workspace-events" style="display:none;">
-      <div style="display:grid; grid-template-columns:390px 1fr; gap:20px;" class="max-lg:!grid-cols-1">
+      <div style="display:grid; grid-template-columns:440px 1fr; gap:20px;" class="max-lg:!grid-cols-1">
         <!-- ซ้าย: ฟอร์มสร้างกิจกรรมอบรมโดย พี่จอม (Super Admin) -->
         <section class="card" style="margin-bottom:0; overflow:visible !important;">
           <div class="card-header" style="border-top-left-radius:15px; border-top-right-radius:15px;">
@@ -1021,8 +1021,7 @@ const PAGE_BODY_HTML = `
                 <input type="text" id="evt-title" class="input-field" placeholder="เช่น อบรมเตรียมความพร้อม: การเขียน Resume &amp; บุคลิกภาพ" style="margin-top:4px;" />
               </div>
 
-              <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
-                <div>
+              <div>
                 <label style="font-size:12.5px; font-weight:700; color:#334155;">ประเภทชั่วโมงทักษะ</label>
                 <select id="evt-skill-type" class="input-field" style="margin-top:4px;">
                   <option value="SOFT">Soft Skill (เกณฑ์ 12 ชม.)</option>
@@ -1322,6 +1321,7 @@ const PAGE_BODY_HTML = `
                       <th>รหัสนิสิต</th>
                       <th>ชื่อ - นามสกุล</th>
                       <th>สาขาวิชา</th>
+                      <th>ช่วงที่เข้าร่วม</th>
                       <th class="text-center">ชั่วโมงที่ได้รับ</th>
                       <th>เวลาที่บันทึก</th>
                       <th class="text-center" style="width:140px; white-space:nowrap;">

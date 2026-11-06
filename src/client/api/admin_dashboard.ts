@@ -2246,25 +2246,28 @@ window.renderEventSessionsList = function() {
           </button>
         ` : ''}
       </div>
-      <div style="display:grid; grid-template-columns:1.1fr 1fr 1fr; gap:6px;">
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
         <div>
-          <label style="font-size:11px; font-weight:600; color:#475569;">วันที่จัด</label>
-          <input type="date" class="input-field" value="${s.date}" onchange="window.updateSessionField(${idx}, 'date', this.value)" style="padding:2px 6px; font-size:11.5px; height:28px; margin-top:2px;" />
+          <label style="font-size:11.5px; font-weight:600; color:#475569; display:block; margin-bottom:2px;">วันที่จัด</label>
+          <input type="date" class="input-field" value="${s.date}" onchange="window.updateSessionField(${idx}, 'date', this.value)" style="width:100%; padding:3px 6px; font-size:12px; height:32px; margin:0;" />
         </div>
         <div>
-          <label style="font-size:11px; font-weight:600; color:#475569;">เวลาเริ่ม - สิ้นสุด</label>
-          <div style="display:flex; align-items:center; gap:2px; margin-top:2px;">
-            <input type="time" class="input-field" value="${s.startTime}" onchange="window.updateSessionField(${idx}, 'startTime', this.value)" style="padding:2px 4px; font-size:11px; height:28px; margin:0;" />
+          <label style="font-size:11.5px; font-weight:600; color:#475569; display:block; margin-bottom:2px;">เวลาเริ่ม - สิ้นสุด</label>
+          <div style="display:flex; align-items:center; gap:3px;">
+            <input type="time" class="input-field" value="${s.startTime}" onchange="window.updateSessionField(${idx}, 'startTime', this.value)" style="flex:1; padding:2px 4px; font-size:11.5px; height:32px; margin:0;" />
             <span style="font-size:11px; color:#64748B;">-</span>
-            <input type="time" class="input-field" value="${s.endTime}" onchange="window.updateSessionField(${idx}, 'endTime', this.value)" style="padding:2px 4px; font-size:11px; height:28px; margin:0;" />
+            <input type="time" class="input-field" value="${s.endTime}" onchange="window.updateSessionField(${idx}, 'endTime', this.value)" style="flex:1; padding:2px 4px; font-size:11.5px; height:32px; margin:0;" />
           </div>
         </div>
-        <div>
-          <label style="font-size:11px; font-weight:700; color:#1E293B;">ชั่วโมงที่ได้รับ (กรอกเอง)</label>
-          <div style="display:flex; align-items:center; gap:4px; margin-top:2px;">
-            <input type="number" min="1" max="24" step="1" class="input-field" value="${s.hours}" oninput="window.updateSessionField(${idx}, 'hours', this.value)" style="padding:2px 6px; font-size:12px; font-weight:700; color:#059669; height:28px; width:65px; margin:0;" />
-            <span style="font-size:11px; font-weight:700; color:#065F46;">ชม.</span>
-          </div>
+      </div>
+      <div style="display:flex; justify-content:space-between; align-items:center; background:#F0FDF4; border:1px solid #BBF7D0; border-radius:8px; padding:6px 10px; margin-top:2px;">
+        <span style="font-size:12px; font-weight:700; color:#166534; display:flex; align-items:center; gap:4px;">
+          <span class="material-icons" style="font-size:16px; color:#16A34A;">alarm</span>
+          <span>ชั่วโมงที่ได้รับช่วงนี้ (กรอกเอง):</span>
+        </span>
+        <div style="display:flex; align-items:center; gap:4px;">
+          <input type="number" min="1" max="24" step="1" class="input-field" value="${s.hours}" oninput="window.updateSessionField(${idx}, 'hours', this.value)" style="padding:2px 6px; font-size:13px; font-weight:800; color:#15803D; height:30px; width:65px; margin:0; text-align:center; background:#FFFFFF; border:1px solid #86EFAC;" />
+          <span style="font-size:12px; font-weight:700; color:#166534;">ชม.</span>
         </div>
       </div>
     </div>
