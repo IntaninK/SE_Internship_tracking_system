@@ -922,7 +922,7 @@ const PAGE_BODY_HTML = `
 
           <!-- Pagination -->
           <div class="flex justify-between items-center mt-4 text-xs text-gray-500">
-            <span id="pagination-info">Showing 1-12 from 0 data</span>
+            <span id="pagination-info">แสดง 0-0 จาก 0 รายการ</span>
             <div class="flex gap-1" id="pagination-controls"></div>
           </div>
 

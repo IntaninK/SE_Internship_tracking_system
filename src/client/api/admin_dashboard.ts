@@ -296,20 +296,10 @@ async function loadStudents() {
     const data = await res.json();
     if (!data.success) return;
 
-    let studentsToRender = data.students || [];
-    let totalToRender = data.total;
-    // Fallback: กรองฝั่ง client-side เพิ่มเติม
-    if (selectedYear) {
-      studentsToRender = studentsToRender.filter(s => s.studentCode && s.studentCode.startsWith(selectedYear));
-      totalToRender = studentsToRender.length;
-    }
-    if (selectedSemester) {
-      studentsToRender = studentsToRender.filter(s => (s.semester || '2') === selectedSemester);
-      totalToRender = studentsToRender.length;
-    }
-    currentFilteredCount = totalToRender;
+    const studentsToRender = data.students || [];
+    currentFilteredCount = data.total;
 
-    renderStudentTable(studentsToRender, totalToRender, data.page, Math.max(1, Math.ceil(totalToRender / pageLimit)));
+    renderStudentTable(studentsToRender, data.total, data.page, Math.max(1, Math.ceil(data.total / pageLimit)));
   } catch (err) {
     console.error('Load students error:', err);
   }
@@ -515,23 +505,23 @@ function renderPagination(page, totalPages, total) {
   const infoEl = document.getElementById('pagination-info');
   if (!paginationEl) return;
 
-  const start = (page - 1) * pageLimit + 1;
+  const start = total > 0 ? (page - 1) * pageLimit + 1 : 0;
   const end = Math.min(page * pageLimit, total);
-  if (infoEl) infoEl.textContent = `Showing ${start}-${end} from ${total} data`;
+  if (infoEl) infoEl.textContent = `แสดง ${start}-${end} จาก ${total} รายการ`;
 
-  paginationEl.innerHTML = '';
-  for (let i = 1; i <= Math.min(totalPages, 5); i++) {
-    const btn = document.createElement('button');
-    btn.textContent = i;
-    btn.className = i === page
-      ? 'w-7 h-7 rounded-lg bg-[#1541D2] text-white text-xs font-medium'
-      : 'w-7 h-7 rounded-lg bg-gray-100 text-gray-600 text-xs hover:bg-gray-200';
-    btn.addEventListener('click', () => {
-      currentPage = i;
+  paginationEl.innerHTML = totalPages > 1 ? `
+    <button type="button" data-page-direction="previous" ${page <= 1 ? 'disabled' : ''}
+      style="border:1px solid #CBD5E1; border-radius:6px; background:#FFFFFF; color:#334155; padding:5px 10px; cursor:${page <= 1 ? 'not-allowed' : 'pointer'}; opacity:${page <= 1 ? '.5' : '1'};">ก่อนหน้า</button>
+    <button type="button" data-page-direction="next" ${page >= totalPages ? 'disabled' : ''}
+      style="border:1px solid #CBD5E1; border-radius:6px; background:#FFFFFF; color:#334155; padding:5px 10px; cursor:${page >= totalPages ? 'not-allowed' : 'pointer'}; opacity:${page >= totalPages ? '.5' : '1'};">ถัดไป</button>
+  ` : '';
+  paginationEl.querySelectorAll<HTMLButtonElement>('[data-page-direction]').forEach(button => {
+    button.addEventListener('click', () => {
+      if (button.disabled) return;
+      currentPage += button.dataset.pageDirection === 'next' ? 1 : -1;
       loadStudents();
     });
-    paginationEl.appendChild(btn);
-  }
+  });
 }
 
 // ==========================================

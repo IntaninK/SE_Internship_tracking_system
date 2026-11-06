@@ -567,6 +567,10 @@ router.get("/students", async (req: Request, res: Response) => {
     if (yearPrefix) {
       mapped = mapped.filter((s) => s.studentCode && s.studentCode.startsWith(yearPrefix));
     }
+    const semester = req.query.semester as string | undefined;
+    if (semester) {
+      mapped = mapped.filter((s) => (s.semester || "2") === semester);
+    }
 
     // Filter ตาม dropdown "สถานะ" (ผ่าน/ไม่ผ่าน แต่ละหมวด)
     const statusFilter = req.query.statusFilter as string | undefined;
