@@ -2463,6 +2463,14 @@ window.updateSelectedYears = function() {
 
 // ปิด dropdown เมื่อคลิกภายนอก
 document.addEventListener('click', (e) => {
+  const statusContainer = document.getElementById('status-dropdown-container');
+  const statusMenu = document.getElementById('status-dropdown-menu');
+  const statusArrow = document.getElementById('status-arrow-icon');
+  if (statusContainer && statusMenu && statusMenu.style.display !== 'none' && !statusContainer.contains(e.target as Node)) {
+    statusMenu.style.display = 'none';
+    if (statusArrow) statusArrow.textContent = 'keyboard_arrow_down';
+  }
+
   const majorContainer = document.getElementById('evt-major-dropdown-container');
   const majorMenu = document.getElementById('evt-major-dropdown-menu');
   const majorArrow = document.getElementById('evt-major-arrow-icon');

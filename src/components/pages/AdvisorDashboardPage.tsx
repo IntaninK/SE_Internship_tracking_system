@@ -148,18 +148,25 @@ const PAGE_BODY_HTML = `
             <option value="SUMMER">ภาคฤดูร้อน</option>
           </select>
 
-          <select id="status-filter" class="input-field" style="width:auto; min-width:155px; font-size:13px; padding:7px 12px; cursor:pointer;">
-            <option value="">ทุกสถานะ Checklist</option>
-            <!-- ⏳ หมวดรูปนาฬิกาทราย (จัดไว้อันแรกก่อน) -->
-            <option value="checklist_pending">⏳ รอผลตรวจ Checklist</option>
-            <option value="training_incomplete">⏳ อบรมยังไม่ครบ</option>
-            <!-- 🟢 หมวดวงกลมสีเขียว (เดิมเป็นเช็คถูก) -->
-            <option value="checklist_approved">🟢 อาจารย์รีวิวแล้ว</option>
-            <option value="training_passed">🟢 อบรมครบ 30 ชม.</option>
-            <option value="cv_approved">🟢 ตรวจ CV ผ่าน</option>
-            <option value="placement_approved">🟢 อนุมัติที่ฝึกงานแล้ว</option>
-            <!-- 🔴 หมวดวงกลมสีแดง (เดิมเป็นกากบาท) -->
-            <option value="checklist_rejected">🔴 ไม่ผ่าน / ทำเพิ่ม</option>
+          <select id="status-filter" class="input-field" style="width:auto; min-width:175px; font-size:13px; padding:7px 12px; cursor:pointer;">
+            <option value="">ทุกสถานะ</option>
+            <optgroup label="📄 1. ตรวจเรซูเม่ (CV)">
+              <option value="cv_pending">⏳ ยังไม่ได้รีวิว CV</option>
+              <option value="cv_approved">🟢 ตรวจ CV ผ่าน</option>
+              <option value="cv_rejected">🔴 ไม่ผ่าน CV</option>
+            </optgroup>
+            <optgroup label="🏢 2. Checklist สถานประกอบการ">
+              <option value="checklist_pending">⏳ รอตรวจ Checklist</option>
+              <option value="checklist_approved">🟢 Checklist ผ่าน (รีวิวแล้ว)</option>
+              <option value="checklist_rejected">🔴 ไม่ผ่าน / ทำเพิ่ม</option>
+            </optgroup>
+            <optgroup label="🎓 3. ชั่วโมงอบรมเตรียมความพร้อม">
+              <option value="training_incomplete">⏳ อบรมยังไม่ครบ</option>
+              <option value="training_passed">🟢 อบรมครบ 30 ชม.</option>
+            </optgroup>
+            <optgroup label="💼 4. ที่ฝึกงาน">
+              <option value="placement_approved">🟢 อนุมัติที่ฝึกงานแล้ว</option>
+            </optgroup>
           </select>
 
           <select id="skill-filter" class="input-field" style="width:auto; min-width:160px; font-size:13px; padding:7px 12px; cursor:pointer;">

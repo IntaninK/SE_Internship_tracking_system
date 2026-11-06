@@ -269,18 +269,25 @@ router.get("/students", async (req: Request, res: Response) => {
         case "training_passed":
           mapped = mapped.filter((s) => s.isTrainingComplete);
           break;
+        case "training_incomplete":
         case "training_failed":
           mapped = mapped.filter((s) => !s.isTrainingComplete);
           break;
+        case "cv_approved":
         case "cv_passed":
           mapped = mapped.filter((s) => s.cvStatus === "APPROVED");
           break;
+        case "cv_pending":
+        case "cv_rejected":
         case "cv_failed":
           mapped = mapped.filter((s) => s.cvStatus !== "APPROVED");
           break;
+        case "checklist_approved":
         case "checklist_passed":
           mapped = mapped.filter((s) => s.checklistStatusCode === "APPROVED");
           break;
+        case "checklist_pending":
+        case "checklist_rejected":
         case "checklist_failed":
           mapped = mapped.filter((s) => s.checklistStatusCode !== "APPROVED");
           break;

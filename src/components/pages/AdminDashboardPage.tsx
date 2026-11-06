@@ -582,6 +582,23 @@ const PAGE_STYLES: string[] = [`
       padding: 15px !important;
     }
   }
+  .status-group-header {
+    pointer-events: none;
+    user-select: none;
+    font-size: 11px;
+    font-weight: 700;
+    color: #475569;
+    background: #F8FAFC;
+    padding: 6px 12px;
+    border-top: 1px solid #E2E8F0;
+    border-bottom: 1px solid #E2E8F0;
+    margin-top: 4px;
+    margin-bottom: 2px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    letter-spacing: 0.2px;
+  }
   .status-option {
     padding: 6px 12px;
     font-size: 13px;
@@ -795,28 +812,34 @@ const PAGE_BODY_HTML = `
                 <span id="status-filter-label" style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-weight:400;">ทุกสถานะ</span>
                 <span id="status-arrow-icon" class="material-icons" style="font-size:18px; color:#64748B; pointer-events:none;">keyboard_arrow_down</span>
               </button>
-              <div id="status-dropdown-menu" style="display:none; position:absolute; top:calc(100% + 4px); left:0; width:100%; min-width:195px; box-sizing:border-box; z-index:1050; background:#FFFFFF; border:1px solid #CBD5E1; border-radius:8px; box-shadow:0 8px 24px -4px rgba(15,23,42,0.12), 0 2px 6px -1px rgba(15,23,42,0.06); padding:4px 0; max-height:260px; overflow-y:auto;">
+              <div id="status-dropdown-menu" style="display:none; position:absolute; top:calc(100% + 4px); left:0; width:max-content; min-width:100%; box-sizing:border-box; z-index:1050; background:#FFFFFF; border:1px solid #CBD5E1; border-radius:8px; box-shadow:0 8px 24px -4px rgba(15,23,42,0.12), 0 2px 6px -1px rgba(15,23,42,0.06); padding:4px 0; max-height:340px; overflow-y:auto;">
                 <div class="status-option selected" data-val="" onclick="window.selectStatusFilter('', 'ทุกสถานะ')">ทุกสถานะ</div>
 
-                <!-- ⏳ หมวดรูปนาฬิกาทราย (จัดไว้อันแรกก่อน) -->
+                <!-- ขั้นตอนที่ 1: ตรวจเรซูเม่ (CV) -->
+                <div class="status-group-header">📄 1. ตรวจเรซูเม่ (CV)</div>
+                <div class="status-option" data-val="cv_pending" onclick="window.selectStatusFilter('cv_pending', '⏳ ยังไม่ได้รีวิว CV')">⏳ ยังไม่ได้รีวิว CV</div>
+                <div class="status-option" data-val="cv_approved" onclick="window.selectStatusFilter('cv_approved', '🟢 ตรวจ CV ผ่าน')">🟢 ตรวจ CV ผ่าน</div>
+                <div class="status-option" data-val="cv_rejected" onclick="window.selectStatusFilter('cv_rejected', '🔴 ไม่ผ่าน CV')">🔴 ไม่ผ่าน CV</div>
+                <div class="status-option" data-val="cv_none" onclick="window.selectStatusFilter('cv_none', '🔴 ยังไม่ทำ CV')">🔴 ยังไม่ทำ CV</div>
+
+                <!-- ขั้นตอนที่ 2: Checklist สถานประกอบการ -->
+                <div class="status-group-header">🏢 2. Checklist สถานประกอบการ</div>
+                <div class="status-option" data-val="checklist_pending" onclick="window.selectStatusFilter('checklist_pending', '⏳ รอตรวจ Checklist')">⏳ รอตรวจ Checklist</div>
+                <div class="status-option" data-val="checklist_approved" onclick="window.selectStatusFilter('checklist_approved', '🟢 Checklist ผ่าน')">🟢 Checklist ผ่าน</div>
+
+                <!-- ขั้นตอนที่ 3: ชั่วโมงอบรมเตรียมความพร้อม -->
+                <div class="status-group-header">🎓 3. ชั่วโมงอบรมเตรียมความพร้อม</div>
                 <div class="status-option" data-val="training_not_checked" onclick="window.selectStatusFilter('training_not_checked', '⏳ ชม.ครบ ยังไม่ตรวจ')">⏳ ชม.ครบ ยังไม่ตรวจ</div>
                 <div class="status-option" data-val="training_incomplete" onclick="window.selectStatusFilter('training_incomplete', '⏳ ชั่วโมงยังไม่ครบ')">⏳ ชั่วโมงยังไม่ครบ</div>
-                <div class="status-option" data-val="cv_pending" onclick="window.selectStatusFilter('cv_pending', '⏳ ยังไม่ได้รีวิว CV')">⏳ ยังไม่ได้รีวิว CV</div>
-                <div class="status-option" data-val="checklist_pending" onclick="window.selectStatusFilter('checklist_pending', '⏳ รอตรวจ Checklist')">⏳ รอตรวจ Checklist</div>
-                <div class="status-option" data-val="placement_pending" onclick="window.selectStatusFilter('placement_pending', '⏳ รออนุมัติที่ฝึกงาน')">⏳ รออนุมัติที่ฝึกงาน</div>
-
-                <!-- 🟢 หมวดวงกลมสีเขียว (เดิมเป็นเช็คถูก) -->
                 <div class="status-option" data-val="training_passed" onclick="window.selectStatusFilter('training_passed', '🟢 ผ่านการตรวจชม.ครบ')">🟢 ผ่านการตรวจชม.ครบ</div>
-                <div class="status-option" data-val="cv_approved" onclick="window.selectStatusFilter('cv_approved', '🟢 ตรวจ CV ผ่าน')">🟢 ตรวจ CV ผ่าน</div>
-                <div class="status-option" data-val="checklist_approved" onclick="window.selectStatusFilter('checklist_approved', '🟢 Checklist ผ่าน')">🟢 Checklist ผ่าน</div>
+                <div class="status-option" data-val="training_failed" onclick="window.selectStatusFilter('training_failed', '🔴 ตรวจแล้ว ยังไม่ผ่าน')">🔴 ตรวจแล้ว ยังไม่ผ่าน</div>
+
+                <!-- ขั้นตอนที่ 4: การสัมภาษณ์ & ที่ฝึกงาน -->
+                <div class="status-group-header">💼 4. การสัมภาษณ์ &amp; ที่ฝึกงาน</div>
+                <div class="status-option" data-val="placement_pending" onclick="window.selectStatusFilter('placement_pending', '⏳ รออนุมัติที่ฝึกงาน')">⏳ รออนุมัติที่ฝึกงาน</div>
                 <div class="status-option" data-val="interview_passed" onclick="window.selectStatusFilter('interview_passed', '🟢 สัมภาษณ์ผ่านแล้ว')">🟢 สัมภาษณ์ผ่านแล้ว</div>
                 <div class="status-option" data-val="placement_approved" onclick="window.selectStatusFilter('placement_approved', '🟢 อนุมัติที่ฝึกงานแล้ว')">🟢 อนุมัติที่ฝึกงานแล้ว</div>
-
-                <!-- 🔴 หมวดวงกลมสีแดง (เดิมเป็นกากบาท) -->
-                <div class="status-option" data-val="training_failed" onclick="window.selectStatusFilter('training_failed', '🔴 ตรวจแล้ว ยังไม่ผ่าน')">🔴 ตรวจแล้ว ยังไม่ผ่าน</div>
-                <div class="status-option" data-val="cv_rejected" onclick="window.selectStatusFilter('cv_rejected', '🔴 ไม่ผ่าน CV')">🔴 ไม่ผ่าน CV</div>
                 <div class="status-option" data-val="placement_rejected" onclick="window.selectStatusFilter('placement_rejected', '🔴 ไม่อนุมัติที่ฝึกงาน')">🔴 ไม่อนุมัติที่ฝึกงาน</div>
-                <div class="status-option" data-val="cv_none" onclick="window.selectStatusFilter('cv_none', '🔴 ยังไม่ทำ CV')">🔴 ยังไม่ทำ CV</div>
               </div>
             </div>
 
