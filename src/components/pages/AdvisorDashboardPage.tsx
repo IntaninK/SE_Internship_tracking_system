@@ -177,6 +177,13 @@ const PAGE_BODY_HTML = `
             <option value="lack_both">⚠️ ขาดทั้ง Soft &amp; Hard</option>
           </select>
 
+          <select id="sort-by" class="input-field" style="width:auto; min-width:165px; font-size:13px; padding:7px 12px; cursor:pointer; font-weight:500;">
+            <option value="critical" selected>🚨 เรียง: วิกฤตสุด ➔ เบาสุด</option>
+            <option value="studentCode_desc">🔢 เรียง: รหัสนิสิต (มาก ➔ น้อย)</option>
+            <option value="studentCode_asc">🔤 เรียง: รหัสนิสิต (น้อย ➔ มาก)</option>
+            <option value="name_asc">👤 เรียง: ชื่อ-นามสกุล (ก-ฮ)</option>
+          </select>
+
           <button id="btn-clear-filter" onclick="clearAllFilters()" style="display:none; background:#EF4444; color:white; border:none; font-size:12px; padding:7px 12px; border-radius:10px; cursor:pointer; align-items:center; gap:4px; font-weight:600;">
             <span class="material-icons" style="font-size:14px;">close</span> ล้างตัวกรอง
           </button>

@@ -73,6 +73,45 @@ function checkPlacementMatchesChecklist(placement: any, companies: any[]): boole
 }
 
 // ==========================================
+
+// Helper: คำนวณระดับความวิกฤตของนิสิต (Risk Priority: 1 วิกฤตสุด -> 5 เบาสุด)
+function getStudentRiskPriority(s: any): number {
+  // Rank 1: วิกฤตสูงสุด - ยังไม่มีข้อมูลใดๆ หรือยังไม่เริ่มทำอะไรเลย
+  const isNoData = s.readinessStatusKey === "noData" ||
+    (!s.cvStatus &&
+      (s.trainingApprovedSoft || 0) === 0 &&
+      (s.trainingApprovedHard || 0) === 0 &&
+      s.checklistStatusCode !== "APPROVED" &&
+      !s.placementStatus);
+  if (isNoData) return 1;
+
+  // Rank 2: มีปัญหา / ติดขัด / ถูกปฏิเสธ / บริษัทไม่ตรง Checklist [REQ-06]
+  const hasIssue = s.placementStatus === "REJECTED" ||
+    s.isMatchedWithChecklist === false ||
+    s.cvStatus === "REJECTED" ||
+    s.checklistStatusCode === "REJECTED";
+  if (hasIssue) return 2;
+
+  // Rank 3: ตกเกณฑ์ / ชั่วโมงไม่ครบ / ยังไม่ทำ CV
+  const isLacking = !s.isTrainingComplete ||
+    (s.trainingApprovedSoft || 0) < 12 ||
+    (s.trainingApprovedHard || 0) < 18 ||
+    s.readinessStatusKey === "hoursIncomplete" ||
+    !s.cvStatus;
+  if (isLacking) return 3;
+
+  // Rank 4: อยู่ระหว่างรอดำเนินการ / รอตรวจ
+  const isPending = s.placementStatus === "PENDING" ||
+    s.hasPendingPlacement ||
+    s.hasPendingChecklist ||
+    s.cvStatus === "PENDING" ||
+    s.checklistStatusCode === "PENDING";
+  if (isPending) return 4;
+
+  // Rank 5: เบาสุด / ปลอดภัย
+  return 5;
+}
+
 // 1. Dashboard Summary ของอาจารย์ที่ปรึกษา / อาจารย์นิเทศก์
 // ==========================================
 router.get("/dashboard-summary", async (req: Request, res: Response) => {
@@ -234,14 +273,41 @@ router.get("/students", async (req: Request, res: Response) => {
       };
     });
 
-    mapped.sort((a, b) => {
-      try {
-        const codeA = BigInt(a.studentCode);
-        const codeB = BigInt(b.studentCode);
-        return codeA === codeB ? 0 : codeA > codeB ? -1 : 1;
-      } catch {
-        return a.studentCode.localeCompare(b.studentCode);
+    const sortBy = (req.query.sortBy as string) || "critical";
+    mapped.sort((a: any, b: any) => {
+      if (sortBy === "critical") {
+        const pA = getStudentRiskPriority(a);
+        const pB = getStudentRiskPriority(b);
+        if (pA !== pB) {
+          return pA - pB;
+        }
+        try {
+          const codeA = BigInt(a.studentCode);
+          const codeB = BigInt(b.studentCode);
+          return codeA === codeB ? 0 : codeA > codeB ? -1 : 1;
+        } catch {
+          return (a.studentCode || "").localeCompare(b.studentCode || "");
+        }
+      } else if (sortBy === "studentCode_desc") {
+        try {
+          const codeA = BigInt(a.studentCode);
+          const codeB = BigInt(b.studentCode);
+          return codeA === codeB ? 0 : codeA > codeB ? -1 : 1;
+        } catch {
+          return (b.studentCode || "").localeCompare(a.studentCode || "");
+        }
+      } else if (sortBy === "studentCode_asc") {
+        try {
+          const codeA = BigInt(a.studentCode);
+          const codeB = BigInt(b.studentCode);
+          return codeA === codeB ? 0 : codeA < codeB ? -1 : 1;
+        } catch {
+          return (a.studentCode || "").localeCompare(b.studentCode || "");
+        }
+      } else if (sortBy === "name_asc") {
+        return (a.nameTh || "").localeCompare(b.nameTh || "", "th");
       }
+      return 0;
     });
 
     // กรองตาม Search query

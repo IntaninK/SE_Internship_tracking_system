@@ -275,6 +275,8 @@ async function loadStudents() {
     const skillFilter = document.getElementById('skill-filter');
     if (statusFilter && statusFilter.value) url += `&statusFilter=${encodeURIComponent(statusFilter.value)}`;
     if (skillFilter && skillFilter.value) url += `&skillFilter=${encodeURIComponent(skillFilter.value)}`;
+    const sortBy = (document.getElementById('sort-by') as HTMLSelectElement | null)?.value || 'critical';
+    url += `&sortBy=${encodeURIComponent(sortBy)}`;
 
     const res = await fetch(url);
     const data = await res.json();
@@ -808,6 +810,8 @@ window.clearAllFilters = function() {
     const el = document.getElementById(id);
     if (el) el.value = '';
   });
+  const sortEl = document.getElementById('sort-by') as HTMLSelectElement | null;
+  if (sortEl) sortEl.value = 'critical';
   const searchEl = document.getElementById('student-search');
   if (searchEl) searchEl.value = '';
   updateFilterUI();
@@ -815,7 +819,7 @@ window.clearAllFilters = function() {
 };
 
 // Dropdown filter events (สถานะ, Skill)
-['status-filter', 'skill-filter'].forEach(id => {
+['status-filter', 'skill-filter', 'sort-by'].forEach(id => {
   const el = document.getElementById(id);
   if (el) {
     el.addEventListener('change', () => {

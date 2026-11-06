@@ -289,6 +289,8 @@ async function loadStudents() {
     if (skillFilter && skillFilter.value) url += `&skillFilter=${encodeURIComponent(skillFilter.value)}`;
     const majorFilter = document.getElementById('major-filter');
     if (majorFilter && majorFilter.value && majorFilter.value !== 'ALL') url += `&major=${encodeURIComponent(majorFilter.value)}`;
+    const sortBy = (document.getElementById('sort-by') as HTMLSelectElement | null)?.value || 'critical';
+    url += `&sortBy=${encodeURIComponent(sortBy)}`;
 
     const res = await fetch(url);
     const data = await res.json();
@@ -1091,7 +1093,7 @@ if (semesterFilterEl) {
 }
 
 // Dropdown filter events (สถานะ, อาจารย์, Skill)
-['status-filter', 'advisor-filter', 'skill-filter'].forEach(id => {
+['status-filter', 'advisor-filter', 'skill-filter', 'sort-by'].forEach(id => {
   const el = document.getElementById(id);
   if (el) {
     el.addEventListener('change', () => {
@@ -1298,6 +1300,8 @@ window.clearAllFilters = function() {
       if ('dataset' in el && el.dataset) el.dataset.label = 'ทุกสถานะ';
     }
   });
+  const sortEl = document.getElementById('sort-by') as HTMLSelectElement | null;
+  if (sortEl) sortEl.value = 'critical';
   const statusLabelEl = document.getElementById('status-filter-label');
   if (statusLabelEl) statusLabelEl.textContent = 'ทุกสถานะ';
   const statusMenu = document.getElementById('status-dropdown-menu');

@@ -193,6 +193,55 @@ function checkPlacementMatchesChecklist(placement: any, companies: any[]): boole
 }
 
 // Helper: กรองขอบเขตสาขาวิชา (Department Scoping สำหรับอาจารย์ประจำวิชาแต่ละสาขา vs เจ้าหน้าที่คณะ/Admin กลาง)
+
+// Helper: คำนวณระดับความวิกฤตของนิสิต (Risk Priority: 1 วิกฤตสุด -> 5 เบาสุด)
+function getStudentRiskPriority(s: any): number {
+  // Rank 1: วิกฤตสูงสุด - ยังไม่มีข้อมูลใดๆ หรือยังไม่เริ่มทำอะไรเลย (เช่น ยังไม่ส่ง CV, ชม.อบรมเป็น 0, ไม่มี Checklist, ไม่มีที่ฝึกงาน)
+  const isNoData = s.statusCategory === "none" ||
+    s.overallStatus === "ยังไม่มีข้อมูล" ||
+    (!s.cvStatus &&
+      (s.trainingApprovedSoft || 0) === 0 &&
+      (s.trainingApprovedHard || 0) === 0 &&
+      !s.hasChecklistApproved &&
+      !s.placementStatus);
+  if (isNoData) return 1;
+
+  // Rank 2: มีปัญหา / ติดขัด / ถูกปฏิเสธ / บริษัทไม่ตรง Checklist [REQ-06]
+  const hasIssue = s.placementStatus === "REJECTED" ||
+    s.placementCategory === "rejected" ||
+    s.statusCategory === "placement_rejected" ||
+    s.isMatchedWithChecklist === false ||
+    s.cvStatus === "REJECTED" ||
+    s.cvCategory === "failed" ||
+    s.statusCategory === "cv_rejected" ||
+    s.trainingCategory === "checkedNotPass" ||
+    s.statusCategory === "training_rejected";
+  if (hasIssue) return 2;
+
+  // Rank 3: ตกเกณฑ์ / ชั่วโมงไม่ครบ / ยังไม่ทำ CV
+  const isLacking = !s.isTrainingComplete ||
+    (s.trainingApprovedSoft || 0) < 12 ||
+    (s.trainingApprovedHard || 0) < 18 ||
+    s.trainingCategory === "hoursNotComplete" ||
+    s.cvCategory === "noCv" ||
+    !s.cvStatus;
+  if (isLacking) return 3;
+
+  // Rank 4: อยู่ระหว่างรอดำเนินการ / รอตรวจ
+  const isPending = s.placementStatus === "PENDING" ||
+    s.placementCategory === "pending" ||
+    s.statusCategory === "placement_pending" ||
+    s.statusCategory === "interview_passed" ||
+    s.cvStatus === "PENDING" ||
+    s.cvCategory === "notReviewed" ||
+    s.statusCategory === "cv_pending" ||
+    s.trainingCategory === "completeNotChecked";
+  if (isPending) return 4;
+
+  // Rank 5: เบาสุด / ปลอดภัย
+  return 5;
+}
+
 function filterStudentsByScope(students: any[], req: Request): any[] {
   const isCentralOrStaff = Boolean(
     req.staff?.isStaff ||
@@ -452,14 +501,41 @@ router.get("/students", async (req: Request, res: Response) => {
       };
     });
 
-    mapped.sort((a, b) => {
-      try {
-        const codeA = BigInt(a.studentCode);
-        const codeB = BigInt(b.studentCode);
-        return codeA === codeB ? 0 : codeA > codeB ? -1 : 1;
-      } catch {
-        return a.studentCode.localeCompare(b.studentCode);
+    const sortBy = (req.query.sortBy as string) || "critical";
+    mapped.sort((a: any, b: any) => {
+      if (sortBy === "critical") {
+        const pA = getStudentRiskPriority(a);
+        const pB = getStudentRiskPriority(b);
+        if (pA !== pB) {
+          return pA - pB;
+        }
+        try {
+          const codeA = BigInt(a.studentCode);
+          const codeB = BigInt(b.studentCode);
+          return codeA === codeB ? 0 : codeA > codeB ? -1 : 1;
+        } catch {
+          return (a.studentCode || "").localeCompare(b.studentCode || "");
+        }
+      } else if (sortBy === "studentCode_desc") {
+        try {
+          const codeA = BigInt(a.studentCode);
+          const codeB = BigInt(b.studentCode);
+          return codeA === codeB ? 0 : codeA > codeB ? -1 : 1;
+        } catch {
+          return (b.studentCode || "").localeCompare(a.studentCode || "");
+        }
+      } else if (sortBy === "studentCode_asc") {
+        try {
+          const codeA = BigInt(a.studentCode);
+          const codeB = BigInt(b.studentCode);
+          return codeA === codeB ? 0 : codeA < codeB ? -1 : 1;
+        } catch {
+          return (a.studentCode || "").localeCompare(b.studentCode || "");
+        }
+      } else if (sortBy === "name_asc") {
+        return (a.nameTh || "").localeCompare(b.nameTh || "", "th");
       }
+      return 0;
     });
 
     // กรองตาม viewDropped (นิสิตปกติ vs นิสิตที่ดรอป)
