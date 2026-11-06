@@ -107,6 +107,41 @@
   ],
   "trainingEvents": [
     {
+      "id": "EVT-874223",
+      "title": "อบรบฝึกงานแต่ละที่ต่างกันอย่างไร",
+      "skillType": "SOFT",
+      "eventDate": "2026-11-07 ถึง 2026-11-08",
+      "startTime": "09:00",
+      "endTime": "16:00",
+      "rawHours": 9,
+      "creditedHours": 9,
+      "targetMajor": "ALL",
+      "targetYear": "ALL",
+      "location": "ห้องประชุมคณะ ICT มหาวิทยาลัยพะเยา",
+      "academicYear": "2569",
+      "createdBy": "whyer kuru",
+      "createdAt": "2026-11-06T06:01:14.223Z",
+      "sessions": [
+        {
+          "id": "SES-1",
+          "title": "ช่วงที่ 1",
+          "date": "2026-11-07",
+          "startTime": "09:00",
+          "endTime": "16:00",
+          "hours": 4
+        },
+        {
+          "id": "SES-2",
+          "title": "ช่วงที่ 2",
+          "date": "2026-11-08",
+          "startTime": "09:00",
+          "endTime": "16:00",
+          "hours": 5
+        }
+      ],
+      "checkIns": []
+    },
+    {
       "id": "EVT-454894",
       "title": "อบรมการเตรียมความพร้อมสำหรับการไปฝึกงานต้องเตรียมตัวอย่างไร",
       "skillType": "SOFT",
