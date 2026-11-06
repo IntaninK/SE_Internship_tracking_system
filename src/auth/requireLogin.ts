@@ -4,7 +4,7 @@ import { Request, Response, NextFunction } from "express";
 // วิธีใช้: app.get('/pages/dashboard.html', requireLogin, (req, res) => { ... })
 export function requireLogin(req: Request, res: Response, next: NextFunction) {
   if (!req.session || !req.session.user) {
-    return res.redirect("/pages/login.html");
+    return res.redirect("/login");
   }
   next();
 }

@@ -31,7 +31,7 @@ async function loadData() {
 
     if (!isDroppedStudent && (!isTrainingComplete || !isCvApproved)) {
       alert('⚠️ ยังไม่สามารถเข้าใช้งานหน้า Checklist บริษัทได้ เนื่องจากยังไม่ผ่านเงื่อนไขการอบรม (Soft >= 12, Hard >= 18 ชม.) หรือ CV ยังไม่ได้รับการอนุมัติ');
-      window.location.href = '/pages/status_all.html';
+      window.location.href = '/status-all';
       return;
     }
 
@@ -322,7 +322,7 @@ document.getElementById('save-all-btn').addEventListener('click', async () => {
     }
 
     alert('✅ บันทึกข้อมูล Checklist สถานประกอบการเรียบร้อยแล้ว');
-    window.location.href = '/pages/status_all.html';
+    window.location.href = '/status-all';
   } catch (err) {
     console.error('Error saving companies:', err);
     alert('เกิดข้อผิดพลาดในการบันทึกข้อมูล');

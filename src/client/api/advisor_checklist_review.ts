@@ -7,7 +7,7 @@ const studentId = params.get('studentId');
 document.addEventListener('DOMContentLoaded', () => {
   if (!studentId) {
     alert('ไม่พบรหัสนิสิตที่ต้องการตรวจสอบ');
-    window.location.href = '/pages/dashboard_ที่ปรึกษา.html';
+    window.location.href = '/advisor-dashboard';
     return;
   }
   loadStudentChecklistData();
@@ -26,7 +26,7 @@ async function loadStudentChecklistData() {
         <div class="bg-white rounded-2xl p-12 text-center shadow-sm border border-gray-200">
           <span class="material-icons text-5xl text-red-500 mb-3">error_outline</span>
           <p class="text-gray-700 text-lg font-medium">${data.message || 'ไม่สามารถโหลดข้อมูลได้'}</p>
-          <a href="/pages/dashboard_ที่ปรึกษา.html" class="inline-block mt-4 px-6 py-2 bg-blue-600 text-white rounded-xl text-sm font-medium no-underline">
+          <a href="/advisor-dashboard" class="inline-block mt-4 px-6 py-2 bg-blue-600 text-white rounded-xl text-sm font-medium no-underline">
             กลับหน้า Dashboard
           </a>
         </div>
@@ -46,7 +46,7 @@ async function loadStudentChecklistData() {
         <div class="bg-white rounded-2xl p-12 text-center shadow-sm border border-gray-200">
           <span class="material-icons text-5xl text-gray-400 mb-3">info</span>
           <p class="text-gray-600 text-lg font-medium">นิสิตยังไม่ได้เพิ่มข้อมูลบริษัทหรือกรอก Checklist</p>
-          <a href="/pages/dashboard_ที่ปรึกษา.html" class="inline-block mt-4 px-6 py-2 bg-blue-600 text-white rounded-xl text-sm font-medium no-underline">
+          <a href="/advisor-dashboard" class="inline-block mt-4 px-6 py-2 bg-blue-600 text-white rounded-xl text-sm font-medium no-underline">
             กลับหน้า Dashboard
           </a>
         </div>
@@ -75,10 +75,10 @@ async function loadStudentChecklistData() {
     const backBtn = document.querySelector('a[href*="dashboard_ที่ปรึกษา"]');
     if (backBtn) {
       if (fromDetail) {
-        backBtn.href = `/pages/admin_student_detail.html?id=${studentId}`;
+        backBtn.href = `/admin-student-detail?id=${studentId}`;
         backBtn.innerHTML = '<span class="material-icons text-base">arrow_back</span><span>กลับไปหน้า Profile นิสิต</span>';
       } else if (!canReview) {
-        backBtn.href = '/pages/dashboard_รายวิชา.html';
+        backBtn.href = '/admin-dashboard';
         backBtn.innerHTML = '<span class="material-icons text-base">arrow_back</span><span>กลับไปหน้า Dashboard</span>';
       }
     }

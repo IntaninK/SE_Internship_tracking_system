@@ -24,7 +24,7 @@ async function initStudentDetail() {
       if (currentUserRole === 'ADVISOR') {
         const backBtn = document.querySelector('a[href*="dashboard"]');
         if (backBtn) {
-          backBtn.href = '/pages/dashboard_ที่ปรึกษา.html';
+          backBtn.href = '/advisor-dashboard';
           backBtn.innerHTML = '<span class="material-icons" style="font-size:18px;">arrow_back</span> กลับหน้า Dashboard ที่ปรึกษา';
         }
       }

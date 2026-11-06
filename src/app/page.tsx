@@ -9,19 +9,19 @@ export default function HomePage() {
       .then((data) => {
         if (data && data.authenticated && data.user) {
           const role = data.user.role;
-          if (role === "STAFF" || role === "ADMIN") {
-            window.location.replace("/pages/dashboard_รายวิชา.html");
-          } else if (role === "ADVISOR") {
-            window.location.replace("/pages/dashboard_ที่ปรึกษา.html");
+          if (role === "STAFF" || role === "ADMIN" || data.user.isStaff || data.user.isCourseAdmin) {
+            window.location.replace("/admin-dashboard");
+          } else if (role === "ADVISOR" || data.user.isAdvisor || data.user.isSupervisor) {
+            window.location.replace("/advisor-dashboard");
           } else {
-            window.location.replace("/pages/dashboard.html");
+            window.location.replace("/student-dashboard");
           }
         } else {
-          window.location.replace("/pages/login.html");
+          window.location.replace("/login");
         }
       })
       .catch(() => {
-        window.location.replace("/pages/login.html");
+        window.location.replace("/login");
       });
   }, []);
 
@@ -31,4 +31,3 @@ export default function HomePage() {
     </div>
   );
 }
-

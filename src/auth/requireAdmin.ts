@@ -4,7 +4,7 @@ import prisma from "../db";
 // Middleware: ตรวจสิทธิ์ว่าเป็นอาจารย์ประจำวิชา (Course Admin), เจ้าหน้าที่ (Staff) หรือ Super Admin
 export async function requireAdmin(req: Request, res: Response, next: NextFunction) {
   if (!req.session || !req.session.user) {
-    return res.redirect("/pages/login.html");
+    return res.redirect("/login");
   }
 
   try {

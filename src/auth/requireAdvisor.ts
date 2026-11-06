@@ -4,7 +4,7 @@ import prisma from "../db";
 // Middleware: ตรวจสอบว่าเป็นอาจารย์ที่ปรึกษา, อาจารย์นิเทศก์, อาจารย์รายวิชา หรือเจ้าหน้าที่
 export async function requireAdvisor(req: Request, res: Response, next: NextFunction) {
   if (!req.session || !req.session.user) {
-    return res.redirect("/pages/login.html");
+    return res.redirect("/login");
   }
 
   try {

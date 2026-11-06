@@ -114,13 +114,13 @@ function initPersistentProfHeader(templateUrl) {
                     const navDashboard = headerNav ? headerNav.querySelector('a[href*="dashboard"]') : null;
                     if (isCourseAdminOrStaff) {
                         if (navDashboard) {
-                            navDashboard.href = '/pages/dashboard_รายวิชา.html';
+                            navDashboard.href = '/admin-dashboard';
                             navDashboard.innerHTML = '<span class="material-icons" style="font-size:16px;">analytics</span><span>Dashboard รายวิชา/คณะ</span>';
                         }
                         if (isAdvOrSup && headerNav && !headerNav.querySelector('#multi-role-advisor-link')) {
                             const advLink = document.createElement('a');
                             advLink.id = 'multi-role-advisor-link';
-                            advLink.href = '/pages/dashboard_ที่ปรึกษา.html';
+                            advLink.href = '/advisor-dashboard';
                             advLink.className = 'nav-link';
                             advLink.innerHTML = '<span class="material-icons" style="font-size:16px;">people</span><span>Dashboard ที่ปรึกษา</span>';
                             if (navDashboard && navDashboard.parentElement) {
@@ -129,7 +129,7 @@ function initPersistentProfHeader(templateUrl) {
                         }
                     } else if (isAdvOrSup) {
                         if (navDashboard) {
-                            navDashboard.href = '/pages/dashboard_ที่ปรึกษา.html';
+                            navDashboard.href = '/advisor-dashboard';
                             navDashboard.innerHTML = '<span class="material-icons" style="font-size:16px;">people</span><span>Dashboard ที่ปรึกษา</span>';
                         }
                     }
@@ -143,7 +143,7 @@ function initPersistentProfHeader(templateUrl) {
                                 mode: 'ADVISOR',
                                 label: 'อาจารย์ที่ปรึกษา',
                                 icon: 'supervisor_account',
-                                url: '/pages/dashboard_ที่ปรึกษา.html?roleMode=ADVISOR'
+                                url: '/advisor-dashboard?roleMode=ADVISOR'
                             });
                         }
                         if (isSupervisor) {
@@ -151,7 +151,7 @@ function initPersistentProfHeader(templateUrl) {
                                 mode: 'SUPERVISOR',
                                 label: 'อาจารย์นิเทศก์',
                                 icon: 'explore',
-                                url: '/pages/dashboard_ที่ปรึกษา.html?roleMode=SUPERVISOR'
+                                url: '/advisor-dashboard?roleMode=SUPERVISOR'
                             });
                         }
                         if (isCourseAdmin) {
@@ -159,7 +159,7 @@ function initPersistentProfHeader(templateUrl) {
                                 mode: 'COURSE_INSTRUCTOR',
                                 label: 'อาจารย์ประจำวิชา',
                                 icon: 'menu_book',
-                                url: '/pages/dashboard_รายวิชา.html'
+                                url: '/admin-dashboard'
                             });
                         }
                         if (isStaff) {
@@ -167,7 +167,7 @@ function initPersistentProfHeader(templateUrl) {
                                 mode: 'FACULTY_STAFF',
                                 label: role === 'ADMIN' ? 'ผู้ดูแลทั้งคณะ' : 'เจ้าหน้าที่คณะ',
                                 icon: 'account_balance',
-                                url: '/pages/dashboard_รายวิชา.html'
+                                url: '/admin-dashboard'
                             });
                         }
 

@@ -169,7 +169,7 @@ document.getElementById('add-cert-btn').addEventListener('click', async () => {
 // ปุ่มยืนยันและกลับหน้าหลัก (บันทึกข้อมูลที่กรอกอยู่ แล้วกลับ Dashboard ทันที)
 document.getElementById('submit-and-return-btn').addEventListener('click', async () => {
     if (isDroppedStudent) {
-        window.location.href = '/pages/status_all.html';
+        window.location.href = '/status-all';
         return;
     }
     const btn = document.getElementById('submit-and-return-btn');
@@ -187,9 +187,9 @@ document.getElementById('submit-and-return-btn').addEventListener('click', async
                 return;
             }
         }
-        window.location.href = '/pages/dashboard.html';
+        window.location.href = '/student-dashboard';
     } catch (err) {
         console.error(err);
-        window.location.href = '/pages/dashboard.html';
+        window.location.href = '/student-dashboard';
     }
 });

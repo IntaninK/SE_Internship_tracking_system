@@ -28,7 +28,7 @@ router.get("/redirect", async (req: Request, res: Response) => {
 
   // หากไม่มี code (เช่น Microsoft redirect กลับมาหลัง logout หรือเข้า URL นี้ตรงๆ) ให้กลับหน้า login
   if (!code) {
-    return res.redirect("/pages/login.html");
+    return res.redirect("/login");
   }
 
   try {
@@ -114,11 +114,11 @@ router.get("/redirect", async (req: Request, res: Response) => {
     };
 
     // Role-based redirect: แต่ละ role ไป dashboard ที่ต่างกัน
-    let redirectUrl = "/pages/dashboard.html"; // default สำหรับ STUDENT
+    let redirectUrl = "/student-dashboard"; // default สำหรับ STUDENT
     if (isCourseAdmin || isStaff) {
-      redirectUrl = "/pages/dashboard_รายวิชา.html";
+      redirectUrl = "/admin-dashboard";
     } else if (isAdvisor || isSupervisor) {
-      redirectUrl = "/pages/dashboard_ที่ปรึกษา.html";
+      redirectUrl = "/advisor-dashboard";
     }
 
     res.redirect(encodeURI(redirectUrl));
@@ -134,7 +134,7 @@ router.get("/logout", (req: Request, res: Response) => {
   req.session.destroy(() => {
     // ถ้าผู้ใช้ต้องการ logout เฉพาะในระบบเรา (?local=true)
     if (req.query.local === "true") {
-      return res.redirect("/pages/login.html");
+      return res.redirect("/login");
     }
 
     // ใช้ REDIRECT_URI ที่ลงทะเบียนใน Azure Portal ไว้แล้วเป็นค่าตั้งต้น
@@ -279,11 +279,11 @@ router.post("/switch-role", async (req: Request, res: Response) => {
 
     req.session.user.activeRole = activeRole;
 
-    let redirectUrl = "/pages/dashboard.html";
+    let redirectUrl = "/student-dashboard";
     if (activeRole === "COURSE_ADMIN" || activeRole === "ADMIN" || activeRole === "STAFF") {
-      redirectUrl = "/pages/dashboard_รายวิชา.html";
+      redirectUrl = "/admin-dashboard";
     } else if (activeRole === "ADVISOR" || activeRole === "SUPERVISOR") {
-      redirectUrl = "/pages/dashboard_ที่ปรึกษา.html";
+      redirectUrl = "/advisor-dashboard";
     }
 
     res.json({

@@ -373,7 +373,7 @@ async function loadCompanies() {
             <td class="${statusClass}">${statusBadge}</td>
             <td>${c.checklistNote || '-'}</td>
             <td>
-              <a href="/pages/checklist.html" class="btn btn-tonal btn-xs" style="text-decoration: none;">แก้ไข</a>
+              <a href="/checklist" class="btn btn-tonal btn-xs" style="text-decoration: none;">แก้ไข</a>
             </td>
           `;
           tbody.appendChild(tr);

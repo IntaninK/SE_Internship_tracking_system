@@ -11,7 +11,7 @@ function loadDashboardData() {
 
     if (!data.hasProfile) {
       // ภาพ 1: ยังไม่มีข้อมูล
-      actionBtn.href = '/pages/Personal_Information.html';
+      actionBtn.href = '/personal-info';
       actionBtnText.textContent = 'เพิ่มข้อมูล';
       document.getElementById('display-name').textContent = data.user.username || data.user.email;
       document.getElementById('display-email').textContent = data.user.email || '-';
@@ -19,7 +19,7 @@ function loadDashboardData() {
     }
 
     // ภาพ 5: มีข้อมูลแล้ว -> เปลี่ยนปุ่มเป็น "ดู/แก้ไขข้อมูล"
-    actionBtn.href = '/pages/status_all.html';
+    actionBtn.href = '/status-all';
     actionBtnText.textContent = 'ดู/แก้ไขข้อมูล';
 
     const s = data.student;

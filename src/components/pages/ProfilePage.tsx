@@ -99,7 +99,7 @@ const PAGE_BODY_HTML = `
 
         <!-- Edit Button -->
         <div class="flex justify-end mt-4 pt-4 border-t border-slate-100">
-          <a href="/pages/status_all.html" class="btn btn-primary btn-md no-underline inline-flex items-center gap-2">
+          <a href="/status-all" class="btn btn-primary btn-md no-underline inline-flex items-center gap-2">
             <span class="material-icons" style="font-size:18px;">edit</span>
             <span>จัดการข้อมูลติดต่อ &amp; เอกสารฝึกงาน</span>
           </a>

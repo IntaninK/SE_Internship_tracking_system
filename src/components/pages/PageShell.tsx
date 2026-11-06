@@ -66,18 +66,18 @@ export default function PageShell({
                 role === "ADVISOR"
             );
             if (isCourseAdminOrStaff) {
-              window.location.replace("/pages/dashboard_รายวิชา.html");
+              window.location.replace("/admin-dashboard");
             } else if (isAdvOrSup) {
-              window.location.replace("/pages/dashboard_ที่ปรึกษา.html");
+              window.location.replace("/advisor-dashboard");
             } else {
-              window.location.replace("/pages/dashboard.html");
+              window.location.replace("/student-dashboard");
             }
             return;
           }
           setAuthorized(true);
         } else {
           if (!isAuth) {
-            window.location.replace("/pages/login.html");
+            window.location.replace("/login");
             return;
           }
           setAuthorized(true);
@@ -87,7 +87,7 @@ export default function PageShell({
         if (isLoginPage) {
           setAuthorized(true);
         } else {
-          window.location.replace("/pages/login.html");
+          window.location.replace("/login");
         }
       });
   }, [pageKey]);

@@ -37,7 +37,7 @@ async function initAdminDashboard() {
 
       // ถ้า user เป็น advisor/supervisor อย่างเดียวแต่หลุดมาหน้านี้ ให้พาไป dashboard ที่ปรึกษา
       if (!isCourseAdminOrStaff && (user.isAdvisor || user.role === 'ADVISOR' || user.isSupervisor)) {
-        window.location.replace('/pages/dashboard_ที่ปรึกษา.html');
+        window.location.replace('/advisor-dashboard');
         return;
       }
 
@@ -359,7 +359,7 @@ function renderStudentTable(students, total, page, totalPages) {
         <td class="text-gray-500 text-xs">${dropDateFormatted}</td>
         <td class="text-center">
           <div style="display: flex; align-items: center; gap: 8px; justify-content: center;">
-            <button class="btn-detail-dots" title="ดูรายละเอียด" onclick="window.location.href='/pages/admin_student_detail.html?id=${s.id}'" style="background:none;border:none;cursor:pointer;padding:4px;">
+            <button class="btn-detail-dots" title="ดูรายละเอียด" onclick="window.location.href='/admin-student-detail?id=${s.id}'" style="background:none;border:none;cursor:pointer;padding:4px;">
               <span class="material-icons text-gray-500 hover:text-blue-600" style="font-size:18px;">more_vert</span>
             </button>
             <input type="checkbox" class="student-checkbox" data-id="${s.id}" ${isChecked ? 'checked' : ''} style="width:16px;height:16px;cursor:pointer;" />
@@ -422,7 +422,7 @@ function renderStudentTable(students, total, page, totalPages) {
         </td>
         <td class="text-center">
           <div style="display: flex; align-items: center; gap: 8px; justify-content: center;">
-            <button class="btn-detail-dots" title="ดูรายละเอียด" onclick="window.location.href='/pages/admin_student_detail.html?id=${s.id}'" style="background:none;border:none;cursor:pointer;padding:4px;">
+            <button class="btn-detail-dots" title="ดูรายละเอียด" onclick="window.location.href='/admin-student-detail?id=${s.id}'" style="background:none;border:none;cursor:pointer;padding:4px;">
               <span class="material-icons text-gray-500 hover:text-blue-600" style="font-size:18px;">more_vert</span>
             </button>
             <input type="checkbox" class="student-checkbox" data-id="${s.id}" ${isChecked ? 'checked' : ''} style="width:16px;height:16px;cursor:pointer;" />

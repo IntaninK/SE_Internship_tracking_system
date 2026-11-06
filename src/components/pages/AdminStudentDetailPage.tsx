@@ -17,7 +17,7 @@ const PAGE_BODY_HTML = `
 
     <!-- ปุ่มกลับ + ป้ายสถานะ -->
     <div style="margin-bottom: 18px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;">
-      <a href="/pages/dashboard_รายวิชา.html" style="display:inline-flex; align-items:center; gap:6px; background:#FFFFFF; border:1px solid #CBD5E1; color:#1E293B; padding:8px 16px; border-radius:12px; text-decoration:none; font-weight:600; font-size:13.5px; box-shadow:0 2px 6px rgba(15,23,42,0.04);">
+      <a href="/admin-dashboard" style="display:inline-flex; align-items:center; gap:6px; background:#FFFFFF; border:1px solid #CBD5E1; color:#1E293B; padding:8px 16px; border-radius:12px; text-decoration:none; font-weight:600; font-size:13.5px; box-shadow:0 2px 6px rgba(15,23,42,0.04);">
         <span class="material-icons" style="font-size:18px; color:#4338CA;">arrow_back</span> กลับหน้า Dashboard
       </a>
       <div style="display:flex; align-items:center; gap:8px;">

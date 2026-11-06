@@ -109,7 +109,7 @@ const PAGE_BODY_HTML = `
           </div>
         </div>
 
-        <a href="/pages/dashboard_ที่ปรึกษา.html" class="inline-flex items-center gap-2 px-4 py-2 bg-white/15 hover:bg-white/25 text-white rounded-xl text-xs font-semibold transition no-underline">
+        <a href="/advisor-dashboard" class="inline-flex items-center gap-2 px-4 py-2 bg-white/15 hover:bg-white/25 text-white rounded-xl text-xs font-semibold transition no-underline">
           <span class="material-icons text-base">arrow_back</span>
           <span>กลับไปหน้า Dashboard</span>
         </a>

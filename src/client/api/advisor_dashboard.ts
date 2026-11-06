@@ -408,11 +408,11 @@ function renderStudentTable(students, total, page, totalPages) {
 
           <!-- Dropdown เมนู (Profile / Check list) -->
           <div id="dropdown-${s.id}" class="action-dropdown hidden absolute right-0 top-8 bg-white border border-gray-200 rounded-xl shadow-lg z-30 py-1 w-32 text-left">
-            <a href="/pages/admin_student_detail.html?id=${s.id}" class="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 no-underline transition-colors">
+            <a href="/admin-student-detail?id=${s.id}" class="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 no-underline transition-colors">
               <span class="material-icons text-base">person</span> Profile
             </a>
             <div class="border-t border-gray-100 my-1"></div>
-            <a href="/pages/advisor_checklist_review.html?studentId=${s.id}" class="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 no-underline transition-colors font-medium">
+            <a href="/advisor-checklist-review?studentId=${s.id}" class="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 no-underline transition-colors font-medium">
               <span class="material-icons text-base">fact_check</span> Check list
             </a>
           </div>

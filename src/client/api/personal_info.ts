@@ -115,7 +115,7 @@ document.getElementById('student-form').addEventListener('submit', async (e) => 
 
         if (data.success) {
             // ไปยังขั้นตอนถัดไป (ภาพที่ 3: Certificate.html)
-            window.location.href = '/pages/Certificate.html';
+            window.location.href = '/certificate';
         } else {
             alert('เกิดข้อผิดพลาด: ' + (data.message || 'บันทึกไม่สำเร็จ'));
             submitBtn.disabled = false;
