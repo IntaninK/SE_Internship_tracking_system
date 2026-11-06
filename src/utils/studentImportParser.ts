@@ -8,6 +8,8 @@ export interface ExtractedRowData {
   curriculum: string;
   gpa: number | null;
   studentStatus: string;
+  softSkillHours?: number | null;
+  hardSkillHours?: number | null;
 }
 
 export interface MatchedStudent {
@@ -16,9 +18,12 @@ export interface MatchedStudent {
   nameEn: string;
   year: number;
   major: string;
+  curriculum?: string;
   gpa: number | null;
   email: string;
   studentStatus: string;
+  softSkillHours?: number | null;
+  hardSkillHours?: number | null;
 }
 
 export interface SkippedStudent {
@@ -130,6 +135,8 @@ export function extractRowData(row: Record<string, any>): ExtractedRowData {
   const curriculum = findVal(/หลักสูตร|curriculum/i);
   const gpaRaw = findVal(/เกรด.*เฉลี่ย|^gpa$/i);
   const studentStatus = findVal(/สถานะ.*นิสิต|^สถานะ$/i);
+  const softRaw = findVal(/soft.*skill|ชั่วโมง.*soft/i);
+  const hardRaw = findVal(/hard.*skill|ชั่วโมง.*hard/i);
 
   let gpa: number | null = null;
   if (gpaRaw) {
@@ -139,6 +146,18 @@ export function extractRowData(row: Record<string, any>): ExtractedRowData {
     }
   }
 
+  let softSkillHours: number | null = null;
+  if (softRaw) {
+    const parsedSoft = parseInt(softRaw, 10);
+    if (!isNaN(parsedSoft) && parsedSoft >= 0) softSkillHours = parsedSoft;
+  }
+
+  let hardSkillHours: number | null = null;
+  if (hardRaw) {
+    const parsedHard = parseInt(hardRaw, 10);
+    if (!isNaN(parsedHard) && parsedHard >= 0) hardSkillHours = parsedHard;
+  }
+
   return {
     studentCode,
     nameTh,
@@ -146,7 +165,9 @@ export function extractRowData(row: Record<string, any>): ExtractedRowData {
     major,
     curriculum,
     gpa,
-    studentStatus
+    studentStatus,
+    softSkillHours,
+    hardSkillHours,
   };
 }
 
@@ -154,13 +175,17 @@ export function extractRowData(row: Record<string, any>): ExtractedRowData {
  * วิเคราะห์ไฟล์ Excel / CSV Buffer ที่อัปโหลดมาจาก REG
  * @param {Buffer} buffer 
  * @param {number|null} [customAcademicYear] ถ้าไม่ได้ระบุจะคำนวณอัตโนมัติตามเดือนมิถุนายน
+ * @param {{ targetDepartment?: string | null; allowAllMajors?: boolean }} [options]
  * @returns {ParseSpreadsheetResult}
  */
 export function parseStudentSpreadsheet(
   buffer: Buffer,
-  customAcademicYear: number | null = null
+  customAcademicYear: number | null = null,
+  options?: { targetDepartment?: string | null; allowAllMajors?: boolean }
 ): ParseSpreadsheetResult {
   const academicYear = customAcademicYear || calculateCurrentAcademicYear();
+  const allowAllMajors = Boolean(options?.allowAllMajors);
+  const targetDepartment = options?.targetDepartment || null;
   
   // อ่านไฟล์ Workbook
   const workbook = xlsx.read(buffer, { type: "buffer" });
@@ -195,17 +220,33 @@ export function parseStudentSpreadsheet(
     }
     seenStudentCodes.add(data.studentCode);
 
-    // ตรวจสอบเงื่อนไขสาขาวิศวกรรมซอฟต์แวร์
-    const isSE = isSoftwareEngineering(data.major, data.curriculum);
-    if (!isSE) {
-      skippedStudents.push({
-        rowNumber: i + 1,
-        studentCode: data.studentCode,
-        nameTh: data.nameTh || "-",
-        major: data.major || data.curriculum || "ไม่ระบุ",
-        reason: "ไม่ใช่สาขาวิศวกรรมซอฟต์แวร์"
-      });
-      continue;
+    // ตรวจสอบเงื่อนไขสาขาวิชา (ถ้าไม่ได้เปิด allowAllMajors สำหรับเจ้าหน้าที่คณะ/Admin กลาง)
+    if (!allowAllMajors) {
+      if (targetDepartment) {
+        const combined = `${data.major || ""} ${data.curriculum || ""}`.toLowerCase();
+        if (!combined.includes(targetDepartment.toLowerCase())) {
+          skippedStudents.push({
+            rowNumber: i + 1,
+            studentCode: data.studentCode,
+            nameTh: data.nameTh || "-",
+            major: data.major || data.curriculum || "ไม่ระบุ",
+            reason: `ไม่ใช่สาขา${targetDepartment}`,
+          });
+          continue;
+        }
+      } else {
+        const isSE = isSoftwareEngineering(data.major, data.curriculum);
+        if (!isSE) {
+          skippedStudents.push({
+            rowNumber: i + 1,
+            studentCode: data.studentCode,
+            nameTh: data.nameTh || "-",
+            major: data.major || data.curriculum || "ไม่ระบุ",
+            reason: "ไม่ใช่สาขาวิศวกรรมซอฟต์แวร์",
+          });
+          continue;
+        }
+      }
     }
 
     // คำนวณชั้นปี
@@ -219,10 +260,13 @@ export function parseStudentSpreadsheet(
       nameTh: data.nameTh,
       nameEn: "-",
       year,
-      major: data.major || "วิศวกรรมซอฟต์แวร์",
+      major: data.major || targetDepartment || "วิศวกรรมซอฟต์แวร์",
+      curriculum: data.curriculum || undefined,
       gpa: data.gpa,
       email,
-      studentStatus: data.studentStatus || "กำลังศึกษา"
+      studentStatus: data.studentStatus || "กำลังศึกษา",
+      softSkillHours: data.softSkillHours ?? null,
+      hardSkillHours: data.hardSkillHours ?? null,
     });
   }
 
@@ -238,11 +282,3 @@ export function parseStudentSpreadsheet(
   };
 }
 
-module.exports = {
-  calculateCurrentAcademicYear,
-  calculateStudentYear,
-  isSoftwareEngineering,
-  parseStudentSpreadsheet,
-  cleanStr,
-  extractRowData,
-};

@@ -6,7 +6,10 @@
 /* บอก Tailwind ให้สแกนหา class ในไฟล์ HTML ตรงไหนบ้าง */
 @source "../pages/*.html";
 @source "../components/*.html";
+@source "../components/FloatingNotification.tsx";
+@source "../client";
 @source "../api/*.js";
+@source inline("mt-0 mr-1 mb-1 h-1 w-1 space-y-4 space-y-6 divide-y bg-gray-50 bg-slate-50 py-0");
 
 /* =========================================================
    CSS เดิมของทีม (hand-written)

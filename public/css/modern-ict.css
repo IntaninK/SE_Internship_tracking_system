@@ -1,0 +1,541 @@
+/* ==========================================================================
+   ICT UP Modern SaaS Design System (SRS Redesign)
+   คณะเทคโนโลยีสารสนเทศและการสื่อสาร มหาวิทยาลัยพะเยา (ICT UP)
+   ========================================================================== */
+
+html {
+  zoom: 0.8;
+}
+
+:root {
+  --ict-primary: #4338CA;
+  --ict-primary-dark: #1E1B4B;
+  --ict-primary-mid: #312E81;
+  --ict-accent: #6366F1;
+  --ict-violet: #7C3AED;
+  --ict-emerald: #10B981;
+  --ict-amber: #F59E0B;
+  --ict-rose: #EF4444;
+  --ict-bg: #F4F6FB;
+  --ict-card-bg: #FFFFFF;
+  --ict-border: #E2E8F0;
+  --ict-text: #0F172A;
+  --ict-text-muted: #64748B;
+}
+
+body {
+  font-family: 'Prompt', 'Inter', 'Kanit', -apple-system, BlinkMacSystemFont, sans-serif !important;
+  background-color: var(--ict-bg) !important;
+  background-image:
+    radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.08) 0px, transparent 45%),
+    radial-gradient(at 100% 0%, rgba(139, 92, 246, 0.08) 0px, transparent 45%),
+    radial-gradient(at 50% 100%, rgba(59, 130, 246, 0.05) 0px, transparent 50%) !important;
+  background-attachment: fixed !important;
+  color: var(--ict-text) !important;
+  letter-spacing: -0.005em;
+}
+
+/* ==========================================================================
+   [REQ-01] Persistent Top Bar & Multi-Role Switcher
+   ========================================================================== */
+#header-placeholder {
+  position: sticky;
+  top: 0;
+  z-index: 950;
+}
+
+.header-bar.ict-persistent-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 950;
+  height: auto !important;
+  min-height: 70px;
+  padding: 10px 24px !important;
+  background: rgba(255, 255, 255, 0.96) !important;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-bottom: 1px solid #E2E8F0 !important;
+  box-shadow: 0 4px 20px -4px rgba(15, 23, 42, 0.06) !important;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.ict-topbar-identity {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.ict-role-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  font-size: 22px;
+  flex-shrink: 0;
+  box-shadow: 0 6px 14px -3px rgba(15, 23, 42, 0.18);
+}
+
+.ict-role-avatar.role-student {
+  background: linear-gradient(135deg, #10B981, #059669);
+}
+.ict-role-avatar.role-advisor {
+  background: linear-gradient(135deg, #3B82F6, #1D4ED8);
+}
+.ict-role-avatar.role-course {
+  background: linear-gradient(135deg, #8B5CF6, #6D28D9);
+}
+.ict-role-avatar.role-staff {
+  background: linear-gradient(135deg, #F59E0B, #D97706);
+}
+.ict-role-avatar.role-admin {
+  background: linear-gradient(135deg, #1E1B4B, #4338CA);
+}
+
+.ict-identity-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.ict-identity-topline {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.ict-identity-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #64748B;
+}
+
+.ict-role-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.ict-role-pill.role-student {
+  background: #D1FAE5;
+  color: #065F46;
+  border: 1px solid #A7F3D0;
+}
+.ict-role-pill.role-advisor {
+  background: #DBEAFE;
+  color: #1E40AF;
+  border: 1px solid #BFDBFE;
+}
+.ict-role-pill.role-course {
+  background: #EDE9FE;
+  color: #5B21B6;
+  border: 1px solid #DDD6FE;
+}
+.ict-role-pill.role-staff {
+  background: #FEF3C7;
+  color: #92400E;
+  border: 1px solid #FDE68A;
+}
+.ict-role-pill.role-admin {
+  background: #E0E7FF;
+  color: #3730A3;
+  border: 1px solid #C7D2FE;
+}
+
+.ict-identity-bottomline {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.ict-user-fullname {
+  font-size: 14px;
+  font-weight: 700;
+  color: #0F172A;
+  white-space: nowrap;
+}
+
+.ict-user-subinfo {
+  font-size: 12px;
+  color: #64748B;
+  white-space: nowrap;
+}
+
+/* Topbar Center Navigation */
+.ict-topbar-center {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #F1F5F9;
+  padding: 4px;
+  border-radius: 14px;
+  border: 1px solid #E2E8F0;
+}
+
+.ict-topbar-center .nav-link {
+  color: #475569 !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  padding: 7px 14px !important;
+  border-radius: 10px !important;
+  text-decoration: none !important;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.18s ease !important;
+  white-space: nowrap;
+}
+
+.ict-topbar-center .nav-link:hover {
+  color: #1E1B4B !important;
+  background: rgba(255, 255, 255, 0.7) !important;
+}
+
+.ict-topbar-center .nav-link.active {
+  background: #FFFFFF !important;
+  color: #4338CA !important;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08) !important;
+}
+
+/* Multi-Role Switcher Group */
+.ict-role-switcher-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.ict-switcher-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #64748B;
+  white-space: nowrap;
+}
+
+.ict-switcher-pills {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #F8FAFC;
+  padding: 3px;
+  border-radius: 12px;
+  border: 1px solid #E2E8F0;
+}
+
+.ict-role-switch-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 11px;
+  border-radius: 9px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #475569;
+  background: transparent;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  white-space: nowrap;
+  font-family: inherit;
+}
+
+.ict-role-switch-btn:hover {
+  color: #0F172A;
+  background: #FFFFFF;
+}
+
+.ict-role-switch-btn.active {
+  background: #0F172A;
+  color: #FFFFFF;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.18);
+}
+
+.ict-logout-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 13px;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #DC2626 !important;
+  background: #FEF2F2 !important;
+  border: 1px solid #FECACA !important;
+  text-decoration: none !important;
+  transition: all 0.18s ease;
+  white-space: nowrap;
+}
+
+.ict-logout-btn:hover {
+  background: #FEE2E2 !important;
+  border-color: #FCA5A5 !important;
+}
+
+/* ==========================================================================
+   Main Content & Modern Cards
+   ========================================================================== */
+.main-content {
+  max-width: 1280px !important;
+  margin: 24px auto 48px !important;
+  padding: 0 20px !important;
+}
+
+.card,
+.student-info-section,
+.company-card {
+  background: #FFFFFF !important;
+  border-radius: 20px !important;
+  border: 1px solid #E2E8F0 !important;
+  box-shadow: 0 10px 30px -10px rgba(30, 27, 75, 0.06), 0 4px 12px -2px rgba(15, 23, 42, 0.03) !important;
+  overflow: hidden !important;
+  margin-bottom: 24px !important;
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.card-header,
+.company-header {
+  background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 50%, #2563eb 100%) !important;
+  padding: 16px 24px !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+.card-header .card-title {
+  font-size: 17px !important;
+  font-weight: 700 !important;
+  color: #FFFFFF !important;
+  letter-spacing: -0.01em;
+}
+
+.card-header .header-icon {
+  background: rgba(255, 255, 255, 0.14);
+  padding: 6px;
+  border-radius: 10px;
+  font-size: 20px !important;
+  color: #E0E7FF !important;
+}
+
+.card-body,
+.student-info-body {
+  padding: 24px 28px !important;
+}
+
+/* ==========================================================================
+   Inputs, Locked REG Fields & Form Controls
+   ========================================================================== */
+.input-field {
+  border-radius: 12px !important;
+  border: 1.5px solid #CBD5E1 !important;
+  padding: 10px 14px !important;
+  font-size: 14px !important;
+  color: #0F172A !important;
+  background-color: #FFFFFF;
+  transition: all 0.18s ease !important;
+}
+
+.input-field:focus {
+  border-color: #4F46E5 !important;
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.14) !important;
+  outline: none !important;
+}
+
+.input-field[readonly],
+.input-field:disabled {
+  background-color: #F8FAFC !important;
+  border-color: #E2E8F0 !important;
+  color: #475569 !important;
+}
+
+/* ==========================================================================
+   Data Tables & Filter Bar
+   ========================================================================== */
+.data-table {
+  width: 100%;
+  border-collapse: separate !important;
+  border-spacing: 0 !important;
+}
+
+.data-table thead th {
+  background: #F8FAFC !important;
+  color: #334155 !important;
+  font-weight: 700 !important;
+  font-size: 13px !important;
+  padding: 13px 16px !important;
+  border-bottom: 1.5px solid #E2E8F0 !important;
+}
+
+.data-table tbody td {
+  padding: 13px 16px !important;
+  border-bottom: 1px solid #F1F5F9 !important;
+  color: #1E293B;
+  font-size: 13.5px;
+  vertical-align: middle;
+}
+
+.data-table tbody tr {
+  transition: background-color 0.15s ease;
+}
+
+.data-table tbody tr:hover {
+  background-color: #F8FAFC !important;
+}
+
+.filter-bar {
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  border-radius: 16px;
+  padding: 12px 16px;
+}
+
+/* ==========================================================================
+   Buttons
+   ========================================================================== */
+.btn {
+  border-radius: 12px !important;
+  font-weight: 600 !important;
+  letter-spacing: -0.005em;
+  transition: all 0.18s ease !important;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #4338CA 0%, #2563EB 100%) !important;
+  box-shadow: 0 4px 12px rgba(67, 56, 202, 0.22);
+}
+
+.btn-primary:hover {
+  background: linear-gradient(135deg, #3730A3 0%, #1D4ED8 100%) !important;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(67, 56, 202, 0.3);
+}
+
+.btn-success {
+  background: linear-gradient(135deg, #10B981 0%, #059669 100%) !important;
+  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.25);
+}
+
+.btn-success:hover {
+  background: linear-gradient(135deg, #059669 0%, #047857 100%) !important;
+  transform: translateY(-1px);
+}
+
+/* ==========================================================================
+   SRS Badges & Alert Cards
+   ========================================================================== */
+.srs-reg-lock-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  background: #FEF2F2;
+  color: #DC2626;
+  border: 1px solid #FECACA;
+}
+
+.srs-editable-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  background: #ECFDF5;
+  color: #059669;
+  border: 1px solid #A7F3D0;
+}
+
+.srs-workflow-stepper {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.srs-step-chip {
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 16px;
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.03);
+}
+
+.srs-step-num {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #1E1B4B;
+  color: #FFFFFF;
+  font-size: 12px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+@media (max-width: 900px) {
+  .header-bar.ict-persistent-topbar {
+    padding: 10px 14px !important;
+  }
+}
+
+/* เมนู 3 ขีด (Hamburger) บนจอเล็ก — ต้องซ่อนเมนูเป็นค่าเริ่มต้น และแสดงเฉพาะตอนมี class .open */
+@media (max-width: 1200px) {
+  .header-bar.ict-persistent-topbar {
+    position: relative;
+  }
+  .ict-persistent-topbar .menu-toggle {
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    padding: 6px !important;
+    border-radius: 10px;
+  }
+  .ict-persistent-topbar .menu-toggle:hover {
+    background: #F1F5F9;
+  }
+  .ict-topbar-center.header-nav {
+    display: none !important;
+    position: absolute;
+    top: 100%;
+    left: 12px;
+    right: 12px;
+    z-index: 50;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 4px;
+    padding: 8px;
+    background: #FFFFFF;
+    border: 1px solid #E2E8F0;
+    border-radius: 14px;
+    box-shadow: 0 12px 30px rgba(15, 23, 42, 0.12);
+  }
+  .ict-topbar-center.header-nav.open {
+    display: flex !important;
+  }
+  .ict-topbar-center.header-nav .nav-link {
+    justify-content: flex-start;
+    padding: 10px 14px !important;
+    border-top: none !important;
+  }
+}

@@ -53,16 +53,81 @@ function getStudentReadinessStatus(s: any) {
   }
 }
 
+// [REQ-06] ตรวจสอบว่าสถานประกอบการที่ยื่นฝึกงานจริง ตรงกับ 1 ในบริษัทที่ผ่านการอนุมัติใน Checklist หรือไม่
+function checkPlacementMatchesChecklist(placement: any, companies: any[]): boolean {
+  if (!placement) return false;
+  const approvedList = (companies || []).filter((c: any) => c.checklistStatus === "APPROVED");
+  if (approvedList.length === 0) return false;
+
+  if (placement.companyId && approvedList.some((c: any) => c.id === placement.companyId)) {
+    return true;
+  }
+
+  const targetName = (placement.companyNameTh || "").trim().toLowerCase();
+  if (!targetName) return false;
+
+  return approvedList.some((c: any) => {
+    const cName = (c.name || "").trim().toLowerCase();
+    return cName && (cName === targetName || cName.includes(targetName) || targetName.includes(cName));
+  });
+}
+
 // ==========================================
-// 1. Dashboard Summary ของอาจารย์ที่ปรึกษา
+
+// Helper: คำนวณระดับความวิกฤตของนิสิต (Risk Priority: 1 วิกฤตสุด -> 5 เบาสุด)
+function getStudentRiskPriority(s: any): number {
+  // Rank 1: วิกฤตสูงสุด - ยังไม่มีข้อมูลใดๆ หรือยังไม่เริ่มทำอะไรเลย
+  const isNoData = s.readinessStatusKey === "noData" ||
+    (!s.cvStatus &&
+      (s.trainingApprovedSoft || 0) === 0 &&
+      (s.trainingApprovedHard || 0) === 0 &&
+      s.checklistStatusCode !== "APPROVED" &&
+      !s.placementStatus);
+  if (isNoData) return 1;
+
+  // Rank 2: มีปัญหา / ติดขัด / ถูกปฏิเสธ / บริษัทไม่ตรง Checklist [REQ-06]
+  const hasIssue = s.placementStatus === "REJECTED" ||
+    s.isMatchedWithChecklist === false ||
+    s.cvStatus === "REJECTED" ||
+    s.checklistStatusCode === "REJECTED";
+  if (hasIssue) return 2;
+
+  // Rank 3: ตกเกณฑ์ / ชั่วโมงไม่ครบ / ยังไม่ทำ CV
+  const isLacking = !s.isTrainingComplete ||
+    (s.trainingApprovedSoft || 0) < 12 ||
+    (s.trainingApprovedHard || 0) < 18 ||
+    s.readinessStatusKey === "hoursIncomplete" ||
+    !s.cvStatus;
+  if (isLacking) return 3;
+
+  // Rank 4: อยู่ระหว่างรอดำเนินการ / รอตรวจ
+  const isPending = s.placementStatus === "PENDING" ||
+    s.hasPendingPlacement ||
+    s.hasPendingChecklist ||
+    s.cvStatus === "PENDING" ||
+    s.checklistStatusCode === "PENDING";
+  if (isPending) return 4;
+
+  // Rank 5: เบาสุด / ปลอดภัย
+  return 5;
+}
+
+// 1. Dashboard Summary ของอาจารย์ที่ปรึกษา / อาจารย์นิเทศก์
 // ==========================================
 router.get("/dashboard-summary", async (req: Request, res: Response) => {
   try {
     const advisorStaffId = req.staff!.id;
+    const isSupervisorMode =
+      req.query.roleMode === "SUPERVISOR" ||
+      (req.session.user?.activeRole === "SUPERVISOR" && !req.query.roleMode);
+
+    const whereClause = isSupervisorMode
+      ? { supervisorId: advisorStaffId, isDropped: false }
+      : { advisorId: advisorStaffId, isDropped: false };
 
     // นิสิตที่อาจารย์คนนี้ดูแล (เฉพาะที่ยังไม่ดรอป)
     const students = await prisma.student.findMany({
-      where: { advisorId: advisorStaffId, isDropped: false },
+      where: whereClause,
       include: {
         user: true,
         cv: true,
@@ -90,12 +155,26 @@ router.get("/dashboard-summary", async (req: Request, res: Response) => {
       trainingComplete: 0,
     };
 
+    let pendingChecklistCount = 0;
+    let pendingPlacementCount = 0;
+    let mismatchedPlacementCount = 0;
+
     students.forEach((s) => {
       const cStatus = getStudentChecklistStatus(s);
       checklistStats[cStatus.key]++;
 
       const rStatus = getStudentReadinessStatus(s);
       readinessStats[rStatus.key]++;
+
+      if ((s.companies || []).some((c) => c.checklistStatus === "PENDING")) {
+        pendingChecklistCount++;
+      }
+      if (s.placement && s.placement.status === "PENDING") {
+        pendingPlacementCount++;
+      }
+      if (s.placement && !checkPlacementMatchesChecklist(s.placement, s.companies || [])) {
+        mismatchedPlacementCount++;
+      }
     });
 
     res.json({
@@ -104,6 +183,9 @@ router.get("/dashboard-summary", async (req: Request, res: Response) => {
       totalStudents,
       checklistStats,
       readinessStats,
+      pendingChecklistCount,
+      pendingPlacementCount,
+      mismatchedPlacementCount,
     });
   } catch (err) {
     console.error("GET /api/advisor/dashboard-summary error:", err);
@@ -112,7 +194,7 @@ router.get("/dashboard-summary", async (req: Request, res: Response) => {
 });
 
 // ==========================================
-// 2. รายชื่อนิสิตที่อาจารย์คนนี้เป็นที่ปรึกษา
+// 2. รายชื่อนิสิตที่อาจารย์คนนี้เป็นที่ปรึกษา / อาจารย์นิเทศก์
 // ==========================================
 router.get("/students", async (req: Request, res: Response) => {
   try {
@@ -122,8 +204,16 @@ router.get("/students", async (req: Request, res: Response) => {
     const limitNum = parseInt(limit || "12", 10);
     const skip = (pageNum - 1) * limitNum;
 
+    const isSupervisorMode =
+      req.query.roleMode === "SUPERVISOR" ||
+      (req.session.user?.activeRole === "SUPERVISOR" && !req.query.roleMode);
+
+    const whereClause = isSupervisorMode
+      ? { supervisorId: advisorStaffId, isDropped: false }
+      : { advisorId: advisorStaffId, isDropped: false };
+
     const allStudents = await prisma.student.findMany({
-      where: { advisorId: advisorStaffId, isDropped: false },
+      where: whereClause,
       include: {
         user: true,
         cv: true,
@@ -148,15 +238,23 @@ router.get("/students", async (req: Request, res: Response) => {
       const isTrainingComplete = softHours >= 12 && hardHours >= 18;
       const cvStatus = s.cv ? s.cv.status : "NONE";
       const placementStatus = s.placement ? s.placement.status : "NONE";
+      const isMatchedWithChecklist = s.placement
+        ? checkPlacementMatchesChecklist(s.placement, s.companies || [])
+        : null;
+      const hasPendingChecklist = (s.companies || []).some((c) => c.checklistStatus === "PENDING");
+      const hasPendingPlacement = Boolean(s.placement && s.placement.status === "PENDING");
 
       return {
         id: s.id,
         studentCode: s.studentCode,
         nameTh: s.nameTh,
         nameEn: s.nameEn,
-        nickname: s.major ? `ปี ${s.year}` : "-",
+        major: s.major,
+        nickname: s.nickname || (s.major ? `ปี ${s.year}` : "-"),
         email: s.user.email,
         phone: s.phone,
+        semester: s.semester || "2",
+        academicYear: s.academicYear,
         advisorName: req.staff!.name,
         checklistStatusKey: cStatus.key,
         checklistStatusLabel: cStatus.label,
@@ -169,17 +267,47 @@ router.get("/students", async (req: Request, res: Response) => {
         trainingApprovedHard: hardHours,
         cvStatus,
         placementStatus,
+        isMatchedWithChecklist,
+        hasPendingChecklist,
+        hasPendingPlacement,
       };
     });
 
-    mapped.sort((a, b) => {
-      try {
-        const codeA = BigInt(a.studentCode);
-        const codeB = BigInt(b.studentCode);
-        return codeA === codeB ? 0 : codeA > codeB ? -1 : 1;
-      } catch {
-        return a.studentCode.localeCompare(b.studentCode);
+    const sortBy = (req.query.sortBy as string) || "critical";
+    mapped.sort((a: any, b: any) => {
+      if (sortBy === "critical") {
+        const pA = getStudentRiskPriority(a);
+        const pB = getStudentRiskPriority(b);
+        if (pA !== pB) {
+          return pA - pB;
+        }
+        try {
+          const codeA = BigInt(a.studentCode);
+          const codeB = BigInt(b.studentCode);
+          return codeA === codeB ? 0 : codeA > codeB ? -1 : 1;
+        } catch {
+          return (a.studentCode || "").localeCompare(b.studentCode || "");
+        }
+      } else if (sortBy === "studentCode_desc") {
+        try {
+          const codeA = BigInt(a.studentCode);
+          const codeB = BigInt(b.studentCode);
+          return codeA === codeB ? 0 : codeA > codeB ? -1 : 1;
+        } catch {
+          return (b.studentCode || "").localeCompare(a.studentCode || "");
+        }
+      } else if (sortBy === "studentCode_asc") {
+        try {
+          const codeA = BigInt(a.studentCode);
+          const codeB = BigInt(b.studentCode);
+          return codeA === codeB ? 0 : codeA < codeB ? -1 : 1;
+        } catch {
+          return (a.studentCode || "").localeCompare(b.studentCode || "");
+        }
+      } else if (sortBy === "name_asc") {
+        return (a.nameTh || "").localeCompare(b.nameTh || "", "th");
       }
+      return 0;
     });
 
     // กรองตาม Search query
@@ -207,18 +335,25 @@ router.get("/students", async (req: Request, res: Response) => {
         case "training_passed":
           mapped = mapped.filter((s) => s.isTrainingComplete);
           break;
+        case "training_incomplete":
         case "training_failed":
           mapped = mapped.filter((s) => !s.isTrainingComplete);
           break;
+        case "cv_approved":
         case "cv_passed":
           mapped = mapped.filter((s) => s.cvStatus === "APPROVED");
           break;
+        case "cv_pending":
+        case "cv_rejected":
         case "cv_failed":
           mapped = mapped.filter((s) => s.cvStatus !== "APPROVED");
           break;
+        case "checklist_approved":
         case "checklist_passed":
           mapped = mapped.filter((s) => s.checklistStatusCode === "APPROVED");
           break;
+        case "checklist_pending":
+        case "checklist_rejected":
         case "checklist_failed":
           mapped = mapped.filter((s) => s.checklistStatusCode !== "APPROVED");
           break;
@@ -435,6 +570,7 @@ router.get("/students/:studentId/checklist", async (req: Request, res: Response)
       where: { id: studentId },
       include: {
         user: true,
+        placement: true,
         companies: {
           include: {
             answers: {
@@ -454,10 +590,18 @@ router.get("/students/:studentId/checklist", async (req: Request, res: Response)
       return res.status(404).json({ success: false, message: "ไม่พบข้อมูลนิสิต" });
     }
 
-    // ตรวจสอบสิทธิ์ (ถ้าไม่ใช่ ADMIN / STAFF ต้องเป็นอาจารย์ที่ปรึกษาของนิสิต)
+    const isCourseAdminOrStaff = Boolean(
+      req.staff?.isCourseAdmin ||
+        req.staff?.isStaff ||
+        req.session.user!.role === "ADMIN" ||
+        req.session.user!.role === "STAFF"
+    );
+
+    // ตรวจสอบสิทธิ์ (ถ้าไม่ใช่ ADMIN / STAFF ต้องเป็นอาจารย์ที่ปรึกษาหรือนิเทศก์ของนิสิต)
     if (
-      req.session.user!.role === "ADVISOR" &&
-      student.advisorId !== advisorStaffId
+      !isCourseAdminOrStaff &&
+      student.advisorId !== advisorStaffId &&
+      student.supervisorId !== advisorStaffId
     ) {
       return res.status(403).json({
         success: false,
@@ -465,21 +609,57 @@ router.get("/students/:studentId/checklist", async (req: Request, res: Response)
       });
     }
 
-    // ดึง Checklist Template ทั้งหมด
-    const sections = await prisma.checklistSection.findMany({
-      include: {
-        items: {
-          orderBy: { order: "asc" },
+    // ดึง Checklist Template ตามเวอร์ชันที่นิสิตยื่น (หรือ Active Version)
+    const primaryCompany = student.companies?.[0];
+    const targetVersionId = primaryCompany?.checklistVersionId;
+
+    let targetVersion = targetVersionId
+      ? await prisma.checklistVersion.findUnique({
+          where: { id: targetVersionId },
+          include: {
+            sections: {
+              orderBy: { order: "asc" },
+              include: { items: { orderBy: { order: "asc" } } },
+            },
+          },
+        })
+      : null;
+
+    if (!targetVersion) {
+      targetVersion = await prisma.checklistVersion.findFirst({
+        where: { status: "ACTIVE" },
+        include: {
+          sections: {
+            orderBy: { order: "asc" },
+            include: { items: { orderBy: { order: "asc" } } },
+          },
         },
-      },
-      orderBy: { order: "asc" },
-    });
+      });
+    }
+
+    if (!targetVersion) {
+      targetVersion = await prisma.checklistVersion.findFirst({
+        orderBy: { id: "asc" },
+        include: {
+          sections: {
+            orderBy: { order: "asc" },
+            include: { items: { orderBy: { order: "asc" } } },
+          },
+        },
+      });
+    }
+
+    const sections = targetVersion?.sections || [];
 
     const canReview = Boolean(
       student.advisorId &&
       advisorStaffId &&
       student.advisorId === advisorStaffId
     );
+
+    const isMatchedWithChecklist = student.placement
+      ? checkPlacementMatchesChecklist(student.placement, student.companies || [])
+      : false;
 
     res.json({
       success: true,
@@ -489,6 +669,7 @@ router.get("/students/:studentId/checklist", async (req: Request, res: Response)
         studentCode: student.studentCode,
         nameTh: student.nameTh,
         nameEn: student.nameEn,
+        nickname: student.nickname,
         year: student.year,
         major: student.major,
         gpa: student.gpa,
@@ -498,6 +679,12 @@ router.get("/students/:studentId/checklist", async (req: Request, res: Response)
       },
       sections,
       companies: student.companies,
+      placement: student.placement
+        ? {
+            ...student.placement,
+            isMatchedWithChecklist,
+          }
+        : null,
     });
   } catch (err) {
     console.error("GET /api/advisor/students/:id/checklist error:", err);
@@ -783,8 +970,29 @@ router.get("/export", async (req: Request, res: Response) => {
 // ==========================================
 router.put("/students/:studentId/placement-status", async (req: Request, res: Response) => {
   try {
+    const advisorStaffId = req.staff!.id;
     const studentId = parseInt(req.params.studentId as string, 10);
     const { status, note } = req.body;
+
+    if (!["APPROVED", "REJECTED", "PENDING"].includes(status)) {
+      return res.status(400).json({ success: false, message: "สถานะไม่ถูกต้อง" });
+    }
+
+    const student = await prisma.student.findUnique({
+      where: { id: studentId },
+      include: { companies: true },
+    });
+
+    if (!student) {
+      return res.status(404).json({ success: false, message: "ไม่พบข้อมูลนิสิต" });
+    }
+
+    if (student.advisorId !== advisorStaffId && req.session.user!.role !== "ADMIN") {
+      return res.status(403).json({
+        success: false,
+        message: "ไม่มีสิทธิ์อนุมัติที่ฝึกงาน (สิทธิ์นี้เป็นของอาจารย์ที่ปรึกษาที่ดูแลนิสิตคนนี้เท่านั้น)",
+      });
+    }
 
     const updated = await prisma.internshipPlacement.upsert({
       where: { studentId },
@@ -803,7 +1011,18 @@ router.put("/students/:studentId/placement-status", async (req: Request, res: Re
       },
     });
 
-    res.json({ success: true, placement: updated });
+    const isMatchedWithChecklist = checkPlacementMatchesChecklist(
+      updated,
+      student.companies || []
+    );
+
+    res.json({
+      success: true,
+      placement: {
+        ...updated,
+        isMatchedWithChecklist,
+      },
+    });
   } catch (err) {
     console.error("PUT /api/advisor/students/:id/placement-status error:", err);
     res.status(500).json({ success: false, message: "อัพเดตสถานะอนุมัติฝึกงานไม่สำเร็จ" });
@@ -811,5 +1030,3 @@ router.put("/students/:studentId/placement-status", async (req: Request, res: Re
 });
 
 export default router;
-module.exports = router;
-module.exports.default = router;

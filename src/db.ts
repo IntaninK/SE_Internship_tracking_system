@@ -14,6 +14,3 @@ const prisma = new PrismaClient({
 
 export default prisma;
 
-// Support CommonJS require for backward compatibility with existing JS files
-module.exports = prisma;
-module.exports.default = prisma;

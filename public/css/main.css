@@ -1,0 +1,385 @@
+@layer legacy, tailwind-theme, tailwind-utilities;
+
+@import "tailwindcss/theme" layer(tailwind-theme);
+@import "tailwindcss/utilities" layer(tailwind-utilities);
+
+/* บอก Tailwind ให้สแกนหา class ในไฟล์ HTML ตรงไหนบ้าง */
+@source "../pages/*.html";
+@source "../components/*.html";
+@source "../api/*.js";
+
+/* =========================================================
+   CSS เดิมของทีม (hand-written)
+   ครอบด้วย @layer legacy ให้มี priority ต่ำกว่า Tailwind utilities
+   เสมอ ถ้า Tailwind class ชนกับ selector ข้างล่างนี้ Tailwind ชนะ
+   ========================================================= */
+@layer legacy {
+
+/* =========================================================
+   1. Reset & Base
+   ========================================================= */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Prompt', 'Inter', sans-serif;
+  background: linear-gradient(180deg, #CEEBFF 0%, #FFFFFF 50%, #CEEBFF 100%);
+  min-height: 100vh;
+  color: #1E1E1E;
+}
+
+/* =========================================================
+   2. Reusable UI Components
+   -----------------------------------------------------------
+   หมวดนี้รวม class ที่ใช้ร่วมกันหลายหน้า เช่น card, button,
+   input, upload zone ฯลฯ แก้ที่เดียวมีผลทั้งเว็บ
+   ========================================================= */
+
+/* ---- Card ---- */
+.card {
+  background: #fff;
+  border: 1px solid #d1d5db;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  margin-top: 50px;
+}
+
+/* ---- Card Header (gradient สีน้ำเงิน) ---- */
+.card-header {
+  background: linear-gradient(90deg, #1e3a8a, #2563eb);
+  border: 1px solid #d1d5db;
+  padding: 16px 32px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 70px;
+}
+
+.header-icon {
+  font-size: 35px;
+  color: #ffffff;
+  flex-shrink: 0;
+}
+
+.card-title {
+  font-size: clamp(16px, 2.2vw, 22px);
+  font-weight: 600;
+  color: #ffffff;
+  letter-spacing: -0.2px;
+}
+
+/* ---- Card Body ---- */
+.card-body {
+  padding: clamp(20px, 4vw, 40px) clamp(16px, 6vw, 64px) clamp(24px, 5vw, 50px);
+}
+
+/* ---- Buttons ----
+   ใช้ร่วมกัน: <button class="btn btn-primary btn-lg">...</button> */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: none;
+  border-radius: 40px;
+  font-family: inherit;
+  font-weight: 500;
+  cursor: pointer;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: opacity 0.2s ease, transform 0.15s ease;
+}
+
+.btn:hover { opacity: 0.9; transform: translateY(-1px); }
+.btn .material-icons { font-size: 1.3em; }
+
+/* สี */
+.btn-primary {
+  background: linear-gradient(180deg, #1541D2, #0B2268);
+  color: #fff;
+  box-shadow: 0 4px 16px rgba(21, 65, 210, 0.3);
+}
+
+.btn-tonal {
+  background: #E8F0FE;
+  color: #1541D2;
+  box-shadow: none;
+}
+.btn-tonal:hover { background: #D2E3FC; opacity: 1; transform: none; }
+
+/* ขนาด */
+.btn-lg { padding: 16px 32px; font-size: 18px; }
+.btn-md { padding: 10px 20px; font-size: 15px; }
+.btn-sm { padding: 8px 20px; font-size: 13px; }
+.btn-xs { padding: 4px 12px; font-size: 12px; border-radius: 6px; }
+
+/* ---- Input Field ----
+   ใช้กับทั้ง <input>, <select>, และ <div> ที่โชว์ค่าแบบ read-only ได้ */
+.input-field {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 0 14px;
+  background: #F7F7F7;
+  border: 1px solid #CCC;
+  border-radius: 10px;
+  font-size: 14px;
+  font-family: inherit;
+  color: #1541D2;
+  outline: none;
+  overflow: hidden;
+  transition: border-color 0.2s;
+}
+
+.input-field:focus { border-color: #1541D2; }
+
+select.input-field {
+  appearance: none;
+  cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23666' stroke-width='1.5' fill='none'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  padding-right: 36px;
+}
+
+/* ---- Upload Zone (dashed drop-zone) ----
+   ใช้ร่วมกับ modifier: .upload-zone--photo หรือ .upload-zone--file */
+.upload-zone {
+  border: 2px dashed #CCC;
+  border-radius: 12px;
+  background: #FAFAFA;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+.upload-zone:hover { border-color: #1541D2; }
+.upload-zone .material-icons { font-size: 40px; color: #999; }
+.upload-zone p { font-size: 13px; color: #888; line-height: 1.4; }
+
+.upload-zone--photo { width: 220px; height: 280px; flex-shrink: 0; padding: 0 12px; }
+.upload-zone--file { padding: 40px 20px; }
+
+/* ---- Placeholder Box (กล่องขอบทึบ "ยังไม่มีข้อมูล") ---- */
+.placeholder-box {
+  background: #F4F4F4;
+  border: 1px solid #000;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+/* ---- Field Value (ค่าที่แสดงใน input-field แบบ read-only) ---- */
+.field-value {
+  font-size: 15px;
+  font-weight: 400;
+  color: #1541d2;
+  overflow-wrap: normal;
+  word-break: keep-all;
+  white-space: normal;
+  line-height: 1.4;
+}
+
+/* =========================================================
+   3. Header Bar (ใช้ทุกหน้าผ่าน component)
+   ========================================================= */
+.header-bar {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  margin: 0 auto;
+  height: 60px;
+  padding: 0 30px;
+  background: #fff;
+}
+
+.header-logo {
+  width: 35px;
+  height: 35px;
+  background-color: #00C3D0;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.header-logo .material-icons {
+  font-size: 32px;
+  color: #1E1E1E;
+}
+
+.header-title {
+  font-size: 24px;
+  font-weight: 600;
+  color: #1E1E1E;
+  margin-left: 30px;
+  white-space: nowrap;
+}
+
+.header-nav {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 30px;
+}
+
+.header-nav a {
+  font-size: 18px;
+  text-decoration: none;
+  color: #1E1E1E;
+  font-weight: 500;
+}
+
+.header-nav a.active {
+  color: #FF383C;
+}
+
+.menu-toggle {
+  padding-top: 10px;
+  margin-left: auto;
+  align-items: center;
+  display: none;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 24px;
+}
+
+@media (max-width: 1200px) {
+  .header-nav {
+    display: none;
+    position: absolute;
+    top: 60px;
+    right: 0;
+    left: 0;
+    flex-direction: column;
+    background: white;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  }
+
+  .menu-toggle {
+    display: block;
+  }
+
+  .header-nav.open {
+    display: flex;
+  }
+
+  .header-nav a {
+    padding: 12px 20px;
+    border-top: 1px solid #eee;
+  }
+}
+
+/* =========================================================
+   4. Main Content Layout
+   ========================================================= */
+.main-content {
+  max-width: 1282px;
+  margin: 15px auto 40px;
+  padding: 0 20px;
+}
+
+/* =========================================================
+   5. Form Components (ใช้หลายหน้า: status_all, submission_status)
+   ========================================================= */
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px 28px;
+}
+
+.form-grid .full-width { grid-column: 1 / -1; }
+
+.form-group { display: flex; flex-direction: column; gap: 6px; }
+
+.form-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: #323639;
+}
+
+.status-group { max-width: 280px; }
+
+.btn-submit-wrap {
+  display: flex;
+  justify-content: center;
+  padding-top: 16px;
+}
+
+@media (max-width: 768px) {
+  .form-grid { grid-template-columns: 1fr; }
+}
+
+/* =========================================================
+   6. Info Row (หน้า "ตั้งค่าปรับเปลี่ยน" — status_all)
+   ========================================================= */
+.info-row {
+  display: flex;
+  gap: 32px;
+  flex-wrap: wrap;
+}
+
+.info-fields {
+  flex: 1;
+  min-width: 300px;
+}
+
+/* =========================================================
+   7. Data Table (ใช้ใน status_all + submission_status)
+   ========================================================= */
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.data-table thead th {
+  background: #f1f5f9;
+  color: #251e1e;
+  padding: 10px 14px;
+  text-align: left;
+  font-weight: 500;
+  border-bottom: 2px solid #001235;
+}
+
+.data-table tbody td {
+  padding: 10px 14px;
+  border-bottom: 1px solid #E5E5E5;
+  vertical-align: middle;
+}
+
+.data-table tbody tr:hover { background: #F8FBFF; }
+
+.data-table .status-pass { color: #22C55E; font-weight: 500; }
+.data-table .status-fail { color: #EF4444; font-weight: 500; }
+.data-table .status-wait { color: #888; }
+
+.table-footer {
+  display: flex;
+  justify-content: center;
+  padding-top: 16px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .info-row { flex-direction: column; align-items: center; }
+  .upload-zone--photo { width: 180px; height: 230px; }
+  .data-table { font-size: 13px; }
+  .data-table thead th,
+  .data-table tbody td { padding: 8px 10px; }
+}
+
+} /* ปิด @layer legacy */

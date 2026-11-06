@@ -55,6 +55,7 @@ model Student {
   faculty         String          @default("คณะเทคโนโลยีสารสนเทศและการสื่อสาร") // คณะ
   curriculum      String?         // หลักสูตร / สาขาวิชา
   academicYear    String?         // ปีการศึกษา เช่น "2567" หรือ "2568"
+  semester        String?         @default("2") // ภาคเรียนที่ออกฝึกงาน เช่น "1", "2", "SUMMER"
   studentStatus   String?         @default("กำลังศึกษา") // สถานะนิสิต เช่น กำลังศึกษา, พักการเรียน
   internshipType  String?         @default("NEW")       // ประเภทการฝึก เช่น NEW (ฝึกรอบแรก), RETEST (ฝึกรอบใหม่/ตกค้าง)
   year            Int             // ชั้นปีที่
@@ -95,7 +96,7 @@ model Staff {
 
   // Multi-role flags สำหรับอาจารย์ / บุคลากร
   isCourseAdmin      Boolean   @default(false) // อาจารย์ประจำวิชา / ประธานหลักสูตร
-  isAdvisor          Boolean   @default(true)  // อาจารย์ที่ปรึกษา
+  isAdvisor          Boolean   @default(false) // อาจารย์ที่ปรึกษา
   isSupervisor       Boolean   @default(false) // อาจารย์นิเทศก์
   isStaff            Boolean   @default(false) // เจ้าหน้าที่คณะ (เช่น พี่จอม) - ถ้าเป็น true จะเป็นเจ้าหน้าที่ฝ่ายฝึกงาน
 
@@ -154,7 +155,7 @@ model TrainingRecord {
   hours             Int            // จำนวนชั่วโมง
   certificateFileUrl String?
   academicYear      String?        // ปีการศึกษา เช่น "2567"
-  source            String?        @default("STUDENT_UPLOAD") // แหล่งที่มา: "STUDENT_UPLOAD" หรือ "STAFF_IMPORT"
+  source            String?        @default("STUDENT_UPLOAD") // แหล่งที่มา: "STUDENT_UPLOAD" (นิสิตยื่นเอง), "STAFF_IMPORT" (พี่จอมนำเข้า), "ADMIN_IMPORT" (อาจารย์ประจำวิชาเพิ่มให้/นำเข้า)
 
   status            ApprovalStatus @default(PENDING) // อนุมัติใน Cert. (ผ่าน/ไม่ผ่าน)
   note              String?
@@ -169,47 +170,73 @@ model TrainingRecord {
 // 6. COMPANY CHECKLIST (นิสิตกรอก checklist 5 ส่วน ต่อ 1 บริษัทที่สนใจยื่น)
 // =====================================================================
 
-// 5 ส่วนคงที่: ความน่าเชื่อถือของบริษัท / สถานที่ตั้งฯ / Tech Stack /
-// Mentorship / Scope of Work — เก็บเป็น "template" กลาง ใช้ร่วมกันทุกบริษัท
-model ChecklistSection {
-  id    Int             @id @default(autoincrement())
-  title String          // เช่น "ส่วนที่ 1 ความน่าเชื่อถือของบริษัท"
-  order Int             @unique // ใช้เป็น key ให้ seed script upsert แทนการลบทิ้งทั้งหมด
+enum ChecklistVersionStatus {
+  DRAFT
+  ACTIVE
+  ARCHIVED
+}
 
-  items ChecklistItem[]
+model ChecklistVersion {
+  id          Int                    @id @default(autoincrement())
+  versionName String                 // เช่น "v1.0 (ปีการศึกษา 2567)", "v2.0 (ปีการศึกษา 2568)"
+  description String?
+  status      ChecklistVersionStatus @default(DRAFT)
+  createdAt   DateTime               @default(now())
+  updatedAt   DateTime               @updatedAt
+
+  sections    ChecklistSection[]
+  companies   Company[]
+}
+
+model ChecklistSection {
+  id          Int               @id @default(autoincrement())
+  versionId   Int?              // ผูกกับ version (optional เพื่อ backward compatibility)
+  version     ChecklistVersion? @relation(fields: [versionId], references: [id], onDelete: Cascade)
+  title       String            // เช่น "ส่วนที่ 1 ความน่าเชื่อถือของบริษัท"
+  order       Int               // ลำดับหมวด
+
+  items       ChecklistItem[]
+
+  @@unique([versionId, order])
 }
 
 model ChecklistItem {
-  id          Int              @id @default(autoincrement())
+  id          Int                      @id @default(autoincrement())
   sectionId   Int
-  section     ChecklistSection @relation(fields: [sectionId], references: [id])
-  order       Int              // ลำดับข้อภายในหมวด (1, 2, 3, ...)
-  description String           // เช่น "1. Google Maps: ปักหมุดแล้วจอสถานที่จริงไหม?"
+  section     ChecklistSection         @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  order       Int                      // ลำดับข้อภายในหมวด (1, 2, 3, ...)
+  description String                   // เช่น "1. Google Maps: ปักหมุดแล้วจอสถานที่จริงไหม?"
+  placeholder String?                  // คำแนะนำ/ตัวอย่างคำตอบ เช่น "เช่น ระบุทุนจดทะเบียน หรือสถานะ Active"
+  isRequired  Boolean                  @default(false) // ข้อบังคับหรือไม่
+  isActive    Boolean                  @default(true)  // เปิด/ปิดใช้งาน
 
   answers     CompanyChecklistAnswer[]
 
-  @@unique([sectionId, order]) // ใช้เป็น key ให้ seed script upsert แทนการลบทิ้งทั้งหมด
+  @@unique([sectionId, order])
 }
 
 // บริษัทที่นิสิตสนใจยื่น (1 นิสิต เพิ่มได้หลายบริษัท) พร้อมสถานะที่อาจารย์ตัดสิน
 model Company {
-  id              Int            @id @default(autoincrement())
-  studentId       Int
-  student         Student        @relation(fields: [studentId], references: [id])
+  id                 Int               @id @default(autoincrement())
+  studentId          Int
+  student            Student           @relation(fields: [studentId], references: [id])
 
-  name            String         // เช่น "บริษัท Magus software"
+  name               String            // เช่น "บริษัท Magus software"
 
-  checklistStatus ApprovalStatus @default(PENDING) // ผ่าน/ไม่ผ่าน/รออนุมัติ (อาจารย์ตรวจ)
-  checklistNote   String?        // หมายเหตุ เช่น "ขาดข้อมูล"
+  checklistVersionId Int?
+  checklistVersion   ChecklistVersion? @relation(fields: [checklistVersionId], references: [id])
 
-  reviewedById    Int?
-  reviewedAt      DateTime?
+  checklistStatus    ApprovalStatus    @default(PENDING) // ผ่าน/ไม่ผ่าน/รออนุมัติ (อาจารย์ตรวจ)
+  checklistNote      String?           // หมายเหตุ เช่น "ขาดข้อมูล"
 
-  answers         CompanyChecklistAnswer[]
-  submission      CompanySubmission?
+  reviewedById       Int?
+  reviewedAt         DateTime?
 
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
+  answers            CompanyChecklistAnswer[]
+  submission         CompanySubmission?
+
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
 }
 
 // คำตอบ checklist แต่ละข้อ ต่อ 1 บริษัท (checkbox + รายละเอียดเพิ่ม)
