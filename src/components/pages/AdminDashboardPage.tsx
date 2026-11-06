@@ -287,6 +287,7 @@ const PAGE_STYLES: string[] = [`
     grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 18px;
     margin-bottom: 24px;
+    margin-top: 24px;
   }
 
   #admin-dashboard .admin-summary-card {
