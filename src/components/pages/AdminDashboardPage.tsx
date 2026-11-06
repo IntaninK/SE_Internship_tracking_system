@@ -1004,7 +1004,7 @@ const PAGE_BODY_HTML = `
          WORKSPACE 3: จัดกิจกรรมอบรมภายในคณะ & ระบบ Check-in หน้างานด้วยรหัสนิสิต
          ===================================================================== -->
     <div id="workspace-events" style="display:none;">
-      <div style="display:grid; grid-template-columns:440px 1fr; gap:20px;" class="max-lg:!grid-cols-1">
+      <div style="display:grid; grid-template-columns:460px 1fr; gap:20px;" class="max-lg:!grid-cols-1">
         <!-- ซ้าย: ฟอร์มสร้างกิจกรรมอบรมโดย พี่จอม (Super Admin) -->
         <section class="card" style="margin-bottom:0; overflow:visible !important;">
           <div class="card-header" style="border-top-left-radius:15px; border-top-right-radius:15px;">
