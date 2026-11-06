@@ -1,4 +1,17 @@
 // @ts-nocheck
+function formatMajorName(major?: string | null): string {
+  if (!major) return '-';
+  if (major.includes('วิศวกรรมซอฟต์แวร์')) return 'วิศวกรรมซอฟต์แวร์ (SE)';
+  if (major.includes('ธุรกิจดิจิทัล')) return 'ธุรกิจดิจิทัล (DB)';
+  if (major.includes('วิทยาการคอมพิวเตอร์')) return 'วิทยาการคอมพิวเตอร์ (CS)';
+  if (major.includes('เทคโนโลยีสารสนเทศ')) return 'เทคโนโลยีสารสนเทศ (IT)';
+  if (major.includes('วิศวกรรมคอมพิวเตอร์')) return 'วิศวกรรมคอมพิวเตอร์ (CPE)';
+  if (major.includes('คอมพิวเตอร์กราฟิก')) return 'คอมพิวเตอร์กราฟิกฯ (CGM)';
+  if (major.includes('ภูมิสารสนเทศ')) return 'ภูมิสารสนเทศศาสตร์ (GIS)';
+  if (major.includes('วิทยาการข้อมูล')) return 'วิทยาการข้อมูลฯ (DSA)';
+  return major.replace(/^(สาขาวิชาวิศวกรรม|สาขาวิชา|สาขา)/, '').trim() || major;
+}
+
 let currentFilter = null;
 let currentPage = 1;
 const pageLimit = 12;
@@ -302,7 +315,7 @@ function renderStudentTable(students, total, page, totalPages) {
   tbody.innerHTML = '';
 
   if (students.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="5" class="text-center py-8 text-gray-400">ไม่พบข้อมูลนิสิต</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="6" class="text-center py-8 text-gray-400">ไม่พบข้อมูลนิสิต</td></tr>';
     renderPagination(1, 1, 0);
     return;
   }
@@ -374,6 +387,7 @@ function renderStudentTable(students, total, page, totalPages) {
         </div>
       </td>
       <td>${s.nameTh}</td>
+      <td><span class="text-xs font-medium text-slate-700" title="${s.major || '-'}">${formatMajorName(s.major)}</span></td>
       <td>${s.advisorName || '<span class="text-gray-400">-</span>'}</td>
       <td>
         <div class="flex flex-col items-start gap-1 py-0.5">

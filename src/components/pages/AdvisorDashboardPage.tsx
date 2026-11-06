@@ -176,10 +176,11 @@ const PAGE_BODY_HTML = `
           <thead>
             <tr>
               <th style="width: 14%;">รหัสนิสิต</th>
-              <th style="width: 24%;">ชื่อ-นามสกุล</th>
-              <th style="width: 20%;">อาจารย์ที่ปรึกษา</th>
-              <th style="width: 30%;">สถานะ Checklist &amp; การตรวจสอบ [REQ-06]</th>
-              <th style="width: 12%; min-width: 100px;" class="text-center">
+              <th style="width: 20%;">ชื่อ-นามสกุล</th>
+              <th style="width: 17%;">สาขาวิชา</th>
+              <th style="width: 17%;">อาจารย์ที่ปรึกษา</th>
+              <th style="width: 22%;">สถานะ Checklist &amp; การตรวจสอบ [REQ-06]</th>
+              <th style="width: 10%; min-width: 100px;" class="text-center">
                 <label style="display:inline-flex;align-items:center;gap:4px;cursor:pointer;white-space:nowrap;" title="เลือกนิสิตทั้งหมดในหน้านี้">
                   <span style="font-size:12px;">เลือกทั้งหมด</span>
                   <input type="checkbox" id="select-all-students" style="width:16px;height:16px;cursor:pointer;" />

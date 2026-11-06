@@ -1,4 +1,17 @@
 // @ts-nocheck
+function formatMajorName(major?: string | null): string {
+  if (!major) return '-';
+  if (major.includes('วิศวกรรมซอฟต์แวร์')) return 'วิศวกรรมซอฟต์แวร์ (SE)';
+  if (major.includes('ธุรกิจดิจิทัล')) return 'ธุรกิจดิจิทัล (DB)';
+  if (major.includes('วิทยาการคอมพิวเตอร์')) return 'วิทยาการคอมพิวเตอร์ (CS)';
+  if (major.includes('เทคโนโลยีสารสนเทศ')) return 'เทคโนโลยีสารสนเทศ (IT)';
+  if (major.includes('วิศวกรรมคอมพิวเตอร์')) return 'วิศวกรรมคอมพิวเตอร์ (CPE)';
+  if (major.includes('คอมพิวเตอร์กราฟิก')) return 'คอมพิวเตอร์กราฟิกฯ (CGM)';
+  if (major.includes('ภูมิสารสนเทศ')) return 'ภูมิสารสนเทศศาสตร์ (GIS)';
+  if (major.includes('วิทยาการข้อมูล')) return 'วิทยาการข้อมูลฯ (DSA)';
+  return major.replace(/^(สาขาวิชาวิศวกรรม|สาขาวิชา|สาขา)/, '').trim() || major;
+}
+
 let allStudents = [];
 let currentPage = 1;
 const pageLimit = 12;
@@ -216,12 +229,13 @@ function updateTableHeader() {
   if (currentTab === 'dropped') {
     thead.innerHTML = `
       <tr>
-        <th style="width: 14%;">Student ID</th>
-        <th style="width: 20%;">ชื่อ-นามสกุล</th>
-        <th style="width: 18%;">อาจารย์ที่ปรึกษา</th>
-        <th style="width: 22%;">เหตุผลที่ดรอป</th>
-        <th style="width: 16%;">วันที่ดรอป</th>
-        <th style="width: 10%; min-width: 90px;" class="text-center">
+        <th style="width: 13%;">Student ID</th>
+        <th style="width: 18%;">ชื่อ-นามสกุล</th>
+        <th style="width: 16%;">สาขาวิชา</th>
+        <th style="width: 16%;">อาจารย์ที่ปรึกษา</th>
+        <th style="width: 17%;">เหตุผลที่ดรอป</th>
+        <th style="width: 12%;">วันที่ดรอป</th>
+        <th style="width: 8%; min-width: 90px;" class="text-center">
           <label style="display:inline-flex;align-items:center;gap:4px;cursor:pointer;white-space:nowrap;" title="เลือกนักศึกษาทั้งหมดในหน้านี้">
             <span style="font-size:12px;">เลือกทั้งหมด</span>
             <input type="checkbox" id="select-all-students" style="width:16px;height:16px;cursor:pointer;" />
@@ -233,10 +247,11 @@ function updateTableHeader() {
     thead.innerHTML = `
       <tr>
         <th style="width: 14%;">Student ID</th>
-        <th style="width: 22%;">ชื่อ-นามสกุล</th>
-        <th style="width: 20%;">อาจารย์ที่ปรึกษา</th>
-        <th style="width: 34%;">สถานะ</th>
-        <th style="width: 10%; min-width: 90px;" class="text-center">
+        <th style="width: 20%;">ชื่อ-นามสกุล</th>
+        <th style="width: 17%;">สาขาวิชา</th>
+        <th style="width: 17%;">อาจารย์ที่ปรึกษา</th>
+        <th style="width: 24%;">สถานะ</th>
+        <th style="width: 8%; min-width: 90px;" class="text-center">
           <label style="display:inline-flex;align-items:center;gap:4px;cursor:pointer;white-space:nowrap;" title="เลือกนักศึกษาทั้งหมดในหน้านี้">
             <span style="font-size:12px;">เลือกทั้งหมด</span>
             <input type="checkbox" id="select-all-students" style="width:16px;height:16px;cursor:pointer;" />
@@ -306,7 +321,7 @@ function renderStudentTable(students, total, page, totalPages) {
   if (!tbody) return;
   tbody.innerHTML = '';
 
-  const colCount = currentTab === 'dropped' ? 6 : 5;
+  const colCount = currentTab === 'dropped' ? 7 : 6;
   const emptyText = currentTab === 'dropped' ? 'ไม่พบนิสิตที่ดรอป' : 'ไม่พบข้อมูลนิสิต';
 
   if (students.length === 0) {
@@ -332,6 +347,7 @@ function renderStudentTable(students, total, page, totalPages) {
           </div>
         </td>
         <td>${s.nameTh}</td>
+        <td><span class="text-xs font-medium text-slate-700" title="${s.major || '-'}">${formatMajorName(s.major)}</span></td>
         <td>${s.advisorName || '<span class="text-gray-400">-</span>'}</td>
         <td>
           <span class="inline-block px-2.5 py-0.5 text-xs font-semibold rounded-full bg-red-100 text-red-700">
@@ -392,6 +408,7 @@ function renderStudentTable(students, total, page, totalPages) {
       tr.innerHTML = `
         <td>${s.studentCode}</td>
         <td>${s.nameTh}</td>
+        <td><span class="text-xs font-medium text-slate-700" title="${s.major || '-'}">${formatMajorName(s.major)}</span></td>
         <td>${s.advisorName || '<span class="text-gray-400">-</span>'}</td>
         <td>
           <div class="flex flex-col items-start gap-1 py-0.5">

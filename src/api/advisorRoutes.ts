@@ -210,6 +210,7 @@ router.get("/students", async (req: Request, res: Response) => {
         studentCode: s.studentCode,
         nameTh: s.nameTh,
         nameEn: s.nameEn,
+        major: s.major,
         nickname: s.nickname || (s.major ? `ปี ${s.year}` : "-"),
         email: s.user.email,
         phone: s.phone,
