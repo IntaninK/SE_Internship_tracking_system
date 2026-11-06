@@ -150,18 +150,21 @@ const PAGE_BODY_HTML = `
 
           <select id="status-filter" class="input-field" style="width:auto; min-width:155px; font-size:13px; padding:7px 12px; cursor:pointer;">
             <option value="">ทุกสถานะ Checklist</option>
-            <option value="checklist_approved">✓ อาจารย์รีวิวแล้ว</option>
+            <!-- ⏳ หมวดรูปนาฬิกาทราย (จัดไว้อันแรกก่อน) -->
             <option value="checklist_pending">⏳ รอผลตรวจ Checklist</option>
-            <option value="checklist_rejected">✗ ไม่ผ่าน / ทำเพิ่ม</option>
-            <option value="training_passed">✓ อบรมครบ 30 ชม.</option>
             <option value="training_incomplete">⏳ อบรมยังไม่ครบ</option>
-            <option value="cv_approved">✓ ตรวจ CV ผ่าน</option>
-            <option value="placement_approved">✓ อนุมัติที่ฝึกงานแล้ว</option>
+            <!-- 🟢 หมวดวงกลมสีเขียว (เดิมเป็นเช็คถูก) -->
+            <option value="checklist_approved">🟢 อาจารย์รีวิวแล้ว</option>
+            <option value="training_passed">🟢 อบรมครบ 30 ชม.</option>
+            <option value="cv_approved">🟢 ตรวจ CV ผ่าน</option>
+            <option value="placement_approved">🟢 อนุมัติที่ฝึกงานแล้ว</option>
+            <!-- 🔴 หมวดวงกลมสีแดง (เดิมเป็นกากบาท) -->
+            <option value="checklist_rejected">🔴 ไม่ผ่าน / ทำเพิ่ม</option>
           </select>
 
           <select id="skill-filter" class="input-field" style="width:auto; min-width:160px; font-size:13px; padding:7px 12px; cursor:pointer;">
             <option value="">ทุกสถานะชั่วโมงอบรม</option>
-            <option value="pass_all">✓ ผ่านเกณฑ์ครบ (Soft+Hard)</option>
+            <option value="pass_all">🟢 ผ่านเกณฑ์ครบ (Soft+Hard)</option>
             <option value="lack_soft">⚠️ ขาด Soft Skill (&lt; 12 ชม.)</option>
             <option value="lack_hard">⚠️ ขาด Hard Skill (&lt; 18 ชม.)</option>
             <option value="lack_both">⚠️ ขาดทั้ง Soft &amp; Hard</option>
