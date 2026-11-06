@@ -79,6 +79,7 @@ export interface StudentDocWorkflowRecord {
   requestLetterDocNo?: string;
   requestLetterDate?: string;
   requestLetterBatchId?: string;
+  requestLetterSignatureSnapshot?: string;
   companyResponseStatus: "NOT_SENT" | "WAITING_RESPONSE" | "ACCEPTED" | "REJECTED";
   companyResponseFileName?: string;
   companyResponseFileUrl?: string;
@@ -87,6 +88,7 @@ export interface StudentDocWorkflowRecord {
   dispatchLetterIssued: boolean;
   dispatchLetterDocNo?: string;
   dispatchLetterDate?: string;
+  dispatchLetterSignatureSnapshot?: string;
   isLocked: boolean;
   unlockedByAdmin?: boolean;
 }
@@ -111,6 +113,7 @@ export interface SuperAdminState {
     defaultDocPrefix: string;
     deanSignatory: string;
     deanPosition: string;
+    signatureDataUrl: string;
     updatedAt: string;
   };
   majorUnlockRules: MajorUnlockRule[];
@@ -130,6 +133,7 @@ const DEFAULT_STATE: SuperAdminState = {
     defaultDocPrefix: "อว 7316/",
     deanSignatory: "ผู้ช่วยศาสตราจารย์ ดร.พรเทพ โรจนวสุ",
     deanPosition: "คณบดีคณะเทคโนโลยีสารสนเทศและการสื่อสาร",
+    signatureDataUrl: "",
     updatedAt: new Date().toISOString(),
   },
   majorUnlockRules: [
@@ -397,6 +401,13 @@ export function saveSuperAdminState(state: SuperAdminState): void {
   }
 }
 
+export function saveSuperAdminStateOrThrow(state: SuperAdminState): void {
+  if (!fs.existsSync(DATA_DIR)) {
+    fs.mkdirSync(DATA_DIR, { recursive: true });
+  }
+  fs.writeFileSync(STATE_FILE, JSON.stringify(state, null, 2), "utf8");
+}
+
 export function calculateEventHours(startTime: string, endTime: string): {
   rawHours: number;
   creditedHours: number;
@@ -410,4 +421,3 @@ export function calculateEventHours(startTime: string, endTime: string): {
   const creditedHours = Math.min(6, rawHours); // สูงสุดไม่เกิน 6 ชั่วโมง/วัน ตามข้อกำหนดพี่จอม
   return { rawHours, creditedHours };
 }
-

@@ -296,20 +296,10 @@ async function loadStudents() {
     const data = await res.json();
     if (!data.success) return;
 
-    let studentsToRender = data.students || [];
-    let totalToRender = data.total;
-    // Fallback: กรองฝั่ง client-side เพิ่มเติม
-    if (selectedYear) {
-      studentsToRender = studentsToRender.filter(s => s.studentCode && s.studentCode.startsWith(selectedYear));
-      totalToRender = studentsToRender.length;
-    }
-    if (selectedSemester) {
-      studentsToRender = studentsToRender.filter(s => (s.semester || '2') === selectedSemester);
-      totalToRender = studentsToRender.length;
-    }
-    currentFilteredCount = totalToRender;
+    const studentsToRender = data.students || [];
+    currentFilteredCount = data.total;
 
-    renderStudentTable(studentsToRender, totalToRender, data.page, Math.max(1, Math.ceil(totalToRender / pageLimit)));
+    renderStudentTable(studentsToRender, data.total, data.page, Math.max(1, Math.ceil(data.total / pageLimit)));
   } catch (err) {
     console.error('Load students error:', err);
   }
@@ -515,23 +505,23 @@ function renderPagination(page, totalPages, total) {
   const infoEl = document.getElementById('pagination-info');
   if (!paginationEl) return;
 
-  const start = (page - 1) * pageLimit + 1;
+  const start = total > 0 ? (page - 1) * pageLimit + 1 : 0;
   const end = Math.min(page * pageLimit, total);
-  if (infoEl) infoEl.textContent = `Showing ${start}-${end} from ${total} data`;
+  if (infoEl) infoEl.textContent = `แสดง ${start}-${end} จาก ${total} รายการ`;
 
-  paginationEl.innerHTML = '';
-  for (let i = 1; i <= Math.min(totalPages, 5); i++) {
-    const btn = document.createElement('button');
-    btn.textContent = i;
-    btn.className = i === page
-      ? 'w-7 h-7 rounded-lg bg-[#1541D2] text-white text-xs font-medium'
-      : 'w-7 h-7 rounded-lg bg-gray-100 text-gray-600 text-xs hover:bg-gray-200';
-    btn.addEventListener('click', () => {
-      currentPage = i;
+  paginationEl.innerHTML = totalPages > 1 ? `
+    <button type="button" data-page-direction="previous" ${page <= 1 ? 'disabled' : ''}
+      style="border:1px solid #CBD5E1; border-radius:6px; background:#FFFFFF; color:#334155; padding:5px 10px; cursor:${page <= 1 ? 'not-allowed' : 'pointer'}; opacity:${page <= 1 ? '.5' : '1'};">ก่อนหน้า</button>
+    <button type="button" data-page-direction="next" ${page >= totalPages ? 'disabled' : ''}
+      style="border:1px solid #CBD5E1; border-radius:6px; background:#FFFFFF; color:#334155; padding:5px 10px; cursor:${page >= totalPages ? 'not-allowed' : 'pointer'}; opacity:${page >= totalPages ? '.5' : '1'};">ถัดไป</button>
+  ` : '';
+  paginationEl.querySelectorAll<HTMLButtonElement>('[data-page-direction]').forEach(button => {
+    button.addEventListener('click', () => {
+      if (button.disabled) return;
+      currentPage += button.dataset.pageDirection === 'next' ? 1 : -1;
       loadStudents();
     });
-    paginationEl.appendChild(btn);
-  }
+  });
 }
 
 // ==========================================
@@ -2086,6 +2076,7 @@ let superAdminData = {
     defaultDocPrefix: 'อว 7316/',
     deanSignatory: 'ผู้ช่วยศาสตราจารย์ ดร.พรเทพ โรจนวสุ',
     deanPosition: 'คณบดีคณะเทคโนโลยีสารสนเทศและการสื่อสาร',
+    signatureDataUrl: '',
   },
   majorUnlockRules: [],
   trainingEvents: [],
@@ -2099,6 +2090,23 @@ let superAdminData = {
 type AdminWorkspace = 'overview' | 'unlock' | 'events' | 'companies' | 'documents' | 'coop' | 'checklist';
 
 let currentWorkspace: AdminWorkspace = 'overview';
+
+function renderAcademicSignaturePreview(signatureDataUrl) {
+  const preview = document.getElementById('cfg-signature-preview') as HTMLImageElement | null;
+  const emptyLabel = document.getElementById('cfg-signature-empty');
+  const uploadButton = document.getElementById('cfg-signature-upload-button');
+  const changeButton = document.getElementById('cfg-signature-change-button');
+  const deleteButton = document.getElementById('cfg-signature-delete-button');
+  if (!preview || !emptyLabel || !uploadButton || !changeButton || !deleteButton) return;
+
+  const hasSignature = Boolean(signatureDataUrl);
+  preview.src = hasSignature ? signatureDataUrl : '';
+  preview.style.display = hasSignature ? 'block' : 'none';
+  emptyLabel.style.display = hasSignature ? 'none' : 'inline';
+  uploadButton.style.display = hasSignature ? 'none' : 'inline-flex';
+  changeButton.style.display = hasSignature ? 'inline-flex' : 'none';
+  deleteButton.style.display = hasSignature ? 'inline-flex' : 'none';
+}
 
 window.switchAdminWorkspace = function(wsKey: AdminWorkspace) {
   currentWorkspace = wsKey;
@@ -2164,6 +2172,7 @@ window.loadSuperAdminOverview = async function() {
       if (semEl) semEl.value = data.academicConfig.currentSemester || '2';
       if (prefEl) prefEl.value = data.academicConfig.defaultDocPrefix || 'อว 7316/';
       if (deanEl) deanEl.value = data.academicConfig.deanSignatory || '';
+      renderAcademicSignaturePreview(data.academicConfig.signatureDataUrl || '');
     }
 
     // Set default date for new event if empty
@@ -2183,6 +2192,69 @@ window.loadSuperAdminOverview = async function() {
     renderCoop01PreviewTable();
   } catch (err) {
     console.error('loadSuperAdminOverview error:', err);
+  }
+};
+
+window.uploadAcademicSignature = async function(event) {
+  const input = event.currentTarget as HTMLInputElement;
+  const file = input.files?.[0];
+  if (!file) return;
+
+  const isPng = file.name.toLowerCase().endsWith('.png') && file.type === 'image/png';
+  const isJpeg = /\.(jpe?g)$/i.test(file.name) && file.type === 'image/jpeg';
+  if (!isPng && !isJpeg) {
+    alert('รองรับเฉพาะไฟล์ PNG, JPG หรือ JPEG');
+    input.value = '';
+    return;
+  }
+  if (file.size > 2 * 1024 * 1024) {
+    alert('ไฟล์ลายเซ็นต้องมีขนาดไม่เกิน 2 MB');
+    input.value = '';
+    return;
+  }
+
+  const formData = new FormData();
+  formData.append('signature', file);
+  try {
+    const res = await fetch('/api/admin/super-admin/academic-config/signature', {
+      method: 'POST',
+      body: formData,
+    });
+    const data = await res.json();
+    if (!res.ok || !data.success) {
+      alert('อัปโหลดลายเซ็นไม่สำเร็จ: ' + (data.message || 'กรุณาลองใหม่'));
+      return;
+    }
+
+    superAdminData.academicConfig.signatureDataUrl = data.signatureDataUrl;
+    renderAcademicSignaturePreview(data.signatureDataUrl);
+    alert('อัปโหลดลายเซ็นเรียบร้อยแล้ว');
+  } catch (err) {
+    console.error('Failed to upload academic signature:', err);
+    alert('เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์');
+  } finally {
+    input.value = '';
+  }
+};
+
+window.deleteAcademicSignature = async function(event) {
+  event.stopPropagation();
+  if (!window.confirm('ยืนยันลบลายเซ็นออกจากระบบหรือไม่?')) return;
+
+  try {
+    const res = await fetch('/api/admin/super-admin/academic-config/signature', { method: 'DELETE' });
+    const data = await res.json();
+    if (!res.ok || !data.success) {
+      alert('ลบลายเซ็นไม่สำเร็จ: ' + (data.message || 'กรุณาลองใหม่'));
+      return;
+    }
+
+    superAdminData.academicConfig.signatureDataUrl = '';
+    renderAcademicSignaturePreview('');
+    alert('ลบลายเซ็นเรียบร้อยแล้ว');
+  } catch (err) {
+    console.error('Failed to delete academic signature:', err);
+    alert('เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์');
   }
 };
 
@@ -4276,6 +4348,14 @@ window.openOfficialLetterPreview = function(type, studentIds, companyName) {
   };
 
   const cfg = superAdminData.academicConfig || {};
+  const isDocumentIssued = type === 'DISPATCH'
+    ? Boolean(first.dispatchLetterIssued)
+    : Boolean(first.requestLetterIssued);
+  const signatureDataUrl = isDocumentIssued
+    ? (type === 'DISPATCH'
+      ? first.dispatchLetterSignatureSnapshot
+      : first.requestLetterSignatureSnapshot) || ''
+    : cfg.signatureDataUrl || '';
   const docNo = type === 'DISPATCH'
     ? (first.dispatchLetterDocNo || `${cfg.defaultDocPrefix || 'อว 7316/'}ว 0512`)
     : (first.requestLetterDocNo || `${cfg.defaultDocPrefix || 'อว 7316/'}ว 0142`);
@@ -4375,7 +4455,10 @@ window.openOfficialLetterPreview = function(type, studentIds, companyName) {
 
       <div style="text-align:center; margin-left:240px; margin-bottom:20px;">
         <div>ขอแสดงความนับถือ</div>
-        <div style="margin-top:28px; font-weight:700;">(${cfg.deanSignatory || 'ผู้ช่วยศาสตราจารย์ ดร.พรเทพ โรจนวสุ'})</div>
+        <div style="height:68px; display:flex; align-items:flex-end; justify-content:center;">
+          ${signatureDataUrl ? `<img src="${signatureDataUrl}" alt="ลายเซ็นผู้ลงนาม" style="max-width:150px; max-height:64px; object-fit:contain;" />` : ''}
+        </div>
+        <div style="font-weight:700;">(${cfg.deanSignatory || 'ผู้ช่วยศาสตราจารย์ ดร.พรเทพ โรจนวสุ'})</div>
         <div>${cfg.deanPosition || 'คณบดีคณะเทคโนโลยีสารสนเทศและการสื่อสาร'}</div>
         <div>มหาวิทยาลัยพะเยา</div>
       </div>
