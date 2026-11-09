@@ -3552,6 +3552,7 @@ router.put("/checklist-sections/:id", requireSuperAdminStaff, async (req: Reques
 router.delete("/checklist-sections/:id", requireSuperAdminStaff, async (req: Request, res: Response) => {
   try {
     const sectionId = parseInt(String(req.params.id), 10);
+    const targetSec = await prisma.checklistSection.findUnique({ where: { id: sectionId } });
 
     // ตรวจสอบว่ามีคำตอบของนิสิตในข้อใดข้อหนึ่งของหมวดนี้หรือไม่
     const answersCount = await prisma.companyChecklistAnswer.count({
@@ -3567,6 +3568,31 @@ router.delete("/checklist-sections/:id", requireSuperAdminStaff, async (req: Req
 
     await prisma.checklistItem.deleteMany({ where: { sectionId } });
     await prisma.checklistSection.delete({ where: { id: sectionId } });
+
+    // รันเลขลำดับหมวดที่เหลือในเวอร์ชันเดียวกันใหม่ให้อัตโนมัติ
+    if (targetSec && targetSec.versionId) {
+      const remaining = await prisma.checklistSection.findMany({
+        where: { versionId: targetSec.versionId },
+        orderBy: { order: "asc" },
+      });
+      if (remaining.length > 0) {
+        const tempOps = remaining.map((s, idx) =>
+          prisma.checklistSection.update({ where: { id: s.id }, data: { order: -(idx + 10000) } })
+        );
+        const finalOps = remaining.map((s, idx) => {
+          const newOrder = idx + 1;
+          let newTitle = s.title || "";
+          if (/^ส่วนที่\s*\d+/.test(newTitle.trim())) {
+            newTitle = newTitle.trim().replace(/^ส่วนที่\s*\d+/, `ส่วนที่ ${newOrder}`);
+          }
+          return prisma.checklistSection.update({
+            where: { id: s.id },
+            data: { order: newOrder, title: newTitle },
+          });
+        });
+        await prisma.$transaction([...tempOps, ...finalOps]);
+      }
+    }
 
     res.json({ success: true, message: "ลบหมวดหลักเรียบร้อยแล้ว" });
   } catch (err) {
@@ -3589,12 +3615,14 @@ router.post("/checklist-items", requireSuperAdminStaff, async (req: Request, res
       orderBy: { order: "desc" },
     });
     const newOrder = maxOrderItem ? maxOrderItem.order + 1 : 1;
+    const cleanDesc = String(description).trim().replace(/^(?:\d+[\.\)]\s*)+/, "");
+    const formattedDesc = `${newOrder}. ${cleanDesc}`;
 
     const item = await prisma.checklistItem.create({
       data: {
         sectionId: sId,
         order: newOrder,
-        description: String(description).trim(),
+        description: formattedDesc,
         placeholder: placeholder ? String(placeholder).trim() : null,
         isRequired: Boolean(isRequired),
         isActive: true,
@@ -3614,10 +3642,17 @@ router.put("/checklist-items/:id", requireSuperAdminStaff, async (req: Request, 
     const itemId = parseInt(String(req.params.id), 10);
     const { description, placeholder, isRequired, isActive } = req.body;
 
+    let formattedDesc: string | undefined = undefined;
+    if (description) {
+      const existing = await prisma.checklistItem.findUnique({ where: { id: itemId } });
+      const cleanDesc = String(description).trim().replace(/^(?:\d+[\.\)]\s*)+/, "");
+      formattedDesc = `${existing ? existing.order : 1}. ${cleanDesc}`;
+    }
+
     const item = await prisma.checklistItem.update({
       where: { id: itemId },
       data: {
-        description: description ? String(description).trim() : undefined,
+        description: formattedDesc,
         placeholder: placeholder !== undefined ? (placeholder ? String(placeholder).trim() : null) : undefined,
         isRequired: isRequired !== undefined ? Boolean(isRequired) : undefined,
         isActive: isActive !== undefined ? Boolean(isActive) : undefined,
@@ -3635,6 +3670,7 @@ router.put("/checklist-items/:id", requireSuperAdminStaff, async (req: Request, 
 router.delete("/checklist-items/:id", requireSuperAdminStaff, async (req: Request, res: Response) => {
   try {
     const itemId = parseInt(String(req.params.id), 10);
+    const targetItem = await prisma.checklistItem.findUnique({ where: { id: itemId } });
 
     const answersCount = await prisma.companyChecklistAnswer.count({
       where: { checklistItemId: itemId },
@@ -3648,6 +3684,29 @@ router.delete("/checklist-items/:id", requireSuperAdminStaff, async (req: Reques
     }
 
     await prisma.checklistItem.delete({ where: { id: itemId } });
+
+    // รันเลขข้อที่เหลือในหมวดเดียวกันใหม่อัตโนมัติ
+    if (targetItem) {
+      const remaining = await prisma.checklistItem.findMany({
+        where: { sectionId: targetItem.sectionId },
+        orderBy: { order: "asc" },
+      });
+      if (remaining.length > 0) {
+        const tempOps = remaining.map((it, idx) =>
+          prisma.checklistItem.update({ where: { id: it.id }, data: { order: -(idx + 10000) } })
+        );
+        const finalOps = remaining.map((it, idx) => {
+          const newOrder = idx + 1;
+          const cleanDesc = String(it.description || "").trim().replace(/^(?:\d+[\.\)]\s*)+/, "");
+          return prisma.checklistItem.update({
+            where: { id: it.id },
+            data: { order: newOrder, description: `${newOrder}. ${cleanDesc}` },
+          });
+        });
+        await prisma.$transaction([...tempOps, ...finalOps]);
+      }
+    }
+
     res.json({ success: true, message: "ลบข้อย่อยเรียบร้อยแล้ว" });
   } catch (err) {
     console.error("DELETE /api/admin/checklist-items/:id error:", err);
@@ -3655,10 +3714,75 @@ router.delete("/checklist-items/:id", requireSuperAdminStaff, async (req: Reques
   }
 });
 
-// 10.12 สลับลำดับหมวดหลัก หรือ ข้อย่อย (Move Up / Down)
+// 10.12 จัดลำดับหมวดหลัก หรือ ข้อย่อย (รองรับทั้ง Drag & Drop orderedIds และ Move Up / Down)
 router.post("/checklist-reorder", requireSuperAdminStaff, async (req: Request, res: Response) => {
   try {
-    const { type, id, direction } = req.body; // type: 'section' | 'item', direction: 'up' | 'down'
+    const { type, id, direction, orderedIds } = req.body;
+
+    // กรณี Drag & Drop ส่งลำดับทั้งหมดมาใน orderedIds
+    if (type && Array.isArray(orderedIds) && orderedIds.length > 0) {
+      const ids = orderedIds.map((x: any) => parseInt(String(x), 10)).filter((n: number) => !isNaN(n));
+
+      if (type === "section") {
+        const existingSections = await prisma.checklistSection.findMany({
+          where: { id: { in: ids } },
+        });
+        const secMap = new Map(existingSections.map((s) => [s.id, s]));
+
+        const tempOps = ids.map((secId: number, idx: number) =>
+          prisma.checklistSection.update({
+            where: { id: secId },
+            data: { order: -(idx + 10000) },
+          })
+        );
+
+        const finalOps = ids.map((secId: number, idx: number) => {
+          const newOrder = idx + 1;
+          const sec = secMap.get(secId);
+          let newTitle = sec?.title || "";
+          if (/^ส่วนที่\s*\d+/.test(newTitle.trim())) {
+            newTitle = newTitle.trim().replace(/^ส่วนที่\s*\d+/, `ส่วนที่ ${newOrder}`);
+          }
+          return prisma.checklistSection.update({
+            where: { id: secId },
+            data: { order: newOrder, title: newTitle },
+          });
+        });
+
+        await prisma.$transaction([...tempOps, ...finalOps]);
+        return res.json({ success: true, message: "จัดลำดับหมวดใหม่เรียบร้อยแล้ว" });
+      }
+
+      if (type === "item") {
+        const existingItems = await prisma.checklistItem.findMany({
+          where: { id: { in: ids } },
+        });
+        const itemMap = new Map(existingItems.map((it) => [it.id, it]));
+
+        const tempOps = ids.map((itId: number, idx: number) =>
+          prisma.checklistItem.update({
+            where: { id: itId },
+            data: { order: -(idx + 10000) },
+          })
+        );
+
+        const finalOps = ids.map((itId: number, idx: number) => {
+          const newOrder = idx + 1;
+          const it = itemMap.get(itId);
+          const cleanDesc = String(it?.description || "")
+            .trim()
+            .replace(/^(?:\d+[\.\)]\s*)+/, "");
+          return prisma.checklistItem.update({
+            where: { id: itId },
+            data: { order: newOrder, description: `${newOrder}. ${cleanDesc}` },
+          });
+        });
+
+        await prisma.$transaction([...tempOps, ...finalOps]);
+        return res.json({ success: true, message: "จัดลำดับข้อใหม่เรียบร้อยแล้ว" });
+      }
+    }
+
     if (!type || !id || !direction) {
       return res.status(400).json({ success: false, message: "ข้อมูลไม่ครบถ้วน" });
     }
@@ -3681,7 +3805,6 @@ router.post("/checklist-reorder", requireSuperAdminStaff, async (req: Request, r
         return res.json({ success: true, message: "อยู่ลำดับแรกหรือลำดับสุดท้ายแล้ว" });
       }
 
-      // สลับ order ผ่าน transaction
       const currentOrder = current.order;
       const siblingOrder = sibling.order;
 
