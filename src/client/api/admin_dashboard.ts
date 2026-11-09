@@ -2109,6 +2109,14 @@ function renderAcademicSignaturePreview(signatureDataUrl) {
 }
 
 window.switchAdminWorkspace = function(wsKey: AdminWorkspace) {
+  if (currentWorkspace === 'checklist' && wsKey !== 'checklist' && typeof (window as any).hasUnsavedChecklistChanges === 'function' && (window as any).hasUnsavedChecklistChanges()) {
+    if (!window.confirm('คุณมีการแก้ไขเกณฑ์ Checklist ที่ยังไม่ได้กดบันทึก\nหากเปลี่ยนหน้า การแก้ไขที่ทำค้างไว้จะถูกยกเลิก ต้องการเปลี่ยนหน้าหรือไม่?')) {
+      return;
+    }
+    if (typeof (window as any).discardChecklistDraftChanges === 'function') {
+      (window as any).discardChecklistDraftChanges(true);
+    }
+  }
   currentWorkspace = wsKey;
   const workspaces: AdminWorkspace[] = ['overview', 'unlock', 'events', 'companies', 'documents', 'coop', 'checklist'];
   workspaces.forEach(k => {
@@ -2123,6 +2131,9 @@ window.switchAdminWorkspace = function(wsKey: AdminWorkspace) {
   });
   if (wsKey === 'companies') renderPendingCompaniesTable();
   if (wsKey === 'checklist') {
+    if (typeof (window as any).hasUnsavedChecklistChanges === 'function' && (window as any).hasUnsavedChecklistChanges()) {
+      return;
+    }
     if (window.loadChecklistSettings) {
       window.loadChecklistSettings();
     }
@@ -4616,6 +4627,175 @@ window.addEventListener('app:data-updated', () => {
 
 let allChecklistVersions: any[] = [];
 let currentChecklistVersion: any = null;
+let originalChecklistSectionsSnapshot: any[] = [];
+let isChecklistDirty = false;
+let checklistDraftChangesCount = 0;
+let tempChecklistDraftIdCounter = -1;
+const collapsedChecklistSections = new Set<number>();
+
+(window as any).hasUnsavedChecklistChanges = function() {
+  return isChecklistDirty;
+};
+
+function resetChecklistDraftBaseline() {
+  originalChecklistSectionsSnapshot = JSON.parse(
+    JSON.stringify(currentChecklistVersion?.sections || [])
+  );
+  isChecklistDirty = false;
+  checklistDraftChangesCount = 0;
+  updateChecklistFloatingBar();
+}
+
+function markChecklistDraftDirty() {
+  isChecklistDirty = true;
+  checklistDraftChangesCount += 1;
+  updateChecklistFloatingBar();
+}
+
+function renumberChecklistDraftInMemory() {
+  if (!currentChecklistVersion || !Array.isArray(currentChecklistVersion.sections)) return;
+  currentChecklistVersion.sections.forEach((sec: any, secIdx: number) => {
+    const newSecOrder = secIdx + 1;
+    sec.order = newSecOrder;
+    let curTitle = String(sec.title || '').trim();
+    if (/^ส่วนที่\s*\d+/.test(curTitle)) {
+      sec.title = curTitle.replace(/^ส่วนที่\s*\d+/, `ส่วนที่ ${newSecOrder}`);
+    }
+    if (Array.isArray(sec.items)) {
+      sec.items.forEach((it: any, itIdx: number) => {
+        const newItemOrder = itIdx + 1;
+        it.order = newItemOrder;
+        const cleanDesc = String(it.description || '').replace(/^(?:\d+[\.\)]\s*)+/, '').trim();
+        it.description = `${newItemOrder}. ${cleanDesc}`;
+      });
+    }
+  });
+}
+
+function updateChecklistFloatingBar() {
+  let bar = document.getElementById('checklist-unsaved-floating-bar');
+  const secContainer = document.getElementById('checklist-sections-container');
+  if (secContainer) {
+    secContainer.style.paddingBottom = isChecklistDirty && currentWorkspace === 'checklist' ? '96px' : '0px';
+  }
+  if (!isChecklistDirty || currentWorkspace !== 'checklist') {
+    if (bar) {
+      bar.style.display = 'none';
+    }
+    return;
+  }
+
+  if (!bar) {
+    bar = document.createElement('div');
+    bar.id = 'checklist-unsaved-floating-bar';
+    document.body.appendChild(bar);
+  }
+
+  bar.style.cssText = `
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 990;
+    background: rgba(255, 255, 255, 0.98);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    padding: 8px 10px;
+    border-radius: 14px;
+    border: 1.5px solid #BFDBFE;
+    box-shadow: 0 12px 28px -6px rgba(30, 64, 175, 0.22), 0 4px 10px -2px rgba(15, 23, 42, 0.08);
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    transition: all 0.2s ease;
+  `;
+
+  bar.innerHTML = `
+    <button
+      type="button"
+      id="btn-checklist-discard-draft"
+      onclick="window.discardChecklistDraftChanges(true)"
+      style="background:#FFFFFF; color:#475569; border:1px solid #CBD5E1; padding:8px 16px; border-radius:10px; font-size:13px; font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:6px; transition:all 0.15s ease; white-space:nowrap;"
+      onmouseover="this.style.background='#FEF2F2'; this.style.color='#DC2626'; this.style.borderColor='#FCA5A5';"
+      onmouseout="this.style.background='#FFFFFF'; this.style.color='#475569'; this.style.borderColor='#CBD5E1';"
+    >
+      <span class="material-icons" style="font-size:17px;">restart_alt</span>
+      <span>ยกเลิก / คืนค่าเดิม</span>
+    </button>
+    <button
+      type="button"
+      id="btn-checklist-commit-draft"
+      onclick="window.commitChecklistDraftChanges()"
+      style="background:linear-gradient(135deg, #1E40AF, #2563EB); color:#FFFFFF; border:none; padding:8px 18px; border-radius:10px; font-size:13px; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:6px; box-shadow:0 4px 12px rgba(37, 99, 235, 0.32); transition:all 0.15s ease; white-space:nowrap;"
+      onmouseover="this.style.filter='brightness(1.08)'"
+      onmouseout="this.style.filter='none'"
+    >
+      <span class="material-icons" style="font-size:17px;">save</span>
+      <span>บันทึกการเปลี่ยนแปลง</span>
+    </button>
+  `;
+}
+
+(window as any).discardChecklistDraftChanges = function(skipConfirm?: boolean) {
+  if (!isChecklistDirty) return;
+  if (!skipConfirm && !window.confirm('ยืนยันยกเลิกการแก้ไขและคืนค่าเดิมทั้งหมดหรือไม่?')) {
+    return;
+  }
+  if (currentChecklistVersion) {
+    currentChecklistVersion.sections = JSON.parse(
+      JSON.stringify(originalChecklistSectionsSnapshot)
+    );
+  }
+  isChecklistDirty = false;
+  checklistDraftChangesCount = 0;
+  updateChecklistFloatingBar();
+  renderChecklistSections();
+};
+
+(window as any).commitChecklistDraftChanges = async function() {
+  if (!currentChecklistVersion || !isChecklistDirty) return;
+
+  const commitBtn = document.getElementById('btn-checklist-commit-draft') as HTMLButtonElement | null;
+  const discardBtn = document.getElementById('btn-checklist-discard-draft') as HTMLButtonElement | null;
+  if (commitBtn) {
+    commitBtn.disabled = true;
+    commitBtn.innerHTML = '<span class="material-icons" style="font-size:16px; animation:spin 1s linear infinite;">sync</span><span>กำลังบันทึก...</span>';
+  }
+  if (discardBtn) discardBtn.disabled = true;
+
+  try {
+    const res = await fetch(`/api/admin/checklist-versions/${currentChecklistVersion.id}/sync-structure`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        sections: currentChecklistVersion.sections || [],
+      }),
+    });
+    const data = await res.json();
+    if (!data.success) {
+      alert(data.message || 'บันทึกการเปลี่ยนแปลงไม่สำเร็จ');
+      if (commitBtn) {
+        commitBtn.disabled = false;
+        commitBtn.innerHTML = '<span class="material-icons" style="font-size:16px;">save</span><span>บันทึกการเปลี่ยนแปลง</span>';
+      }
+      if (discardBtn) discardBtn.disabled = false;
+      return;
+    }
+
+    isChecklistDirty = false;
+    checklistDraftChangesCount = 0;
+    updateChecklistFloatingBar();
+    await window.loadChecklistSettings(currentChecklistVersion.id);
+  } catch (err) {
+    console.error('commitChecklistDraftChanges error:', err);
+    alert('เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์');
+    if (commitBtn) {
+      commitBtn.disabled = false;
+      commitBtn.innerHTML = '<span class="material-icons" style="font-size:16px;">save</span><span>บันทึกการเปลี่ยนแปลง</span>';
+    }
+    if (discardBtn) discardBtn.disabled = false;
+  }
+};
 
 // โหลดรายการเวอร์ชันและเนื้อหา Checklist
 window.loadChecklistSettings = async function(targetVersionId?: number) {
@@ -4635,8 +4815,10 @@ window.loadChecklistSettings = async function(targetVersionId?: number) {
     allChecklistVersions = data.versions || [];
 
     // หาเวอร์ชันเป้าหมายที่จะแสดง
-    if (targetVersionId) {
-      currentChecklistVersion = allChecklistVersions.find(v => v.id === targetVersionId);
+    const targetId = targetVersionId || currentChecklistVersion?.id;
+    currentChecklistVersion = null;
+    if (targetId) {
+      currentChecklistVersion = allChecklistVersions.find(v => v.id === targetId);
     }
     if (!currentChecklistVersion) {
       currentChecklistVersion = allChecklistVersions.find(v => v.status === 'ACTIVE') || allChecklistVersions[0];
@@ -4649,6 +4831,7 @@ window.loadChecklistSettings = async function(targetVersionId?: number) {
       badgeSidebar.textContent = activeVer.versionName.split(' ')[0] || 'v1.0';
     }
 
+    resetChecklistDraftBaseline();
     renderChecklistVersionHeader();
     renderChecklistSections();
   } catch (err) {
@@ -4719,7 +4902,26 @@ function renderChecklistVersionHeader() {
 // สลับดูเวอร์ชันอื่น
 window.switchChecklistVersion = function(versionIdStr: string) {
   const vId = parseInt(versionIdStr, 10);
+  if (currentChecklistVersion && currentChecklistVersion.id === vId) return;
+
+  if (isChecklistDirty) {
+    if (!window.confirm('คุณมีการแก้ไขเกณฑ์ Checklist ที่ยังไม่ได้กดบันทึก\nหากเปลี่ยนเวอร์ชัน การแก้ไขที่ทำค้างไว้จะถูกยกเลิก ต้องการเปลี่ยนเวอร์ชันหรือไม่?')) {
+      const selectEl = document.getElementById('checklist-version-select') as HTMLSelectElement | null;
+      if (selectEl && currentChecklistVersion) {
+        selectEl.value = String(currentChecklistVersion.id);
+      }
+      return;
+    }
+    if (currentChecklistVersion) {
+      currentChecklistVersion.sections = JSON.parse(
+        JSON.stringify(originalChecklistSectionsSnapshot)
+      );
+    }
+  }
+
   currentChecklistVersion = allChecklistVersions.find(v => v.id === vId) || currentChecklistVersion;
+  collapsedChecklistSections.clear();
+  resetChecklistDraftBaseline();
   renderChecklistVersionHeader();
   renderChecklistSections();
 };
@@ -4894,13 +5096,13 @@ function renderChecklistSections() {
 
             <!-- ปุ่มเปิด/ปิด (ย่อ/ขยาย) หัวข้อย่อย ไว้ขวาสุด -->
             <button type="button" onclick="event.stopPropagation(); window.toggleSectionCollapse(${sec.id})" id="btn-collapse-${sec.id}" title="เปิด/ปิดแสดงข้อย่อย" style="background:#FFFFFF; border:1px solid #CBD5E1; border-radius:6px; padding:4px 8px; color:#475569; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; margin-left:4px;">
-              <span id="icon-collapse-${sec.id}" class="material-icons" style="font-size:20px; transition:transform 0.2s ease;">expand_less</span>
+              <span id="icon-collapse-${sec.id}" class="material-icons" style="font-size:20px; transition:transform 0.2s ease;">${collapsedChecklistSections.has(sec.id) ? 'expand_more' : 'expand_less'}</span>
             </button>
           </div>
         </div>
 
         <!-- Section Body (Items List) -->
-        <div id="section-body-${sec.id}" class="checklist-section-body" data-section-id="${sec.id}" style="padding:14px 18px; display:block;">
+        <div id="section-body-${sec.id}" class="checklist-section-body" data-section-id="${sec.id}" style="padding:14px 18px; display:${collapsedChecklistSections.has(sec.id) ? 'none' : 'block'};">
           <div id="section-items-list-${sec.id}" class="checklist-items-list" data-section-id="${sec.id}">
             ${itemsHtml}
           </div>
@@ -4914,6 +5116,7 @@ function renderChecklistSections() {
     `;
   });
 
+  container.style.paddingBottom = isChecklistDirty ? '96px' : '0px';
   container.innerHTML = html;
   initChecklistDragAndDrop(container);
 }
@@ -5056,15 +5259,7 @@ function initChecklistDragAndDrop(container: HTMLElement) {
         currentChecklistVersion.sections.sort((a: any, b: any) => a.order - b.order);
       }
 
-      try {
-        await fetch('/api/admin/checklist-reorder', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ type: 'section', orderedIds }),
-        });
-      } catch (err) {
-        console.error('Reorder section error:', err);
-      }
+      markChecklistDraftDirty();
     }
   };
 
@@ -5187,15 +5382,7 @@ function initChecklistDragAndDrop(container: HTMLElement) {
           secObj.items.sort((a: any, b: any) => a.order - b.order);
         }
 
-        try {
-          await fetch('/api/admin/checklist-reorder', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ type: 'item', orderedIds, sectionId: secId }),
-          });
-        } catch (err) {
-          console.error('Reorder items error:', err);
-        }
+        markChecklistDraftDirty();
       }
     });
   });
@@ -5390,60 +5577,54 @@ window.saveChecklistSection = async function() {
   }
 
   const sectionId = idEl?.value ? parseInt(idEl.value, 10) : null;
-
-  try {
-    if (!sectionId) {
-      // Add
-      const res = await fetch('/api/admin/checklist-sections', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ versionId: currentChecklistVersion.id, title }),
-      });
-      const data = await res.json();
-      if (!data.success) {
-        alert(data.message || 'เพิ่มหมวดไม่สำเร็จ');
-        return;
-      }
-    } else {
-      // Edit
-      const res = await fetch(`/api/admin/checklist-sections/${sectionId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title }),
-      });
-      const data = await res.json();
-      if (!data.success) {
-        alert(data.message || 'แก้ไขหมวดไม่สำเร็จ');
-        return;
-      }
-    }
-
-    document.getElementById('checklist-section-modal')!.style.display = 'none';
-    await window.loadChecklistSettings(currentChecklistVersion.id);
-  } catch (err) {
-    console.error('saveChecklistSection error:', err);
-    alert('เกิดข้อผิดพลาดในการบันทึกหมวด');
+  if (!Array.isArray(currentChecklistVersion.sections)) {
+    currentChecklistVersion.sections = [];
   }
+
+  if (!sectionId) {
+    const newOrder = currentChecklistVersion.sections.length + 1;
+    currentChecklistVersion.sections.push({
+      id: tempChecklistDraftIdCounter--,
+      versionId: currentChecklistVersion.id,
+      title,
+      order: newOrder,
+      items: [],
+    });
+  } else {
+    const secObj = currentChecklistVersion.sections.find((s: any) => s.id === sectionId);
+    if (secObj) {
+      secObj.title = title;
+    }
+  }
+
+  renumberChecklistDraftInMemory();
+  document.getElementById('checklist-section-modal')!.style.display = 'none';
+  markChecklistDraftDirty();
+  renderChecklistSections();
 };
 
 window.deleteChecklistSection = async function(sectionId: number) {
-  if (!confirm('ยืนยันลบหมวดหลักนี้และข้อคำถามทั้งหมดในหมวดหรือไม่?')) return;
+  if (!currentChecklistVersion || !Array.isArray(currentChecklistVersion.sections)) return;
 
-  try {
-    const res = await fetch(`/api/admin/checklist-sections/${sectionId}`, {
-      method: 'DELETE',
-    });
-    const data = await res.json();
-    if (!data.success) {
-      alert(data.message || 'ลบหมวดไม่สำเร็จ');
-      return;
-    }
-    alert(data.message);
-    await window.loadChecklistSettings(currentChecklistVersion.id);
-  } catch (err) {
-    console.error('deleteChecklistSection error:', err);
-    alert('เกิดข้อผิดพลาดในการลบหมวด');
+  const targetSec = currentChecklistVersion.sections.find((s: any) => s.id === sectionId);
+  if (!targetSec) return;
+
+  const totalAnswers = (targetSec.items || []).reduce(
+    (sum: number, it: any) => sum + Number(it._count?.answers || 0),
+    0
+  );
+  if (totalAnswers > 0) {
+    alert(`ไม่สามารถลบหมวดนี้ได้เนื่องจากมีคำตอบของนิสิต ${totalAnswers} รายการผูกอยู่ แนะนำให้กดปุ่ม "เปิดอยู่/ปิดอยู่" เพื่อซ่อนข้อในหมวดแทน`);
+    return;
   }
+
+  currentChecklistVersion.sections = currentChecklistVersion.sections.filter(
+    (s: any) => s.id !== sectionId
+  );
+  collapsedChecklistSections.delete(sectionId);
+  renumberChecklistDraftInMemory();
+  markChecklistDraftDirty();
+  renderChecklistSections();
 };
 
 // ----------------------------------------------------
@@ -5521,77 +5702,75 @@ window.saveChecklistItem = async function() {
     return;
   }
 
-  try {
-    if (!itemId) {
-      // Add
-      const res = await fetch('/api/admin/checklist-items', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sectionId, description, placeholder, isRequired }),
-      });
-      const data = await res.json();
-      if (!data.success) {
-        alert(data.message || 'เพิ่มเกณฑ์ไม่สำเร็จ');
-        return;
-      }
-    } else {
-      // Edit
-      const res = await fetch(`/api/admin/checklist-items/${itemId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ description, placeholder, isRequired, isActive }),
-      });
-      const data = await res.json();
-      if (!data.success) {
-        alert(data.message || 'แก้ไขเกณฑ์ไม่สำเร็จ');
-        return;
+  const cleanDesc = description.replace(/^(?:\d+[\.\)]\s*)+/, '').trim();
+
+  if (!itemId) {
+    const secObj = (currentChecklistVersion.sections || []).find((s: any) => s.id === sectionId);
+    if (!secObj) return;
+    if (!Array.isArray(secObj.items)) secObj.items = [];
+    const newOrder = secObj.items.length + 1;
+    secObj.items.push({
+      id: tempChecklistDraftIdCounter--,
+      sectionId: secObj.id,
+      order: newOrder,
+      description: `${newOrder}. ${cleanDesc}`,
+      placeholder: placeholder || null,
+      isRequired,
+      isActive: true,
+      _count: { answers: 0 },
+    });
+  } else {
+    for (const s of currentChecklistVersion.sections || []) {
+      const found = (s.items || []).find((it: any) => it.id === itemId);
+      if (found) {
+        found.description = `${found.order}. ${cleanDesc}`;
+        found.placeholder = placeholder || null;
+        found.isRequired = isRequired;
+        found.isActive = isActive;
+        break;
       }
     }
-
-    document.getElementById('checklist-item-modal')!.style.display = 'none';
-    await window.loadChecklistSettings(currentChecklistVersion.id);
-  } catch (err) {
-    console.error('saveChecklistItem error:', err);
-    alert('เกิดข้อผิดพลาดในการบันทึกเกณฑ์');
   }
+
+  renumberChecklistDraftInMemory();
+  document.getElementById('checklist-item-modal')!.style.display = 'none';
+  markChecklistDraftDirty();
+  renderChecklistSections();
 };
 
 window.toggleChecklistItemActive = async function(itemId: number, currentActive: boolean) {
-  try {
-    const res = await fetch(`/api/admin/checklist-items/${itemId}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ isActive: !currentActive }),
-    });
-    const data = await res.json();
-    if (!data.success) {
-      alert(data.message || 'สลับสถานะไม่สำเร็จ');
-      return;
+  if (!currentChecklistVersion) return;
+  for (const s of currentChecklistVersion.sections || []) {
+    const found = (s.items || []).find((it: any) => it.id === itemId);
+    if (found) {
+      found.isActive = !currentActive;
+      break;
     }
-    await window.loadChecklistSettings(currentChecklistVersion.id);
-  } catch (err) {
-    console.error('toggleChecklistItemActive error:', err);
   }
+  markChecklistDraftDirty();
+  renderChecklistSections();
 };
 
 window.deleteChecklistItem = async function(itemId: number) {
-  if (!confirm('ยืนยันลบเกณฑ์ข้อนี้หรือไม่?')) return;
+  if (!currentChecklistVersion) return;
 
-  try {
-    const res = await fetch(`/api/admin/checklist-items/${itemId}`, {
-      method: 'DELETE',
-    });
-    const data = await res.json();
-    if (!data.success) {
-      alert(data.message || 'ลบไม่สำเร็จ');
-      return;
+  for (const s of currentChecklistVersion.sections || []) {
+    const idx = (s.items || []).findIndex((it: any) => it.id === itemId);
+    if (idx !== -1) {
+      const targetItem = s.items[idx];
+      const ansCount = Number(targetItem._count?.answers || 0);
+      if (ansCount > 0) {
+        alert(`ไม่สามารถลบข้อนี้ได้เนื่องจากมีนิสิตเคยตอบแล้ว ${ansCount} รายการ กรุณากดปุ่ม "เปิดอยู่/ปิดอยู่" เพื่อซ่อนข้อนี้แทน`);
+        return;
+      }
+      s.items.splice(idx, 1);
+      break;
     }
-    alert(data.message);
-    await window.loadChecklistSettings(currentChecklistVersion.id);
-  } catch (err) {
-    console.error('deleteChecklistItem error:', err);
-    alert('เกิดข้อผิดพลาดในการลบเกณฑ์');
   }
+
+  renumberChecklistDraftInMemory();
+  markChecklistDraftDirty();
+  renderChecklistSections();
 };
 
 // สลับลำดับ Move Up / Down
@@ -5621,6 +5800,11 @@ window.toggleSectionCollapse = function(secId: number) {
   if (bodyEl) {
     const isHidden = bodyEl.style.display === 'none';
     bodyEl.style.display = isHidden ? 'block' : 'none';
+    if (isHidden) {
+      collapsedChecklistSections.delete(secId);
+    } else {
+      collapsedChecklistSections.add(secId);
+    }
     if (iconEl) {
       iconEl.textContent = isHidden ? 'expand_less' : 'expand_more';
     }

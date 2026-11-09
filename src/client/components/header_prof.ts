@@ -8,27 +8,6 @@ function initPersistentProfHeader(templateUrl) {
             if (!placeholder) return;
             placeholder.innerHTML = html;
 
-            const menuToggle = document.getElementById('menu-toggle');
-            const headerNav = document.getElementById('header-nav');
-
-            if (menuToggle && headerNav) {
-                const setMenuOpen = (open) => {
-                    headerNav.classList.toggle('open', open);
-                    const icon = menuToggle.querySelector('.material-icons');
-                    if (icon) icon.textContent = open ? 'close' : 'menu';
-                };
-                menuToggle.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    setMenuOpen(!headerNav.classList.contains('open'));
-                });
-                headerNav.addEventListener('click', (e) => {
-                    if (e.target.closest('a')) setMenuOpen(false);
-                });
-                document.addEventListener('click', (e) => {
-                    if (!headerNav.contains(e.target) && !menuToggle.contains(e.target)) setMenuOpen(false);
-                });
-            }
-
             fetch('/auth/me')
                 .then(r => r.json())
                 .then(data => {
@@ -111,29 +90,6 @@ function initPersistentProfHeader(templateUrl) {
                         }
                     }
 
-                    const navDashboard = headerNav ? headerNav.querySelector('a[href*="dashboard"]') : null;
-                    if (isCourseAdminOrStaff) {
-                        if (navDashboard) {
-                            navDashboard.href = '/admin-dashboard';
-                            navDashboard.innerHTML = '<span class="material-icons" style="font-size:16px;">analytics</span><span>Dashboard รายวิชา/คณะ</span>';
-                        }
-                        if (isAdvOrSup && headerNav && !headerNav.querySelector('#multi-role-advisor-link')) {
-                            const advLink = document.createElement('a');
-                            advLink.id = 'multi-role-advisor-link';
-                            advLink.href = '/advisor-dashboard';
-                            advLink.className = 'nav-link';
-                            advLink.innerHTML = '<span class="material-icons" style="font-size:16px;">people</span><span>Dashboard ที่ปรึกษา</span>';
-                            if (navDashboard && navDashboard.parentElement) {
-                                navDashboard.parentElement.insertBefore(advLink, navDashboard.nextSibling);
-                            }
-                        }
-                    } else if (isAdvOrSup) {
-                        if (navDashboard) {
-                            navDashboard.href = '/advisor-dashboard';
-                            navDashboard.innerHTML = '<span class="material-icons" style="font-size:16px;">people</span><span>Dashboard ที่ปรึกษา</span>';
-                        }
-                    }
-
                     const switcherContainer = document.getElementById('ict-role-switcher-container');
                     const switcherPills = document.getElementById('ict-switcher-pills');
                     if (switcherContainer && switcherPills && role !== 'STUDENT') {
@@ -185,18 +141,6 @@ function initPersistentProfHeader(templateUrl) {
                                 `;
                             }).join('');
                         }
-                    }
-
-                    if (headerNav) {
-                        const cleanCurrentPath = currentPath.replace(/\.html$/i, '').toLowerCase();
-                        headerNav.querySelectorAll('a').forEach(a => {
-                            a.classList.remove('active');
-                            const rawHref = (a.getAttribute('href') || '').split('?')[0];
-                            const targetHref = decodeURIComponent(rawHref.replace('../pages/', '/pages/')).replace(/\.html$/i, '').toLowerCase();
-                            if (targetHref && cleanCurrentPath === targetHref) {
-                                a.classList.add('active');
-                            }
-                        });
                     }
                 })
                 .catch(() => {});

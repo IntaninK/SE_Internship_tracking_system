@@ -11,7 +11,20 @@ function initPersistentHeader(templateUrl) {
             const menuToggle = document.getElementById('menu-toggle');
             const headerNav = document.getElementById('header-nav');
 
-            if (menuToggle && headerNav) {
+            const initPath = decodeURIComponent(window.location.pathname).toLowerCase();
+            if (
+                initPath.includes('admin-dashboard') ||
+                initPath.includes('advisor-dashboard') ||
+                initPath.includes('admin-student-detail') ||
+                initPath.includes('advisor-checklist-review') ||
+                initPath.includes('dashboard_รายวิชา') ||
+                initPath.includes('dashboard_ที่ปรึกษา')
+            ) {
+                if (headerNav) headerNav.remove();
+                if (menuToggle) menuToggle.remove();
+            }
+
+            if (menuToggle && headerNav && headerNav.isConnected) {
                 const setMenuOpen = (open) => {
                     headerNav.classList.toggle('open', open);
                     const icon = menuToggle.querySelector('.material-icons');
@@ -142,35 +155,9 @@ function initPersistentHeader(templateUrl) {
                             }
                         }
 
-                        // Hide Student-only nav links when logged in as Staff/Advisor/Admin
-                        ['nav-student-profile', 'nav-student-status-all', 'nav-student-checklist'].forEach(id => {
-                            const el = document.getElementById(id);
-                            if (el) el.style.display = 'none';
-                        });
-                    }
-
-                    // Adjust Dashboard nav links
-                    const navDashboard = headerNav ? headerNav.querySelector('a[href*="dashboard"]') : null;
-                    if (isCourseAdminOrStaff) {
-                        if (navDashboard) {
-                            navDashboard.href = '/admin-dashboard';
-                            navDashboard.innerHTML = '<span class="material-icons" style="font-size:16px;">analytics</span><span>Dashboard รายวิชา/คณะ</span>';
-                        }
-                        if (isAdvOrSup && headerNav && !headerNav.querySelector('#multi-role-advisor-link')) {
-                            const advLink = document.createElement('a');
-                            advLink.id = 'multi-role-advisor-link';
-                            advLink.href = '/advisor-dashboard';
-                            advLink.className = 'nav-link';
-                            advLink.innerHTML = '<span class="material-icons" style="font-size:16px;">people</span><span>Dashboard ที่ปรึกษา</span>';
-                            if (navDashboard && navDashboard.parentElement) {
-                                navDashboard.parentElement.insertBefore(advLink, navDashboard.nextSibling);
-                            }
-                        }
-                    } else if (isAdvOrSup) {
-                        if (navDashboard) {
-                            navDashboard.href = '/advisor-dashboard';
-                            navDashboard.innerHTML = '<span class="material-icons" style="font-size:16px;">people</span><span>Dashboard ที่ปรึกษา</span>';
-                        }
+                        // Remove center nav links & mobile 3-line toggle completely when logged in as Staff/Advisor/Admin
+                        if (headerNav) headerNav.remove();
+                        if (menuToggle) menuToggle.remove();
                     }
 
                     // Render [REQ-01] Role Switcher Pills ("สลับสิทธิ์:")

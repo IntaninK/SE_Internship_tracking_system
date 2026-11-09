@@ -3852,4 +3852,171 @@ router.post("/checklist-reorder", requireSuperAdminStaff, async (req: Request, r
   }
 });
 
+// 10.13 บันทึกการเปลี่ยนแปลงโครงสร้าง Checklist ทั้งหมดในครั้งเดียว (Draft Mode Batch Sync)
+router.put("/checklist-versions/:id/sync-structure", requireSuperAdminStaff, async (req: Request, res: Response) => {
+  try {
+    const versionId = parseInt(String(req.params.id), 10);
+    const { sections } = req.body;
+
+    if (isNaN(versionId) || !Array.isArray(sections)) {
+      return res.status(400).json({ success: false, message: "ข้อมูลโครงสร้าง Checklist ไม่ถูกต้อง" });
+    }
+
+    const existingSections = await prisma.checklistSection.findMany({
+      where: { versionId },
+      include: {
+        items: {
+          include: {
+            _count: { select: { answers: true } },
+          },
+        },
+      },
+    });
+
+    const existingSectionIdSet = new Set(existingSections.map((s) => s.id));
+    const allExistingItems = existingSections.flatMap((s) => s.items);
+    const existingItemIdSet = new Set(allExistingItems.map((it) => it.id));
+
+    const keptSectionIds = new Set<number>();
+    const keptItemIds = new Set<number>();
+
+    for (const sec of sections) {
+      const sId = Number(sec.id);
+      if (sId > 0 && existingSectionIdSet.has(sId)) {
+        keptSectionIds.add(sId);
+      }
+      if (Array.isArray(sec.items)) {
+        for (const it of sec.items) {
+          const itId = Number(it.id);
+          if (itId > 0 && existingItemIdSet.has(itId)) {
+            keptItemIds.add(itId);
+          }
+        }
+      }
+    }
+
+    const removedItems = allExistingItems.filter((it) => !keptItemIds.has(it.id));
+    const itemsWithAnswers = removedItems.filter((it) => (it._count?.answers || 0) > 0);
+    if (itemsWithAnswers.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: `ไม่สามารถลบข้อที่มีนิสิตเคยตอบแล้วได้ (${itemsWithAnswers.length} ข้อ) กรุณากดยกเลิกแล้วใช้ปุ่ม "เปิดอยู่/ปิดอยู่" เพื่อซ่อนข้อแทน`,
+      });
+    }
+
+    const removedItemIds = removedItems.map((it) => it.id);
+    const removedSectionIds = existingSections
+      .filter((s) => !keptSectionIds.has(s.id))
+      .map((s) => s.id);
+
+    await prisma.$transaction(async (tx) => {
+      // 1. ลบข้อย่อยและหมวดหลักที่ถูกลบออกใน Draft
+      if (removedItemIds.length > 0) {
+        await tx.checklistItem.deleteMany({
+          where: { id: { in: removedItemIds } },
+        });
+      }
+      if (removedSectionIds.length > 0) {
+        await tx.checklistSection.deleteMany({
+          where: { id: { in: removedSectionIds } },
+        });
+      }
+
+      // 2. ย้าย order ของหมวดและข้อย่อยที่เหลืออยู่ไปเป็นค่าติดลบชั่วคราว เพื่อป้องกัน Unique Constraint ชนกัน
+      for (const sId of keptSectionIds) {
+        await tx.checklistSection.update({
+          where: { id: sId },
+          data: { order: -(sId + 100000) },
+        });
+      }
+      for (const itId of keptItemIds) {
+        await tx.checklistItem.update({
+          where: { id: itId },
+          data: { order: -(itId + 100000) },
+        });
+      }
+
+      // 3. อัปเดตหรือสร้างหมวดหลักและข้อย่อยตามลำดับใหม่ พร้อมรันเลขข้ออัตโนมัติ
+      for (let secIdx = 0; secIdx < sections.length; secIdx++) {
+        const sec = sections[secIdx];
+        const newSecOrder = secIdx + 1;
+        let newSecTitle = String(sec.title || "").trim();
+        if (/^ส่วนที่\s*\d+/.test(newSecTitle)) {
+          newSecTitle = newSecTitle.replace(/^ส่วนที่\s*\d+/, `ส่วนที่ ${newSecOrder}`);
+        }
+
+        const rawSecId = Number(sec.id);
+        let realSectionId: number;
+
+        if (rawSecId > 0 && keptSectionIds.has(rawSecId)) {
+          await tx.checklistSection.update({
+            where: { id: rawSecId },
+            data: {
+              title: newSecTitle,
+              order: newSecOrder,
+            },
+          });
+          realSectionId = rawSecId;
+        } else {
+          const createdSec = await tx.checklistSection.create({
+            data: {
+              versionId,
+              title: newSecTitle,
+              order: newSecOrder,
+            },
+          });
+          realSectionId = createdSec.id;
+        }
+
+        const items = Array.isArray(sec.items) ? sec.items : [];
+        for (let itIdx = 0; itIdx < items.length; itIdx++) {
+          const item = items[itIdx];
+          const newItemOrder = itIdx + 1;
+          const cleanDesc = String(item.description || "")
+            .trim()
+            .replace(/^(?:\d+[\.\)]\s*)+/, "");
+          const formattedDesc = `${newItemOrder}. ${cleanDesc}`;
+          const placeholderVal = item.placeholder ? String(item.placeholder).trim() : null;
+          const isRequiredVal = Boolean(item.isRequired);
+          const isActiveVal = item.isActive !== undefined ? Boolean(item.isActive) : true;
+
+          const rawItemId = Number(item.id);
+          if (rawItemId > 0 && keptItemIds.has(rawItemId)) {
+            await tx.checklistItem.update({
+              where: { id: rawItemId },
+              data: {
+                sectionId: realSectionId,
+                order: newItemOrder,
+                description: formattedDesc,
+                placeholder: placeholderVal,
+                isRequired: isRequiredVal,
+                isActive: isActiveVal,
+              },
+            });
+          } else {
+            await tx.checklistItem.create({
+              data: {
+                sectionId: realSectionId,
+                order: newItemOrder,
+                description: formattedDesc,
+                placeholder: placeholderVal,
+                isRequired: isRequiredVal,
+                isActive: isActiveVal,
+              },
+            });
+          }
+        }
+      }
+    });
+
+    res.json({
+      success: true,
+      message: "บันทึกการเปลี่ยนแปลงเกณฑ์ Checklist ทั้งหมดเรียบร้อยแล้ว",
+    });
+  } catch (err) {
+    console.error("PUT /api/admin/checklist-versions/:id/sync-structure error:", err);
+    res.status(500).json({ success: false, message: "บันทึกการเปลี่ยนแปลงไม่สำเร็จ" });
+  }
+});
+
 export default router;
