@@ -4724,7 +4724,71 @@ window.switchChecklistVersion = function(versionIdStr: string) {
   renderChecklistSections();
 };
 
-// เรนเดอร์หมวดหมู่และเกณฑ์คำถาม
+// สร้างเส้นขีดสีน้ำเงินบอกตำแหน่งวาง (Blue Drop Indicator Line)
+function getOrCreateChecklistDropIndicator(): HTMLElement {
+  let el = document.getElementById('checklist-drop-indicator');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'checklist-drop-indicator';
+    el.style.cssText = `
+      height: 4px;
+      background: linear-gradient(90deg, #1D4ED8, #3B82F6, #1D4ED8);
+      border-radius: 999px;
+      position: relative;
+      margin: 6px 0;
+      pointer-events: none;
+      box-shadow: 0 0 10px rgba(37, 99, 235, 0.55);
+      z-index: 50;
+    `;
+    el.innerHTML = `
+      <div style="
+        width: 11px;
+        height: 11px;
+        background: #2563EB;
+        border: 2px solid #FFFFFF;
+        border-radius: 50%;
+        position: absolute;
+        left: -4px;
+        top: -3.5px;
+        box-shadow: 0 1px 4px rgba(37, 99, 235, 0.6);
+      "></div>
+      <div style="
+        width: 11px;
+        height: 11px;
+        background: #2563EB;
+        border: 2px solid #FFFFFF;
+        border-radius: 50%;
+        position: absolute;
+        right: -4px;
+        top: -3.5px;
+        box-shadow: 0 1px 4px rgba(37, 99, 235, 0.6);
+      "></div>
+    `;
+  }
+  return el;
+}
+
+// คำนวณหา Element ถัดไปที่จะแทรกเส้นสีน้ำเงินด้านหน้า
+function getChecklistDragAfterElement(container: HTMLElement, y: number, selector: string): HTMLElement | null {
+  const draggableElements = [...container.querySelectorAll<HTMLElement>(selector)].filter(
+    (el) => !el.classList.contains('is-dragging')
+  );
+
+  return draggableElements.reduce<{ offset: number; element: HTMLElement | null }>(
+    (closest, child) => {
+      const box = child.getBoundingClientRect();
+      const offset = y - box.top - box.height / 2;
+      if (offset < 0 && offset > closest.offset) {
+        return { offset, element: child };
+      } else {
+        return closest;
+      }
+    },
+    { offset: Number.NEGATIVE_INFINITY, element: null }
+  ).element;
+}
+
+// เรนเดอร์หมวดหมู่และเกณฑ์คำถาม (พร้อมระบบคลิกค้างลากวาง Drag & Drop + เส้นสีน้ำเงินบอกตำแหน่ง)
 function renderChecklistSections() {
   const container = document.getElementById('checklist-sections-container');
   const summaryEl = document.getElementById('checklist-sections-summary');
@@ -4745,54 +4809,50 @@ function renderChecklistSections() {
 
   let html = '';
   sections.forEach((sec: any, secIdx: number) => {
-    const isFirstSec = secIdx === 0;
-    const isLastSec = secIdx === sections.length - 1;
     const items = sec.items || [];
+    let displaySecTitle = String(sec.title || '').trim();
+    if (/^ส่วนที่\s*\d+/.test(displaySecTitle)) {
+      displaySecTitle = displaySecTitle.replace(/^ส่วนที่\s*\d+/, `ส่วนที่ ${secIdx + 1}`);
+    }
 
     let itemsHtml = '';
     if (items.length === 0) {
-      itemsHtml = '<div style="padding:16px; text-align:center; color:#94A3B8; font-size:13px; background:#F8FAFC; border-radius:8px; margin-top:8px;">ยังไม่มีข้อย่อยในหมวดนี้ คลิก "+ เพิ่มข้อย่อยในหมวดนี้" ด้านล่าง</div>';
+      itemsHtml = '<div class="checklist-empty-items" style="padding:16px; text-align:center; color:#94A3B8; font-size:13px; background:#F8FAFC; border-radius:8px; margin-top:8px;">ยังไม่มีข้อย่อยในหมวดนี้ คลิก "+ เพิ่มข้อย่อยในหมวดนี้" ด้านล่าง</div>';
     } else {
       itemsHtml = items.map((item: any, itIdx: number) => {
-        const isFirstIt = itIdx === 0;
-        const isLastIt = itIdx === items.length - 1;
-        const answerCount = item._count?.answers || 0;
+        const cleanDesc = String(item.description || '').replace(/^(?:\d+[\.\)]\s*)+/, '').trim();
 
         return `
-          <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:12px; padding:10px 14px; background:${item.isActive ? '#FFFFFF' : '#F8FAFC'}; border:1px solid ${item.isActive ? '#E2E8F0' : '#E2E8F0'}; border-radius:8px; margin-bottom:8px; ${!item.isActive ? 'opacity:0.65;' : ''}">
+          <div
+            class="checklist-item-row"
+            data-item-id="${item.id}"
+            data-section-id="${sec.id}"
+            title="คลิกค้างแล้วลากเพื่อเปลี่ยนลำดับข้อนี้"
+            style="display:flex; align-items:flex-start; justify-content:space-between; gap:12px; padding:10px 14px; background:${item.isActive ? '#FFFFFF' : '#F8FAFC'}; border:1px solid #E2E8F0; border-radius:8px; margin-bottom:8px; cursor:grab; user-select:none; transition:transform 0.15s ease, box-shadow 0.15s ease, background-color 0.25s ease, opacity 0.15s ease; ${!item.isActive ? 'opacity:0.65;' : ''}"
+          >
             <div style="flex:1;">
               <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-                <span style="font-weight:700; color:#1E293B; font-size:13px;">${item.order}.</span>
-                <span style="font-size:13px; color:#1E293B; font-weight:500;">${item.description}</span>
+                <span class="checklist-item-num" style="font-weight:700; color:#2563EB; font-size:13px; min-width:18px;">${itIdx + 1}.</span>
+                <span class="checklist-item-desc" style="font-size:13px; color:#1E293B; font-weight:500;">${cleanDesc}</span>
                 ${item.isRequired ? '<span style="background:#FEE2E2; color:#DC2626; font-size:11px; font-weight:700; padding:1px 6px; border-radius:4px;">*จำเป็น</span>' : ''}
                 ${!item.isActive ? '<span style="background:#F1F5F9; color:#64748B; font-size:11px; font-weight:700; padding:1px 6px; border-radius:4px;">(ปิดใช้งาน)</span>' : ''}
               </div>
-              ${item.placeholder ? `<div style="font-size:11.5px; color:#64748B; margin-top:3px; margin-left:18px;">💡 คำใบ้/ตัวอย่าง: ${item.placeholder}</div>` : ''}
+              ${item.placeholder ? `<div style="font-size:11.5px; color:#64748B; margin-top:3px; margin-left:26px;">💡 คำใบ้/ตัวอย่าง: ${item.placeholder}</div>` : ''}
             </div>
 
-            <div style="display:flex; align-items:center; gap:4px; flex-shrink:0;">
+            <div class="checklist-no-drag" style="display:flex; align-items:center; gap:5px; flex-shrink:0;">
               <!-- สลับ เปิด/ปิดใช้งาน -->
-              <button type="button" onclick="window.toggleChecklistItemActive(${item.id}, ${item.isActive})" title="${item.isActive ? 'คลิกเพื่อปิดใช้งาน (ซ่อนไม่ให้นิสิตเห็น)' : 'คลิกเพื่อเปิดใช้งาน'}" style="background:${item.isActive ? '#EFF6FF' : '#F1F5F9'}; color:${item.isActive ? '#2563EB' : '#64748B'}; border:none; padding:4px 8px; border-radius:6px; font-size:11.5px; font-weight:600; cursor:pointer;">
+              <button type="button" onclick="event.stopPropagation(); window.toggleChecklistItemActive(${item.id}, ${item.isActive})" title="${item.isActive ? 'คลิกเพื่อปิดใช้งาน (ซ่อนไม่ให้นิสิตเห็น)' : 'คลิกเพื่อเปิดใช้งาน'}" style="background:${item.isActive ? '#EFF6FF' : '#F1F5F9'}; color:${item.isActive ? '#2563EB' : '#64748B'}; border:none; padding:4px 8px; border-radius:6px; font-size:11.5px; font-weight:600; cursor:pointer;">
                 ${item.isActive ? '👁️ เปิดอยู่' : '🙈 ปิดอยู่'}
               </button>
 
-              <!-- เลื่อนขึ้น 🔼 -->
-              <button type="button" onclick="window.moveChecklist('item', ${item.id}, 'up')" ${isFirstIt ? 'disabled style="opacity:0.3; cursor:not-allowed;"' : 'style="cursor:pointer;"'} title="เลื่อนขึ้น" style="background:#F8FAFC; border:1px solid #CBD5E1; border-radius:6px; padding:3px 6px; color:#475569;">
-                <span class="material-icons" style="font-size:15px; display:block;">arrow_upward</span>
-              </button>
-
-              <!-- เลื่อนลง 🔽 -->
-              <button type="button" onclick="window.moveChecklist('item', ${item.id}, 'down')" ${isLastIt ? 'disabled style="opacity:0.3; cursor:not-allowed;"' : 'style="cursor:pointer;"'} title="เลื่อนลง" style="background:#F8FAFC; border:1px solid #CBD5E1; border-radius:6px; padding:3px 6px; color:#475569;">
-                <span class="material-icons" style="font-size:15px; display:block;">arrow_downward</span>
-              </button>
-
               <!-- แก้ไขข้อความ ✏️ -->
-              <button type="button" onclick="window.openEditItemModal(${item.id})" title="แก้ไข" style="background:#F8FAFC; border:1px solid #CBD5E1; border-radius:6px; padding:3px 6px; color:#2563EB; cursor:pointer;">
+              <button type="button" onclick="event.stopPropagation(); window.openEditItemModal(${item.id})" title="แก้ไข" style="background:#F8FAFC; border:1px solid #CBD5E1; border-radius:6px; padding:3px 6px; color:#2563EB; cursor:pointer;">
                 <span class="material-icons" style="font-size:15px; display:block;">edit</span>
               </button>
 
               <!-- ลบข้อความ 🗑️ -->
-              <button type="button" onclick="window.deleteChecklistItem(${item.id})" title="ลบข้อนี้" style="background:#FFFFFF; border:1px solid #FCA5A5; border-radius:6px; padding:3px 6px; color:#DC2626; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; transition:background-color 0.15s ease;" onmouseover="this.style.background='#FEE2E2'" onmouseout="this.style.background='#FFFFFF'">
+              <button type="button" onclick="event.stopPropagation(); window.deleteChecklistItem(${item.id})" title="ลบข้อนี้" style="background:#FFFFFF; border:1px solid #FCA5A5; border-radius:6px; padding:3px 6px; color:#DC2626; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; transition:background-color 0.15s ease;" onmouseover="this.style.background='#FEE2E2'" onmouseout="this.style.background='#FFFFFF'">
                 <span class="material-icons" style="font-size:18px; display:block; color:#DC2626;">delete_outline</span>
               </button>
             </div>
@@ -4802,28 +4862,28 @@ function renderChecklistSections() {
     }
 
     html += `
-      <div style="background:#FFFFFF; border:1px solid #CBD5E1; border-radius:12px; margin-bottom:16px; overflow:hidden; box-shadow:0 1px 3px rgba(0,0,0,0.05);">
-        <!-- Section Header -->
-        <div style="background:#F8FAFC; padding:12px 18px; border-bottom:1px solid #E2E8F0; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;">
-          <div style="display:flex; align-items:center; gap:8px; cursor:pointer; user-select:none;" onclick="window.toggleSectionCollapse(${sec.id})">
+      <div
+        class="checklist-section-card"
+        data-section-id="${sec.id}"
+        style="background:#FFFFFF; border:1px solid #CBD5E1; border-radius:12px; margin-bottom:16px; overflow:hidden; box-shadow:0 1px 3px rgba(0,0,0,0.05); transition:transform 0.15s ease, box-shadow 0.2s ease, opacity 0.15s ease;"
+      >
+        <!-- Section Header (คลิกค้างที่แถบนี้เพื่อลากสลับหมวดหลัก) -->
+        <div
+          class="checklist-section-header"
+          data-section-id="${sec.id}"
+          title="คลิกค้างที่แถบหัวข้อนี้เพื่อลากสลับหมวดหลัก (หรือคลิก 1 ครั้งเพื่อย่อ/ขยาย)"
+          onclick="window.toggleSectionCollapse(${sec.id})"
+          style="background:#F8FAFC; padding:12px 18px; border-bottom:1px solid #E2E8F0; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; cursor:grab; user-select:none; transition:background-color 0.15s ease;"
+        >
+          <div style="display:flex; align-items:center; gap:8px;">
             <span class="material-icons" style="color:#2563EB; font-size:20px;">bookmark</span>
-            <span style="font-size:14.5px; font-weight:700; color:#1E293B;">${sec.title}</span>
-            <span style="font-size:12px; font-weight:600; color:#64748B; background:#E2E8F0; padding:2px 8px; border-radius:999px;">${items.length} ข้อ</span>
+            <span class="checklist-section-title" style="font-size:14.5px; font-weight:700; color:#1E293B;">${displaySecTitle}</span>
+            <span class="checklist-section-count" style="font-size:12px; font-weight:600; color:#64748B; background:#E2E8F0; padding:2px 8px; border-radius:999px;">${items.length} ข้อ</span>
           </div>
 
-          <div style="display:flex; align-items:center; gap:6px;">
-            <!-- เลื่อนหมวดขึ้น 🔼 -->
-            <button type="button" onclick="event.stopPropagation(); window.moveChecklist('section', ${sec.id}, 'up')" ${isFirstSec ? 'disabled style="opacity:0.3; cursor:not-allowed;"' : 'style="cursor:pointer;"'} title="เลื่อนหมวดขึ้น" style="background:#FFFFFF; border:1px solid #CBD5E1; border-radius:6px; padding:4px 8px; color:#475569;">
-              <span class="material-icons" style="font-size:16px; display:block;">arrow_upward</span>
-            </button>
-
-            <!-- เลื่อนหมวดลง 🔽 -->
-            <button type="button" onclick="event.stopPropagation(); window.moveChecklist('section', ${sec.id}, 'down')" ${isLastSec ? 'disabled style="opacity:0.3; cursor:not-allowed;"' : 'style="cursor:pointer;"'} title="เลื่อนหมวดลง" style="background:#FFFFFF; border:1px solid #CBD5E1; border-radius:6px; padding:4px 8px; color:#475569;">
-              <span class="material-icons" style="font-size:16px; display:block;">arrow_downward</span>
-            </button>
-
+          <div class="checklist-no-drag" style="display:flex; align-items:center; gap:6px;">
             <!-- แก้ไขชื่อหมวด ✏️ -->
-            <button type="button" onclick="event.stopPropagation(); window.openEditSectionModal(${sec.id}, '${sec.title.replace(/'/g, "\\'")}')" title="แก้ไขชื่อหมวด" style="background:#FFFFFF; border:1px solid #CBD5E1; border-radius:6px; padding:4px 8px; color:#2563EB; cursor:pointer;">
+            <button type="button" onclick="event.stopPropagation(); window.openEditSectionModal(${sec.id}, '${displaySecTitle.replace(/'/g, "\\'")}' )" title="แก้ไขชื่อหมวด" style="background:#FFFFFF; border:1px solid #CBD5E1; border-radius:6px; padding:4px 8px; color:#2563EB; cursor:pointer;">
               <span class="material-icons" style="font-size:16px; display:block;">edit</span>
             </button>
 
@@ -4840,8 +4900,10 @@ function renderChecklistSections() {
         </div>
 
         <!-- Section Body (Items List) -->
-        <div id="section-body-${sec.id}" style="padding:14px 18px; display:block;">
-          ${itemsHtml}
+        <div id="section-body-${sec.id}" class="checklist-section-body" data-section-id="${sec.id}" style="padding:14px 18px; display:block;">
+          <div id="section-items-list-${sec.id}" class="checklist-items-list" data-section-id="${sec.id}">
+            ${itemsHtml}
+          </div>
           <div style="margin-top:10px;">
             <button type="button" onclick="window.openAddItemModal(${sec.id})" style="background:#F1F5F9; color:#2563EB; border:1px dashed #93C5FD; padding:6px 14px; border-radius:8px; font-size:12.5px; font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:6px; width:100%; justify-content:center;">
               <span class="material-icons" style="font-size:17px;">add</span> เพิ่มข้อย่อยในหมวดนี้
@@ -4853,6 +4915,290 @@ function renderChecklistSections() {
   });
 
   container.innerHTML = html;
+  initChecklistDragAndDrop(container);
+}
+
+// ระบบ Drag & Drop สำหรับทั้ง หมวดหลัก (Sections) และ ข้อย่อย (Items)
+function initChecklistDragAndDrop(container: HTMLElement) {
+  const dropIndicator = getOrCreateChecklistDropIndicator();
+  let activeDragType: 'section' | 'item' | null = null;
+  let draggedEl: HTMLElement | null = null;
+  let activeSectionId: number | null = null;
+  let expandedSectionsBeforeDrag: number[] = [];
+
+  // ----------------------------------------
+  // 1. ตั้งค่าการลากระดับ "หมวดหลัก (Section)"
+  // ----------------------------------------
+  const sectionCards = container.querySelectorAll<HTMLElement>('.checklist-section-card');
+  sectionCards.forEach((card) => {
+    const header = card.querySelector<HTMLElement>('.checklist-section-header');
+    if (!header) return;
+
+    // เปิดให้ลากเฉพาะตอนคลิกค้างที่แถบ Header (และไม่ได้คลิกปุ่มด้านขวา)
+    header.addEventListener('mousedown', (e) => {
+      const target = e.target as HTMLElement;
+      if (target.closest('.checklist-no-drag, button')) {
+        card.draggable = false;
+      } else {
+        card.draggable = true;
+      }
+    });
+
+    header.addEventListener('mouseup', () => {
+      card.draggable = false;
+    });
+
+    card.addEventListener('dragstart', (e) => {
+      if (e.target !== card) return;
+      activeDragType = 'section';
+      draggedEl = card;
+
+      if (e.dataTransfer) {
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', String(card.dataset.sectionId || ''));
+        if (header && e.dataTransfer.setDragImage) {
+          e.dataTransfer.setDragImage(header, 40, 22);
+        }
+      }
+
+      // ย่อข้อย่อยทุกหมวดชั่วคราวขณะลาก เพื่อให้เห็นหมวดที่ 1, 2, 3... เรียงกันชัดเจนและเล็งเส้นสีน้ำเงินง่าย
+      setTimeout(() => {
+        expandedSectionsBeforeDrag = [];
+        container.querySelectorAll<HTMLElement>('.checklist-section-body').forEach((bodyEl) => {
+          const sId = Number(bodyEl.dataset.sectionId);
+          if (bodyEl.style.display !== 'none') {
+            expandedSectionsBeforeDrag.push(sId);
+            bodyEl.style.display = 'none';
+            const iconEl = document.getElementById(`icon-collapse-${sId}`);
+            if (iconEl) iconEl.textContent = 'expand_more';
+          }
+        });
+
+        card.classList.add('is-dragging');
+        card.style.opacity = '0.45';
+        card.style.border = '2px dashed #2563EB';
+        card.style.boxShadow = '0 8px 20px rgba(37, 99, 235, 0.18)';
+      }, 0);
+    });
+
+    card.addEventListener('dragend', () => {
+      card.draggable = false;
+      card.classList.remove('is-dragging');
+      card.style.opacity = '1';
+      card.style.border = '1px solid #2563EB';
+      card.style.boxShadow = '0 0 0 3px rgba(37, 99, 235, 0.25)';
+      setTimeout(() => {
+        card.style.border = '1px solid #CBD5E1';
+        card.style.boxShadow = '0 1px 3px rgba(0,0,0,0.05)';
+      }, 650);
+
+      if (dropIndicator.parentElement) {
+        dropIndicator.remove();
+      }
+
+      // กางหมวดที่เคยเปิดอยู่กลับมาเหมือนเดิม
+      expandedSectionsBeforeDrag.forEach((sId) => {
+        const bodyEl = document.getElementById(`section-body-${sId}`);
+        const iconEl = document.getElementById(`icon-collapse-${sId}`);
+        if (bodyEl) bodyEl.style.display = 'block';
+        if (iconEl) iconEl.textContent = 'expand_less';
+      });
+      expandedSectionsBeforeDrag = [];
+      activeDragType = null;
+      draggedEl = null;
+    });
+  });
+
+  // Container รับการลากวางของ Section
+  container.ondragover = (e) => {
+    if (activeDragType !== 'section' || !draggedEl) return;
+    e.preventDefault();
+    if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
+
+    const afterElement = getChecklistDragAfterElement(container, e.clientY, '.checklist-section-card');
+    if (afterElement == null) {
+      container.appendChild(dropIndicator);
+    } else {
+      container.insertBefore(dropIndicator, afterElement);
+    }
+  };
+
+  container.ondrop = async (e) => {
+    if (activeDragType !== 'section' || !draggedEl) return;
+    e.preventDefault();
+
+    if (dropIndicator.parentElement === container) {
+      container.insertBefore(draggedEl, dropIndicator);
+      dropIndicator.remove();
+
+      // รันเลข "ส่วนที่ 1, 2, 3..." ใหม่ตามลำดับทันที
+      const allCards = [...container.querySelectorAll<HTMLElement>('.checklist-section-card')];
+      const orderedIds = allCards.map((c) => Number(c.dataset.sectionId));
+
+      allCards.forEach((c, idx) => {
+        const newOrder = idx + 1;
+        const sId = Number(c.dataset.sectionId);
+        const titleEl = c.querySelector<HTMLElement>('.checklist-section-title');
+        if (titleEl) {
+          const curTitle = (titleEl.textContent || '').trim();
+          if (/^ส่วนที่\s*\d+/.test(curTitle)) {
+            titleEl.textContent = curTitle.replace(/^ส่วนที่\s*\d+/, `ส่วนที่ ${newOrder}`);
+          }
+        }
+        const secObj = (currentChecklistVersion?.sections || []).find((s: any) => s.id === sId);
+        if (secObj) {
+          secObj.order = newOrder;
+          if (titleEl) secObj.title = titleEl.textContent;
+        }
+      });
+
+      if (currentChecklistVersion?.sections) {
+        currentChecklistVersion.sections.sort((a: any, b: any) => a.order - b.order);
+      }
+
+      try {
+        await fetch('/api/admin/checklist-reorder', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ type: 'section', orderedIds }),
+        });
+      } catch (err) {
+        console.error('Reorder section error:', err);
+      }
+    }
+  };
+
+  // ----------------------------------------
+  // 2. ตั้งค่าการลากระดับ "ข้อย่อย (Item)"
+  // ----------------------------------------
+  const itemRows = container.querySelectorAll<HTMLElement>('.checklist-item-row');
+  itemRows.forEach((row) => {
+    row.addEventListener('mousedown', (e) => {
+      const target = e.target as HTMLElement;
+      if (target.closest('.checklist-no-drag, button')) {
+        row.draggable = false;
+      } else {
+        row.draggable = true;
+      }
+    });
+
+    row.addEventListener('mouseup', () => {
+      row.draggable = false;
+    });
+
+    row.addEventListener('dragstart', (e) => {
+      e.stopPropagation();
+      activeDragType = 'item';
+      draggedEl = row;
+      activeSectionId = Number(row.dataset.sectionId);
+
+      if (e.dataTransfer) {
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', String(row.dataset.itemId || ''));
+      }
+
+      setTimeout(() => {
+        row.classList.add('is-dragging');
+        row.style.opacity = '0.4';
+        row.style.border = '1.5px dashed #2563EB';
+        row.style.background = '#EFF6FF';
+      }, 0);
+    });
+
+    row.addEventListener('dragend', () => {
+      row.draggable = false;
+      row.classList.remove('is-dragging');
+      row.style.opacity = '1';
+      row.style.border = '1px solid #3B82F6';
+      row.style.background = '#DBEAFE';
+      row.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.25)';
+
+      setTimeout(() => {
+        row.style.border = '1px solid #E2E8F0';
+        row.style.background = '#FFFFFF';
+        row.style.boxShadow = 'none';
+      }, 650);
+
+      if (dropIndicator.parentElement) {
+        dropIndicator.remove();
+      }
+
+      activeDragType = null;
+      draggedEl = null;
+      activeSectionId = null;
+    });
+  });
+
+  // แต่ละหมวดรับการลากวางข้อย่อยภายในหมวดนั้น
+  const sectionBodies = container.querySelectorAll<HTMLElement>('.checklist-section-body');
+  sectionBodies.forEach((bodyEl) => {
+    const secId = Number(bodyEl.dataset.sectionId);
+    const listEl = bodyEl.querySelector<HTMLElement>('.checklist-items-list');
+    if (!listEl) return;
+
+    bodyEl.addEventListener('dragover', (e) => {
+      if (activeDragType !== 'item' || !draggedEl || activeSectionId !== secId) return;
+      e.preventDefault();
+      e.stopPropagation();
+      if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
+
+      const afterElement = getChecklistDragAfterElement(listEl, e.clientY, '.checklist-item-row');
+      if (afterElement == null) {
+        listEl.appendChild(dropIndicator);
+      } else {
+        listEl.insertBefore(dropIndicator, afterElement);
+      }
+    });
+
+    bodyEl.addEventListener('drop', async (e) => {
+      if (activeDragType !== 'item' || !draggedEl || activeSectionId !== secId) return;
+      e.preventDefault();
+      e.stopPropagation();
+
+      if (dropIndicator.parentElement === listEl) {
+        listEl.insertBefore(draggedEl, dropIndicator);
+        dropIndicator.remove();
+
+        // รันเลขข้อ 1., 2., 3... ใหม่ตามตำแหน่งทันที
+        const allRows = [...listEl.querySelectorAll<HTMLElement>('.checklist-item-row')];
+        const orderedIds = allRows.map((r) => Number(r.dataset.itemId));
+        const secObj = (currentChecklistVersion?.sections || []).find((s: any) => s.id === secId);
+
+        allRows.forEach((r, idx) => {
+          const newOrder = idx + 1;
+          const itId = Number(r.dataset.itemId);
+          const numEl = r.querySelector<HTMLElement>('.checklist-item-num');
+          const descEl = r.querySelector<HTMLElement>('.checklist-item-desc');
+          if (numEl) numEl.textContent = `${newOrder}.`;
+
+          if (secObj && Array.isArray(secObj.items)) {
+            const itObj = secObj.items.find((it: any) => it.id === itId);
+            if (itObj) {
+              itObj.order = newOrder;
+              const cleanDesc = descEl
+                ? (descEl.textContent || '').trim()
+                : String(itObj.description || '').replace(/^(?:\d+[\.\)]\s*)+/, '').trim();
+              itObj.description = `${newOrder}. ${cleanDesc}`;
+            }
+          }
+        });
+
+        if (secObj && Array.isArray(secObj.items)) {
+          secObj.items.sort((a: any, b: any) => a.order - b.order);
+        }
+
+        try {
+          await fetch('/api/admin/checklist-reorder', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ type: 'item', orderedIds, sectionId: secId }),
+          });
+        } catch (err) {
+          console.error('Reorder items error:', err);
+        }
+      }
+    });
+  });
 }
 
 // ----------------------------------------------------
@@ -5023,9 +5369,12 @@ window.openEditSectionModal = function(sectionId: number, currentTitle: string) 
   const idEl = document.getElementById('cs-section-id') as HTMLInputElement | null;
   const inputEl = document.getElementById('cs-title') as HTMLInputElement | null;
 
+  const secObj = (currentChecklistVersion?.sections || []).find((s: any) => s.id === sectionId);
+  const latestTitle = secObj?.title || currentTitle;
+
   if (titleEl) titleEl.textContent = 'แก้ไขชื่อหมวดหลัก';
   if (idEl) idEl.value = String(sectionId);
-  if (inputEl) inputEl.value = currentTitle;
+  if (inputEl) inputEl.value = latestTitle;
   if (modal) modal.style.display = 'flex';
 };
 
@@ -5143,7 +5492,7 @@ window.openEditItemModal = function(itemId: number) {
   if (titleEl) titleEl.textContent = 'แก้ไขเกณฑ์คำถาม';
   if (idEl) idEl.value = String(targetItem.id);
   if (secIdEl) secIdEl.value = String(targetItem.sectionId);
-  if (descEl) descEl.value = targetItem.description || '';
+  if (descEl) descEl.value = String(targetItem.description || '').replace(/^(?:\d+[\.\)]\s*)+/, '').trim();
   if (placeEl) placeEl.value = targetItem.placeholder || '';
   if (reqEl) reqEl.checked = Boolean(targetItem.isRequired);
   if (actEl) actEl.checked = Boolean(targetItem.isActive);

@@ -1779,8 +1779,11 @@ const PAGE_BODY_HTML = `
 
           <!-- แถบหัวข้อรายการคำถาม -->
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:10px;">
-            <div style="font-size:14px; font-weight:700; color:#1E293B;">
-              📋 หัวข้อและเกณฑ์การประเมิน <span id="checklist-sections-summary" style="font-size:12.5px; font-weight:500; color:#64748B;"></span>
+            <div style="font-size:14px; font-weight:700; color:#1E293B; display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+              <span>📋 หัวข้อและเกณฑ์การประเมิน <span id="checklist-sections-summary" style="font-size:12.5px; font-weight:500; color:#64748B;"></span></span>
+              <span style="font-size:11.5px; color:#2563EB; background:#EFF6FF; border:1px solid #BFDBFE; padding:2px 9px; border-radius:999px; font-weight:600;">
+                ✋ คลิกค้างที่แถบหัวข้อหรือข้อย่อยเพื่อลากสลับตำแหน่ง
+              </span>
             </div>
             <button type="button" onclick="window.openAddSectionModal ? window.openAddSectionModal() : null" style="background:#2563EB; color:white; border:none; padding:7px 14px; border-radius:8px; font-size:12.5px; font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:6px;">
               <span class="material-icons" style="font-size:17px;">add_circle_outline</span> เพิ่มหมวดหลักใหม่
