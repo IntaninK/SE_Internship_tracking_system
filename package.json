@@ -7,7 +7,7 @@
     "build:css": "tailwindcss -i ./src/css/main.css -o ./public/css/main-output.css --minify",
     "watch:css": "tailwindcss -i ./src/css/main.css -o ./public/css/main-output.css --watch",
     "build:client": "tsx scripts/build-client.ts",
-    "dev": "tsx scripts/build-client.ts && next dev",
+    "dev": "tsx scripts/build-client.ts && next dev --webpack",
     "start": "next start",
     "build": "tsx scripts/build-client.ts && next build",
     "type-check": "tsc --noEmit",
