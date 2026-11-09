@@ -11,6 +11,7 @@ import {
   EventSessionItem,
   EventCheckInItem,
 } from "../utils/superAdminStore";
+import { analyzeAcceptanceForm, fetchFileBuffer } from "../utils/acceptanceOcr";
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -2184,6 +2185,10 @@ router.get("/super-admin/overview", async (req: Request, res: Response) => {
         companyResponseFileName: wf.companyResponseFileName || "",
         companyResponseFileUrl: wf.companyResponseFileUrl || "",
         companyResponseNote: wf.companyResponseNote || "",
+        companyResponseUploadedAt: wf.companyResponseUploadedAt || "",
+        companyResponseSubmittedByStudent: Boolean(wf.companyResponseSubmittedByStudent),
+        companyResponseOcr: wf.companyResponseOcr || null,
+        companyResponseConfirmedAt: wf.companyResponseConfirmedAt || "",
         dispatchLetterIssued: Boolean(wf.dispatchLetterIssued),
         dispatchLetterDocNo: wf.dispatchLetterDocNo || "",
         dispatchLetterDate: wf.dispatchLetterDate || "",
@@ -3064,6 +3069,7 @@ router.post("/super-admin/documents/record-company-response", async (req: Reques
     const companyName =
       student.placement?.companyNameTh || activeComp?.name || "สถานประกอบการ";
     const position = student.placement?.position || "นิสิตฝึกงาน / สหกิจศึกษา";
+    const prevWf = state.docWorkflowMap[wfKey];
 
     // กรณีบริษัทส่งแบบตอบรับว่า "ปฏิเสธ" (REJECTED):
     // ย้ายข้อมูลบริษัทเดิมเข้า Archive แบบย่อ และปลดล็อกให้นิสิตยื่น Checklist บริษัทแห่งใหม่ได้ทันที!
@@ -3111,6 +3117,12 @@ router.post("/super-admin/documents/record-company-response", async (req: Reques
         requestLetterIssued: false,
         companyResponseStatus: "REJECTED",
         companyResponseNote: note || "บริษัทปฏิเสธ — เก็บประวัติเข้า Archive แล้ว",
+        companyResponseFileName: prevWf?.companyResponseFileName,
+        companyResponseFileUrl: prevWf?.companyResponseFileUrl,
+        companyResponseUploadedAt: prevWf?.companyResponseUploadedAt,
+        companyResponseOcr: prevWf?.companyResponseOcr,
+        companyResponseConfirmedAt: new Date().toISOString(),
+        companyResponseConfirmedBy: req.session?.user?.email || req.session?.user?.username || "",
         dispatchLetterIssued: false,
         isLocked: false,
       };
@@ -3125,6 +3137,7 @@ router.post("/super-admin/documents/record-company-response", async (req: Reques
     // กรณีบริษัทตอบรับ "รับเข้าฝึกงาน" (ACCEPTED)
     const existingWf = state.docWorkflowMap[wfKey];
     state.docWorkflowMap[wfKey] = {
+      ...(existingWf || {}),
       studentId: student.id,
       studentCode: student.studentCode,
       companyName,
@@ -3134,9 +3147,12 @@ router.post("/super-admin/documents/record-company-response", async (req: Reques
         existingWf?.requestLetterDocNo || `${state.academicConfig.defaultDocPrefix}ว 0142`,
       requestLetterDate: existingWf?.requestLetterDate || new Date().toISOString().slice(0, 10),
       companyResponseStatus: "ACCEPTED",
-      companyResponseFileName: fileName || `ใบตอบรับ_${student.studentCode}.pdf`,
-      companyResponseUploadedAt: new Date().toISOString(),
+      companyResponseFileName:
+        fileName || existingWf?.companyResponseFileName || `ใบตอบรับ_${student.studentCode}.pdf`,
+      companyResponseUploadedAt: existingWf?.companyResponseUploadedAt || new Date().toISOString(),
       companyResponseNote: note || "สถานประกอบการตอบรับเข้าฝึกงานเรียบร้อยแล้ว",
+      companyResponseConfirmedAt: new Date().toISOString(),
+      companyResponseConfirmedBy: req.session?.user?.email || req.session?.user?.username || "",
       dispatchLetterIssued: existingWf?.dispatchLetterIssued || false,
       dispatchLetterDocNo: existingWf?.dispatchLetterDocNo,
       dispatchLetterDate: existingWf?.dispatchLetterDate,
@@ -3151,6 +3167,34 @@ router.post("/super-admin/documents/record-company-response", async (req: Reques
   } catch (err) {
     console.error("POST /api/admin/super-admin/documents/record-company-response error:", err);
     res.status(500).json({ success: false, message: "บันทึกผลใบตอบรับไม่สำเร็จ" });
+  }
+});
+
+// 9.9.1 สแกนแบบตอบรับซ้ำด้วย OCR (กรณี OCR ล่ม/เริ่มทำงานช้าตอนนิสิตอัปโหลด)
+router.post("/super-admin/documents/rescan-company-response", async (req: Request, res: Response) => {
+  try {
+    const wfKey = String(Number(req.body?.studentId));
+    const wf = loadSuperAdminState().docWorkflowMap[wfKey];
+    if (!wf?.companyResponseFileUrl) {
+      return res.status(400).json({ success: false, message: "นิสิตยังไม่ได้อัปโหลดไฟล์แบบตอบรับ" });
+    }
+    const { buffer, mimeType } = await fetchFileBuffer(wf.companyResponseFileUrl);
+    const ocr = await analyzeAcceptanceForm(
+      buffer,
+      wf.companyResponseFileName || "acceptance.pdf",
+      mimeType,
+      wf.companyResponseFileUrl
+    );
+
+    const latest = loadSuperAdminState();
+    if (latest.docWorkflowMap[wfKey]) {
+      latest.docWorkflowMap[wfKey].companyResponseOcr = ocr;
+      saveSuperAdminState(latest);
+    }
+    res.json({ success: true, ocr, message: ocr.status === "DONE" ? "สแกนแบบตอบรับซ้ำเรียบร้อยแล้ว" : ocr.reasons[0] });
+  } catch (err: any) {
+    console.error("POST /api/admin/super-admin/documents/rescan-company-response error:", err);
+    res.status(500).json({ success: false, message: "สแกนซ้ำไม่สำเร็จ: " + (err?.message || err) });
   }
 });
 
@@ -3185,6 +3229,7 @@ router.post("/super-admin/documents/issue-dispatch-letter", async (req: Request,
       const existingWf = state.docWorkflowMap[wfKey];
 
       state.docWorkflowMap[wfKey] = {
+        ...(existingWf || {}),
         studentId: s.id,
         studentCode: s.studentCode,
         companyName: compName,

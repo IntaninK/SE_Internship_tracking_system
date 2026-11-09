@@ -7,6 +7,7 @@ let currentTrainingsData = [];
 let currentCompaniesData = [];
 let currentSubmissionsData = [];
 let currentPlacementData = null;
+let currentAcceptanceData = null;
 
 // โหลดข้อมูลทั้งหมดเข้าสู่ทั้ง 6 Section
 async function initPage() {
@@ -389,11 +390,17 @@ async function loadCompanies() {
   }
 }
 
-// 5. โหลดสถานะการยื่น (เฉพาะบริษัทที่ผ่านการอนุมัติ Checklist)
+// 5. โหลดสถานะการยื่น (เฉพาะบริษัทที่ผ่านการอนุมัติ Checklist) + อัปโหลดแบบตอบรับจากบริษัท
 async function loadSubmissions() {
   try {
-    const res = await fetch('/api/student/submissions');
+    const [res, accRes] = await Promise.all([
+      fetch('/api/student/submissions'),
+      fetch('/api/student/acceptance-form').catch(() => null),
+    ]);
     const data = await res.json();
+    const accData = accRes ? await accRes.json().catch(() => null) : null;
+    currentAcceptanceData = accData?.success ? accData.acceptance : null;
+
     const tbody = document.getElementById('submissions-table-body');
     tbody.innerHTML = '';
 
@@ -423,7 +430,7 @@ async function loadSubmissions() {
                 <option value="INTERVIEW_FAILED_REAPPLIED" ${currentStatus === 'INTERVIEW_FAILED_REAPPLIED' ? 'selected' : ''}>สัมภาษณ์ไม่ผ่าน ยื่นเพิ่มแล้ว</option>
               </select>
             </td>
-            <td>-</td>
+            <td>${renderStudentAcceptanceCell()}</td>
           `;
           tbody.appendChild(tr);
         });
@@ -431,6 +438,7 @@ async function loadSubmissions() {
         tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: #666; padding: 20px;">ยังไม่มีบริษัทที่ผ่านการอนุมัติ Checklist (จะแสดงรายชื่อเมื่ออาจารย์ตรวจให้ผ่าน)</td></tr>';
       }
     }
+    renderStudentAcceptanceCard();
   } catch (err) {
     console.error('Load submissions error:', err);
   } finally {
@@ -438,6 +446,296 @@ async function loadSubmissions() {
     updatePlacementCompanyOptions();
   }
 }
+
+function escapeStudentHtml(str) {
+  return String(str || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function renderStudentAcceptanceCell() {
+  const acc = currentAcceptanceData;
+  if (!acc || !acc.requestLetterIssued) {
+    return '<span style="font-size:12.5px; color:#64748B;">รอเจ้าหน้าที่ออกหนังสือขอความอนุเคราะห์</span>';
+  }
+  const reqBtn = `<button type="button" onclick="downloadStudentOfficialLetter('REQUEST')" style="background:#EEF2FF; color:#312E81; border:1px solid #C7D2FE; padding:4px 9px; border-radius:6px; font-size:11.5px; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:4px;">📥 โหลดหนังสือขอความอนุเคราะห์</button>`;
+  const blankFormBtn = `<a href="/documents/acceptance_form_se.pdf" download="แบบตอบรับนิสิตฝึกงาน_SE.pdf" target="_blank" rel="noopener" style="background:#F0FDF4; color:#166534; border:1px solid #BBF7D0; padding:4px 9px; border-radius:6px; font-size:11.5px; font-weight:700; text-decoration:none; display:inline-flex; align-items:center; gap:4px;">📄 โหลดแบบตอบรับเปล่า</a>`;
+  const dispBtn = acc.dispatchLetterIssued
+    ? `<button type="button" onclick="downloadStudentOfficialLetter('DISPATCH')" style="background:#DBEAFE; color:#1E40AF; border:1px solid #93C5FD; padding:4px 9px; border-radius:6px; font-size:11.5px; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:4px;">📥 โหลดหนังสือส่งตัว (PDF)</button>`
+    : '';
+
+  if (acc.status === 'ACCEPTED') {
+    return `
+      <div style="font-size:12.5px; font-weight:700; color:#15803D; margin-bottom:4px;">✅ เจ้าหน้าที่ยืนยัน: บริษัทตอบรับแล้ว</div>
+      <div style="display:flex; gap:5px; flex-wrap:wrap;">${reqBtn}${blankFormBtn}${dispBtn}</div>
+    `;
+  }
+  if (acc.status === 'REJECTED') {
+    return '<span style="font-size:12.5px; font-weight:700; color:#B91C1C;">✗ บริษัทปฏิเสธ (ปลดล็อกให้ยื่นใหม่แล้ว)</span>';
+  }
+  if (acc.fileUrl || acc.submittedByStudent) {
+    return `
+      <div style="font-size:12px; font-weight:600; color:#B45309; margin-bottom:4px;">⏳ อัปโหลดใบตอบรับแล้ว (รอเจ้าหน้าที่ยืนยัน)</div>
+      <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
+        ${reqBtn}
+        ${blankFormBtn}
+        ${acc.fileUrl ? `<a href="${acc.fileUrl}" target="_blank" rel="noopener" style="font-size:11.5px; color:#2563EB; font-weight:600;">📎 ดูไฟล์ที่อัปโหลด</a>` : ''}
+      </div>
+    `;
+  }
+  return `
+    <div style="font-size:12px; color:#2563EB; font-weight:600; margin-bottom:4px;">📄 ออกหนังสือแล้ว (${escapeStudentHtml(acc.requestLetterDocNo || '-')})</div>
+    <div style="display:flex; gap:5px; flex-wrap:wrap;">${reqBtn}${blankFormBtn}</div>
+  `;
+}
+
+function renderStudentAcceptanceCard() {
+  const section = document.getElementById('submission-section');
+  if (!section) return;
+  const body = section.querySelector('.card-body');
+  if (!body) return;
+
+  let container = document.getElementById('student-acceptance-upload-box');
+  if (!container) {
+    container = document.createElement('div');
+    container.id = 'student-acceptance-upload-box';
+    container.style.marginTop = '16px';
+    body.appendChild(container);
+  }
+
+  const acc = currentAcceptanceData;
+  if (!acc || !acc.requestLetterIssued) {
+    container.innerHTML = '';
+    return;
+  }
+
+  const isFinalized = acc.status === 'ACCEPTED' || acc.status === 'REJECTED';
+  const statusBanner = acc.status === 'ACCEPTED'
+    ? `<div style="background:#DCFCE7; color:#166534; padding:8px 12px; border-radius:8px; font-size:13px; font-weight:700;">✅ เจ้าหน้าที่คณะตรวจสอบและยืนยันผล "บริษัทตอบรับเข้าฝึกงาน" เรียบร้อยแล้ว ${acc.dispatchLetterIssued ? `(ออกหนังสือส่งตัวเลขที่ ${escapeStudentHtml(acc.dispatchLetterDocNo || '-')} แล้ว)` : '(รอออกหนังสือส่งตัว)'}</div>`
+    : acc.status === 'REJECTED'
+    ? `<div style="background:#FEE2E2; color:#991B1B; padding:8px 12px; border-radius:8px; font-size:13px; font-weight:700;">✗ เจ้าหน้าที่บันทึกผล "บริษัทปฏิเสธ" (${escapeStudentHtml(acc.note || '-')}) — ระบบปลดล็อกให้ยื่นบริษัทใหม่แล้ว</div>`
+    : acc.fileUrl
+    ? `<div style="background:#FEF3C7; color:#92400E; padding:8px 12px; border-radius:8px; font-size:13px; font-weight:600;">⏳ อัปโหลดไฟล์ "${escapeStudentHtml(acc.fileName || 'ใบตอบรับ')}" แล้ว — ระบบกำลังให้เจ้าหน้าที่คณะตรวจสอบและกดยืนยันผล</div>`
+    : `<div style="background:#EFF6FF; color:#1E40AF; padding:8px 12px; border-radius:8px; font-size:13px; font-weight:600;">📄 คณะออกหนังสือขอความอนุเคราะห์ (${escapeStudentHtml(acc.requestLetterDocNo || '-')}) แล้ว กดดาวน์โหลดหนังสือขอความอนุเคราะห์และแบบตอบรับเปล่าด้านขวาเพื่อนำไปยื่นให้บริษัท และเมื่อบริษัทกรอกแบบตอบรับกลับมา กรุณาอัปโหลดไฟล์ที่นี่</div>`;
+
+  container.innerHTML = `
+    <div style="border:1px solid #CBD5E1; border-radius:12px; padding:16px 18px; background:#F8FAFC;">
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:10px;">
+        <div>
+          <div style="font-size:15px; font-weight:700; color:#1E293B;">เอกสารราชการ &amp; อัปโหลดแบบตอบรับ/ปฏิเสธ การรับนิสิตฝึกงาน</div>
+          <div style="font-size:12.5px; color:#64748B;">ดาวน์โหลดหนังสือขอความอนุเคราะห์และแบบตอบรับเปล่าไปยื่นสถานประกอบการ และอัปโหลดใบตอบรับที่บริษัทกรอกกลับมา (PDF, JPG, PNG ไม่เกิน 10MB)</div>
+        </div>
+        <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+          <button type="button" onclick="downloadStudentOfficialLetter('REQUEST')"
+            style="background:#EEF2FF; color:#312E81; border:1px solid #C7D2FE; padding:8px 13px; border-radius:8px; font-size:12.5px; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:5px;">
+            📥 ดาวน์โหลดหนังสือขอความอนุเคราะห์ (PDF)
+          </button>
+          <a href="/documents/acceptance_form_se.pdf" download="แบบตอบรับนิสิตฝึกงาน_SE.pdf" target="_blank" rel="noopener"
+            style="background:#F0FDF4; color:#166534; border:1px solid #BBF7D0; padding:8px 13px; border-radius:8px; font-size:12.5px; font-weight:700; text-decoration:none; display:inline-flex; align-items:center; gap:5px;">
+            📄 ดาวน์โหลดแบบตอบรับเปล่า (PDF)
+          </a>
+          ${acc.dispatchLetterIssued ? `
+            <button type="button" onclick="downloadStudentOfficialLetter('DISPATCH')"
+              style="background:#DBEAFE; color:#1E40AF; border:1px solid #93C5FD; padding:8px 13px; border-radius:8px; font-size:12.5px; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:5px;">
+              📥 ดาวน์โหลดหนังสือส่งตัวเข้าฝึกงาน (PDF)
+            </button>
+          ` : ''}
+          ${acc.fileUrl ? `<a href="${acc.fileUrl}" target="_blank" rel="noopener" class="btn btn-tonal btn-sm" style="text-decoration:none;">ดูไฟล์ที่อัปโหลด</a>` : ''}
+          ${!isFinalized ? `
+            <input type="file" id="student-acceptance-file-input" accept=".pdf,image/jpeg,image/png,image/webp" style="display:none;" onchange="uploadStudentAcceptanceForm(this)" />
+            <button type="button" id="student-acceptance-upload-btn" class="btn btn-primary btn-sm" onclick="document.getElementById('student-acceptance-file-input').click()">
+              ${acc.fileUrl ? 'อัปโหลดไฟล์ใหม่' : 'เลือกไฟล์ใบตอบรับ (PDF / รูปภาพ)'}
+            </button>
+          ` : ''}
+        </div>
+      </div>
+      ${statusBanner}
+    </div>
+  `;
+}
+
+window.downloadStudentOfficialLetter = function(type) {
+  const acc = currentAcceptanceData;
+  if (!acc || !acc.requestLetterIssued) {
+    alert('ยังไม่มีการออกหนังสือขอความอนุเคราะห์จากเจ้าหน้าที่คณะ');
+    return;
+  }
+
+  const students = Array.isArray(acc.letterStudents) && acc.letterStudents.length > 0
+    ? acc.letterStudents
+    : [{
+        studentCode: document.getElementById('prof-studentCode')?.value || '-',
+        nameTh: document.getElementById('prof-nameTh')?.value || '-',
+        major: document.getElementById('prof-major')?.value || 'วิศวกรรมซอฟต์แวร์',
+        position: document.getElementById('plc-position')?.value || 'นิสิตฝึกงาน',
+        phone: document.getElementById('prof-phone')?.value || '-',
+      }];
+
+  const first = students[0];
+  const cfg = acc.academicConfig || {};
+  const docNo = type === 'DISPATCH'
+    ? (acc.dispatchLetterDocNo || 'อว 7316/ว 0512')
+    : (acc.requestLetterDocNo || 'อว 7316/ว 0142');
+  const rawDate = type === 'DISPATCH' ? acc.dispatchLetterDate : acc.requestLetterDate;
+  const dateObj = rawDate ? new Date(rawDate) : new Date();
+  const thaiDate = !isNaN(dateObj.getTime())
+    ? dateObj.toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' })
+    : new Date().toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' });
+  const signatureDataUrl = type === 'DISPATCH'
+    ? (acc.dispatchLetterSignatureSnapshot || '')
+    : (acc.requestLetterSignatureSnapshot || '');
+  const targetCompName = acc.companyName || (currentSubmissionsData[0]?.name) || 'สถานประกอบการ';
+  const targetCompAddress = acc.companyAddress && acc.companyAddress !== '-' ? acc.companyAddress : '';
+  const targetMajor = first.major || 'วิศวกรรมซอฟต์แวร์';
+  const subjectText = type === 'DISPATCH'
+    ? 'ขอส่งตัวนิสิตเข้าฝึกงานวิชาชีพ / สหกิจศึกษา'
+    : 'ขอความอนุเคราะห์รับนิสิตเข้าฝึกงานวิชาชีพ / สหกิจศึกษา และนัดหมายสัมภาษณ์';
+
+  const studentRowsHtml = students.map((s, idx) => `
+    <tr>
+      <td style="border:1px solid #334155; padding:6px 10px; text-align:center;">${idx + 1}</td>
+      <td style="border:1px solid #334155; padding:6px 10px; text-align:center;">${escapeStudentHtml(s.studentCode)}</td>
+      <td style="border:1px solid #334155; padding:6px 10px;">${escapeStudentHtml(s.nameTh)}</td>
+      <td style="border:1px solid #334155; padding:6px 10px;">วท.บ. (${escapeStudentHtml(s.major || targetMajor)})</td>
+      <td style="border:1px solid #334155; padding:6px 10px;">${escapeStudentHtml(s.position || 'นิสิตฝึกงาน')}</td>
+      <td style="border:1px solid #334155; padding:6px 10px; text-align:center;">${escapeStudentHtml(s.phone || '-')}</td>
+    </tr>
+  `).join('');
+
+  const win = window.open('', '_blank', 'width=920,height=800');
+  if (!win) {
+    alert('กรุณาอนุญาตให้เปิดหน้าต่างป๊อปอัป (Pop-up) เพื่อดาวน์โหลด/พิมพ์เอกสาร PDF');
+    return;
+  }
+
+  win.document.write(`
+    <!DOCTYPE html>
+    <html lang="th">
+      <head>
+        <meta charset="utf-8" />
+        <title>${type === 'DISPATCH' ? 'หนังสือส่งตัวนิสิตเข้าฝึกงาน' : 'หนังสือขอความอนุเคราะห์ฝึกงาน'} (${escapeStudentHtml(docNo)})</title>
+        <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700;800&display=swap" rel="stylesheet" />
+        <style>
+          body { font-family: 'Sarabun', sans-serif; padding: 24px 36px; color: #0F172A; line-height: 1.65; background: #F1F5F9; margin: 0; }
+          .print-toolbar {
+            max-width: 760px; margin: 0 auto 16px auto; background: #1E293B; color: white;
+            padding: 10px 18px; border-radius: 10px; display: flex; justify-content: space-between; align-items: center;
+          }
+          .print-sheet {
+            max-width: 720px; margin: 0 auto; background: white; padding: 32px 40px;
+            border-radius: 10px; box-shadow: 0 4px 20px rgba(15,23,42,0.08);
+          }
+          @media print {
+            body { padding: 0; background: white; }
+            .print-toolbar { display: none !important; }
+            .print-sheet { box-shadow: none; padding: 0; max-width: 100%; }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="print-toolbar">
+          <div style="font-size:13.5px; font-weight:700;">
+            📄 ${type === 'DISPATCH' ? 'หนังสือส่งตัวนิสิตเข้าฝึกงาน' : 'หนังสือขอความอนุเคราะห์ฝึกงาน'} — เลขที่ ${escapeStudentHtml(docNo)}
+          </div>
+          <button onclick="window.print()" style="background:#2563EB; color:white; border:none; padding:7px 16px; border-radius:8px; font-family:inherit; font-size:13px; font-weight:700; cursor:pointer;">
+            🖨️ พิมพ์ / บันทึกเป็น PDF (Save as PDF)
+          </button>
+        </div>
+        <div class="print-sheet" style="font-size:14px; color:#0F172A;">
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:16px;">
+            <div><div style="font-weight:700;">ที่ ${escapeStudentHtml(docNo)}</div></div>
+            <div style="text-align:center;">
+              <div style="font-size:17px; font-weight:800; color:#1E1B4B;">คณะเทคโนโลยีสารสนเทศและการสื่อสาร</div>
+              <div style="font-size:14px; font-weight:700;">มหาวิทยาลัยพะเยา จ.พะเยา 56000</div>
+            </div>
+            <div style="text-align:right;"><div>วันที่ ${escapeStudentHtml(thaiDate)}</div></div>
+          </div>
+
+          <div style="margin-bottom:10px;"><strong>เรื่อง</strong> &nbsp;&nbsp;${subjectText}</div>
+          <div style="margin-bottom:10px;"><strong>เรียน</strong> &nbsp;&nbsp;ผู้จัดการฝ่ายทรัพยากรบุคคล / ผู้บริหาร <strong>${escapeStudentHtml(targetCompName)}</strong></div>
+          ${type === 'REQUEST' ? `<div style="margin-bottom:14px;"><strong>สิ่งที่ส่งมาด้วย</strong> &nbsp;&nbsp;1. แบบตอบรับ/ปฏิเสธ การรับนิสิตฝึกงาน และประวัติย่อ (CV) จำนวน ${students.length} ชุด</div>` : ''}
+
+          <p style="text-indent:40px; margin-bottom:12px; text-align:justify;">
+            ด้วย คณะเทคโนโลยีสารสนเทศและการสื่อสาร มหาวิทยาลัยพะเยา ได้กำหนดให้นิสิตระดับปริญญาตรี ชั้นปีที่ 3-4 เข้ารับการฝึกงานวิชาชีพและสหกิจศึกษาในสถานประกอบการ เพื่อให้นิสิตได้เพิ่มพูนทักษะและประสบการณ์การทำงานจริงในสายวิชาชีพเทคโนโลยีสารสนเทศ พิจารณาแล้วเห็นว่าหน่วยงานของท่านมีความเหมาะสมและมีมาตรฐานทางวิชาชีพเป็นอย่างดียิ่ง
+          </p>
+
+          <p style="text-indent:40px; margin-bottom:14px;">
+            ในการนี้ คณะเทคโนโลยีสารสนเทศและการสื่อสาร จึงใคร่<strong>${type === 'DISPATCH' ? 'ขอส่งตัวนิสิตเข้าปฏิบัติงานสหกิจศึกษา/ฝึกงาน' : 'ขอความอนุเคราะห์รับนิสิตเข้าฝึกงานวิชาชีพ/สหกิจศึกษา'}</strong> ประจำปีการศึกษา ${escapeStudentHtml(cfg.currentAcademicYear || '2568')} จำนวน ${students.length} คน ดังรายชื่อต่อไปนี้:
+          </p>
+
+          <table style="width:100%; border-collapse:collapse; margin-bottom:18px; font-size:13px;">
+            <thead>
+              <tr style="background:#F1F5F9;">
+                <th style="border:1px solid #334155; padding:6px 10px;">ลำดับ</th>
+                <th style="border:1px solid #334155; padding:6px 10px;">รหัสนิสิต</th>
+                <th style="border:1px solid #334155; padding:6px 10px;">ชื่อ - นามสกุล</th>
+                <th style="border:1px solid #334155; padding:6px 10px;">หลักสูตร/สาขาวิชา</th>
+                <th style="border:1px solid #334155; padding:6px 10px;">ตำแหน่งที่ยื่นฝึกงาน</th>
+                <th style="border:1px solid #334155; padding:6px 10px;">เบอร์โทรศัพท์</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${studentRowsHtml}
+            </tbody>
+          </table>
+
+          <p style="text-indent:40px; margin-bottom:24px;">
+            จึงเรียนมาเพื่อโปรดพิจารณาให้ความอนุเคราะห์ และขอขอบพระคุณในความร่วมมือด้วยดีเสมอมา ณ โอกาสนี้
+          </p>
+
+          <div style="text-align:center; margin-left:240px; margin-bottom:20px;">
+            <div>ขอแสดงความนับถือ</div>
+            <div style="height:68px; display:flex; align-items:flex-end; justify-content:center;">
+              ${signatureDataUrl ? `<img src="${signatureDataUrl}" alt="ลายเซ็นผู้ลงนาม" style="max-width:150px; max-height:64px; object-fit:contain;" />` : ''}
+            </div>
+            <div style="font-weight:700;">(${escapeStudentHtml(cfg.deanSignatory || 'ผู้ช่วยศาสตราจารย์ ดร.พรเทพ โรจนวสุ')})</div>
+            <div>${escapeStudentHtml(cfg.deanPosition || 'คณบดีคณะเทคโนโลยีสารสนเทศและการสื่อสาร')}</div>
+            <div>มหาวิทยาลัยพะเยา</div>
+          </div>
+        </div>
+      </body>
+    </html>
+  `);
+  win.document.close();
+};
+
+window.uploadStudentAcceptanceForm = async function(inputEl) {
+  const file = inputEl?.files?.[0];
+  if (!file) return;
+  const btn = document.getElementById('student-acceptance-upload-btn');
+  const prevText = btn ? btn.textContent : '';
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = 'กำลังอัปโหลดและตรวจสอบ...';
+  }
+  try {
+    const formData = new FormData();
+    formData.append('file', file);
+    const res = await fetch('/api/student/acceptance-form', {
+      method: 'POST',
+      body: formData,
+    });
+    const data = await res.json();
+    if (data.success) {
+      alert('✅ ' + (data.message || 'อัปโหลดแบบตอบรับสำเร็จ'));
+      await loadSubmissions();
+    } else {
+      alert('เกิดข้อผิดพลาด: ' + (data.message || 'อัปโหลดไม่สำเร็จ'));
+    }
+  } catch (err) {
+    console.error(err);
+    alert('เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์');
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = prevText;
+    }
+    if (inputEl) inputEl.value = '';
+  }
+};
 
 window.updateSubmissionStatus = async function(companyId, status) {
   try {

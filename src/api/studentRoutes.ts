@@ -4,6 +4,7 @@ import path from "path";
 import prisma from "../db";
 import requireLogin from "../auth/requireLogin";
 import { uploadToCloudinary } from "../utils/cloudinary";
+import { analyzeAcceptanceForm } from "../utils/acceptanceOcr";
 import { loadSuperAdminState, saveSuperAdminState } from "../utils/superAdminStore";
 
 const router = express.Router();
@@ -408,6 +409,158 @@ router.post("/cv", upload.single("cv"), async (req: Request, res: Response) => {
   } catch (err: any) {
     console.error("POST /api/student/cv error:", err);
     res.status(500).json({ success: false, message: "อัปโหลด CV ไม่สำเร็จ: " + err.message });
+  }
+});
+
+// ==========================================
+// 4.1 แบบตอบรับ/ปฏิเสธ การรับนิสิตฝึกงาน (นิสิตอัปโหลดไฟล์ที่บริษัทกรอกแล้ว -> OCR ตรวจ -> พี่จอมยืนยัน)
+// ==========================================
+function toStudentAcceptanceView(wf: any, state?: any, student?: any, letterStudents?: any[]) {
+  if (!wf) {
+    return { requestLetterIssued: false, dispatchLetterIssued: false, status: "NOT_SENT" };
+  }
+  const cfg = state?.academicConfig || {};
+  const fallbackStudent = student
+    ? [
+        {
+          studentCode: student.studentCode || "",
+          nameTh: student.nameTh || "",
+          major: student.major || "วิศวกรรมซอฟต์แวร์",
+          position: student.placement?.position || "นิสิตฝึกงาน",
+          phone: student.phone || "-",
+          companyAddress: student.placement?.companyAddress || "",
+        },
+      ]
+    : [];
+  return {
+    requestLetterIssued: Boolean(wf.requestLetterIssued),
+    requestLetterDocNo: wf.requestLetterDocNo || "",
+    requestLetterDate: wf.requestLetterDate || "",
+    requestLetterSignatureSnapshot: wf.requestLetterSignatureSnapshot || cfg.signatureDataUrl || "",
+    dispatchLetterIssued: Boolean(wf.dispatchLetterIssued),
+    dispatchLetterDocNo: wf.dispatchLetterDocNo || "",
+    dispatchLetterDate: wf.dispatchLetterDate || "",
+    dispatchLetterSignatureSnapshot: wf.dispatchLetterSignatureSnapshot || cfg.signatureDataUrl || "",
+    companyName: wf.companyName || student?.placement?.companyNameTh || student?.companies?.[0]?.name || "",
+    companyAddress: student?.placement?.companyAddress || "",
+    status: wf.companyResponseStatus || "NOT_SENT",
+    fileName: wf.companyResponseFileName || "",
+    fileUrl: wf.companyResponseFileUrl || "",
+    uploadedAt: wf.companyResponseUploadedAt || "",
+    submittedByStudent: Boolean(wf.companyResponseSubmittedByStudent),
+    note: wf.companyResponseStatus === "REJECTED" ? wf.companyResponseNote || "" : "",
+    academicConfig: {
+      currentAcademicYear: cfg.currentAcademicYear || "2568",
+      deanSignatory: cfg.deanSignatory || "ผู้ช่วยศาสตราจารย์ ดร.พรเทพ โรจนวสุ",
+      deanPosition: cfg.deanPosition || "คณบดีคณะเทคโนโลยีสารสนเทศและการสื่อสาร",
+    },
+    letterStudents: letterStudents && letterStudents.length > 0 ? letterStudents : fallbackStudent,
+  };
+}
+
+router.get("/acceptance-form", async (req: Request, res: Response) => {
+  try {
+    const student = await prisma.student.findUnique({
+      where: { userId: req.session.user!.id },
+      include: { placement: true, companies: true },
+    });
+    if (!student) return res.json({ success: true, acceptance: toStudentAcceptanceView(null) });
+    const state = loadSuperAdminState();
+    const wf = state.docWorkflowMap[String(student.id)];
+
+    let letterStudents: any[] = [];
+    if (wf) {
+      const batchIds = wf.requestLetterBatchId
+        ? Object.values(state.docWorkflowMap)
+            .filter((item: any) => item && item.requestLetterBatchId === wf.requestLetterBatchId)
+            .map((item: any) => Number(item.studentId))
+            .filter((n) => !isNaN(n))
+        : [student.id];
+      const targetIds = batchIds.length > 0 ? batchIds : [student.id];
+      const dbStudents = await prisma.student.findMany({
+        where: { id: { in: targetIds } },
+        include: { placement: true },
+      });
+      letterStudents = dbStudents.map((s) => ({
+        studentCode: s.studentCode,
+        nameTh: s.nameTh,
+        major: s.major || "วิศวกรรมซอฟต์แวร์",
+        position: s.placement?.position || "นิสิตฝึกงาน",
+        phone: s.phone || "-",
+        companyAddress: s.placement?.companyAddress || "",
+      }));
+    }
+
+    res.json({
+      success: true,
+      acceptance: toStudentAcceptanceView(wf, state, student, letterStudents),
+    });
+  } catch (err) {
+    console.error("GET /api/student/acceptance-form error:", err);
+    res.status(500).json({ success: false, message: "ดึงข้อมูลแบบตอบรับไม่สำเร็จ" });
+  }
+});
+
+router.post("/acceptance-form", upload.single("file"), async (req: Request, res: Response) => {
+  try {
+    const student = await prisma.student.findUnique({ where: { userId: req.session.user!.id } });
+    if (!student) {
+      return res.status(400).json({ success: false, message: "ไม่พบข้อมูลนิสิต" });
+    }
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: "กรุณาเลือกไฟล์แบบตอบรับ (PDF หรือรูปภาพ)" });
+    }
+
+    const state = loadSuperAdminState();
+    const wfKey = String(student.id);
+    const wf = state.docWorkflowMap[wfKey];
+    if (!wf || !wf.requestLetterIssued) {
+      return res.status(400).json({
+        success: false,
+        message: "ยังไม่มีการออกหนังสือขอความอนุเคราะห์ จึงยังอัปโหลดแบบตอบรับไม่ได้",
+      });
+    }
+    if (wf.companyResponseStatus === "ACCEPTED" || wf.companyResponseStatus === "REJECTED") {
+      return res.status(400).json({
+        success: false,
+        message: "เจ้าหน้าที่ยืนยันผลแบบตอบรับนี้แล้ว หากต้องการแก้ไขกรุณาติดต่อเจ้าหน้าที่คณะ",
+      });
+    }
+
+    const { buffer, originalname, mimetype } = req.file;
+    let cleanFileName = originalname;
+    try {
+      const utf8Name = Buffer.from(originalname, "latin1").toString("utf8");
+      if (!utf8Name.includes("\ufffd")) cleanFileName = utf8Name;
+    } catch {
+      // ignore
+    }
+
+    const fileUrl = await uploadToCloudinary(buffer, cleanFileName, "acceptance_forms");
+    const ocr = await analyzeAcceptanceForm(buffer, cleanFileName, mimetype, fileUrl);
+
+    // โหลด state ใหม่อีกครั้งหลังรอ OCR เพื่อไม่ทับการเปลี่ยนแปลงที่เกิดระหว่างนั้น
+    const latest = loadSuperAdminState();
+    const current = latest.docWorkflowMap[wfKey] || wf;
+    latest.docWorkflowMap[wfKey] = {
+      ...current,
+      companyResponseStatus: "WAITING_RESPONSE",
+      companyResponseFileName: cleanFileName,
+      companyResponseFileUrl: fileUrl,
+      companyResponseUploadedAt: new Date().toISOString(),
+      companyResponseSubmittedByStudent: true,
+      companyResponseOcr: ocr,
+    };
+    saveSuperAdminState(latest);
+
+    res.json({
+      success: true,
+      message: "อัปโหลดแบบตอบรับเรียบร้อยแล้ว รอเจ้าหน้าที่คณะตรวจสอบและยืนยันผล",
+      acceptance: toStudentAcceptanceView(latest.docWorkflowMap[wfKey]),
+    });
+  } catch (err: any) {
+    console.error("POST /api/student/acceptance-form error:", err);
+    res.status(500).json({ success: false, message: "อัปโหลดแบบตอบรับไม่สำเร็จ: " + (err?.message || err) });
   }
 });
 

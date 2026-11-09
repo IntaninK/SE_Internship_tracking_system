@@ -1,5 +1,6 @@
 import fs from "fs";
 import path from "path";
+import type { AcceptanceOcrResult } from "./acceptanceOcr";
 
 export interface MajorUnlockRule {
   code: string;
@@ -85,6 +86,13 @@ export interface StudentDocWorkflowRecord {
   companyResponseFileUrl?: string;
   companyResponseUploadedAt?: string;
   companyResponseNote?: string;
+  /** นิสิตอัปโหลดไฟล์ใบตอบรับเองแล้ว (รอพี่จอมยืนยันผล) */
+  companyResponseSubmittedByStudent?: boolean;
+  /** ผลตรวจ OCR (PaddleOCR) ของไฟล์ใบตอบรับล่าสุด — เป็นข้อเสนอแนะ ต้องให้ Super Admin ยืนยัน */
+  companyResponseOcr?: AcceptanceOcrResult;
+  /** ผู้ยืนยันผลใบตอบรับ และผลยืนยันตรง/ไม่ตรงกับ OCR */
+  companyResponseConfirmedAt?: string;
+  companyResponseConfirmedBy?: string;
   dispatchLetterIssued: boolean;
   dispatchLetterDocNo?: string;
   dispatchLetterDate?: string;

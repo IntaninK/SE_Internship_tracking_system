@@ -4058,6 +4058,132 @@ function renderCompanyGroups() {
   }).join('');
 }
 
+function escapeHtmlText(str) {
+  return String(str || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function renderCompanyResponseReviewCell(d) {
+  const hasFile = Boolean(d.companyResponseFileUrl || d.companyResponseSubmittedByStudent);
+  const ocr = d.companyResponseOcr || null;
+
+  let ocrBoxHtml = '';
+  if (!hasFile) {
+    ocrBoxHtml = `
+      <div style="font-size:11.5px; color:#B45309; font-weight:600; margin-bottom:6px;">
+        ⏳ รอนิสิตอัปโหลดใบตอบรับจากบริษัท
+      </div>
+    `;
+  } else if (ocr && ocr.status === 'DONE' && ocr.result === 'ACCEPTED') {
+    const confPct = Math.round((Number(ocr.confidence) || 0.85) * 100);
+    const reasonText = (ocr.reasons && ocr.reasons[0]) || 'ตรวจพบรอยติ๊กหรือรายละเอียดในช่องตอบรับ';
+    const warnHtml = Array.isArray(ocr.warnings) && ocr.warnings.length > 0
+      ? `<div style="margin-top:3px; font-size:10.5px; color:#B45309; font-weight:600;">⚠️ ${escapeHtmlText(ocr.warnings.join(' / '))}</div>`
+      : '';
+    ocrBoxHtml = `
+      <div style="background:#ECFDF5; border:1px solid #6EE7B7; border-radius:8px; padding:7px 9px; margin-bottom:6px;">
+        <div style="font-size:11.5px; font-weight:800; color:#065F46;">
+          🤖 OCR ตรวจพบ: คาดว่า "บริษัทตอบรับ" (${confPct}%)
+        </div>
+        <div style="font-size:10.5px; color:#047857; margin-top:2px;">
+          ${escapeHtmlText(reasonText)}
+        </div>
+        ${ocr.extracted?.acceptDetailText ? `<div style="font-size:10.5px; color:#064E3B; margin-top:2px;">ข้อความที่อ่านได้: "${escapeHtmlText(ocr.extracted.acceptDetailText)}"</div>` : ''}
+        ${warnHtml}
+      </div>
+    `;
+  } else if (ocr && ocr.status === 'DONE' && ocr.result === 'REJECTED') {
+    const confPct = Math.round((Number(ocr.confidence) || 0.85) * 100);
+    const reasonText = (ocr.reasons && ocr.reasons[0]) || 'ตรวจพบรอยติ๊กหรือเหตุผลในช่องปฏิเสธ';
+    const warnHtml = Array.isArray(ocr.warnings) && ocr.warnings.length > 0
+      ? `<div style="margin-top:3px; font-size:10.5px; color:#B45309; font-weight:600;">⚠️ ${escapeHtmlText(ocr.warnings.join(' / '))}</div>`
+      : '';
+    ocrBoxHtml = `
+      <div style="background:#FEF2F2; border:1px solid #FCA5A5; border-radius:8px; padding:7px 9px; margin-bottom:6px;">
+        <div style="font-size:11.5px; font-weight:800; color:#991B1B;">
+          🤖 OCR ตรวจพบ: คาดว่า "บริษัทปฏิเสธ" (${confPct}%)
+        </div>
+        <div style="font-size:10.5px; color:#B91C1C; margin-top:2px;">
+          ${escapeHtmlText(reasonText)}
+        </div>
+        ${ocr.extracted?.rejectReasonText ? `<div style="font-size:10.5px; color:#7F1D1D; margin-top:2px;">เนื่องจาก: "${escapeHtmlText(ocr.extracted.rejectReasonText)}"</div>` : ''}
+        ${warnHtml}
+      </div>
+    `;
+  } else {
+    const unclearReason =
+      (ocr && Array.isArray(ocr.reasons) && ocr.reasons[0]) ||
+      'ไม่พบการติ๊กช่อง ☐ และไม่พบข้อความหลังช่องตอบรับ/ปฏิเสธ หรืออ่านไฟล์ไม่ได้';
+    ocrBoxHtml = `
+      <div style="background:#FFFBEB; border:1.5px solid #F59E0B; border-radius:8px; padding:7px 9px; margin-bottom:6px;">
+        <div style="font-size:11.5px; font-weight:800; color:#B45309; display:flex; align-items:center; gap:4px;">
+          ⚠️ แจ้งเตือน: ระบบตรวจผลอัตโนมัติไม่ได้
+        </div>
+        <div style="font-size:10.5px; color:#92400E; margin-top:2px; line-height:1.35;">
+          ${escapeHtmlText(unclearReason)} — กรุณาเปิดไฟล์ตรวจด้วยตาก่อนกดยืนยัน
+        </div>
+      </div>
+    `;
+  }
+
+  const fileActionsHtml = hasFile
+    ? `
+      <div style="display:flex; gap:5px; align-items:center; flex-wrap:wrap; margin-bottom:6px;">
+        ${d.companyResponseFileUrl
+          ? `<a href="${d.companyResponseFileUrl}" target="_blank" rel="noopener"
+              style="background:#EFF6FF; color:#1D4ED8; border:1px solid #BFDBFE; padding:3px 8px; border-radius:6px; font-size:11px; font-weight:700; text-decoration:none; display:inline-flex; align-items:center; gap:3px;">
+              👁️ เปิดดูใบตอบรับที่นิสิตแนบ
+            </a>`
+          : `<span style="font-size:11px; color:#475569;">📎 ${escapeHtmlText(d.companyResponseFileName || 'แนบไฟล์แล้ว')}</span>`}
+        <button type="button" onclick="rescanCompanyResponseOcr(${d.studentId})"
+          style="background:#F8FAFC; color:#334155; border:1px solid #CBD5E1; padding:3px 7px; border-radius:6px; font-size:10.5px; font-weight:600; cursor:pointer;"
+          title="สแกนตรวจสอบด้วย PaddleOCR อีกครั้ง">
+          🔄 สแกนซ้ำ
+        </button>
+      </div>
+    `
+    : '';
+
+  return `
+    ${ocrBoxHtml}
+    ${fileActionsHtml}
+    <div style="display:flex; gap:5px; flex-wrap:wrap;">
+      <button type="button" onclick="recordCompanyResponseAction(${d.studentId}, 'ACCEPTED')"
+        style="background:#10B981; color:white; border:none; padding:5px 9px; border-radius:7px; font-size:11px; font-weight:700; cursor:pointer;">
+        ✓ ยืนยันบริษัทตอบรับ
+      </button>
+      <button type="button" onclick="recordCompanyResponseAction(${d.studentId}, 'REJECTED')"
+        style="background:#EF4444; color:white; border:none; padding:5px 9px; border-radius:7px; font-size:11px; font-weight:700; cursor:pointer;">
+        ✗ ยืนยันปฏิเสธ (ปลดล็อก+Archive)
+      </button>
+    </div>
+  `;
+}
+
+window.rescanCompanyResponseOcr = async function(studentId) {
+  try {
+    const res = await fetch('/api/admin/super-admin/documents/rescan-company-response', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ studentId }),
+    });
+    const data = await res.json();
+    if (data.success) {
+      alert('🔍 ' + (data.message || 'สแกนใบตอบรับซ้ำเรียบร้อยแล้ว'));
+      await window.loadSuperAdminOverview();
+    } else {
+      alert('ไม่สามารถสแกนซ้ำได้: ' + (data.message || 'เกิดข้อผิดพลาด'));
+    }
+  } catch (err) {
+    console.error(err);
+    alert('เกิดข้อผิดพลาดในการเชื่อมต่อระบบ OCR');
+  }
+};
+
 window.renderDocumentQueueTable = function() {
   const tbody = document.getElementById('doc-workflow-tbody');
   if (!tbody) return;
@@ -4098,8 +4224,12 @@ window.renderDocumentQueueTable = function() {
         <div style="display:flex; gap:4px; margin-top:4px; flex-wrap:wrap;">
           <button type="button" onclick='openOfficialLetterPreview("REQUEST", [${d.studentId}], "${escapedComp}")'
             style="background:#EEF2FF; color:#312E81; border:1px solid #C7D2FE; padding:3px 8px; border-radius:6px; font-size:11px; font-weight:700; cursor:pointer;">
-            📄 เปิด PDF (+ใบตอบรับ)
+            📄 หนังสือขอความอนุเคราะห์
           </button>
+          <a href="/documents/acceptance_form_se.pdf" download="แบบตอบรับนิสิตฝึกงาน_SE.pdf" target="_blank" rel="noopener"
+            style="background:#F0FDF4; color:#166534; border:1px solid #BBF7D0; padding:3px 8px; border-radius:6px; font-size:11px; font-weight:700; text-decoration:none;">
+            📥 แบบตอบรับเปล่า
+          </a>
           <button type="button" onclick="toggleDocumentLockOverride(${d.studentId})"
             style="background:#F8FAFC; color:#475569; border:1px solid #CBD5E1; padding:3px 7px; border-radius:6px; font-size:10.5px; cursor:pointer;" title="ปลดล็อกกรณีฉุกเฉินโดย Super Admin">
             ${d.isLocked ? '🔒 ล็อกอยู่' : '🔓 ปลดล็อกแล้ว'}
@@ -4126,22 +4256,12 @@ window.renderDocumentQueueTable = function() {
     } else if (d.companyResponseStatus === 'ACCEPTED') {
       respColHtml = `
         <div style="font-size:12px; font-weight:700; color:#166534;">✅ บริษัทตอบรับเข้าฝึกงานแล้ว</div>
-        <div style="font-size:11px; color:#64748B;">ไฟล์: ${d.companyResponseFileName || 'ใบตอบรับ_ประทับตรา.pdf'}</div>
+        ${d.companyResponseFileUrl
+          ? `<a href="${d.companyResponseFileUrl}" target="_blank" rel="noopener" style="font-size:11px; color:#2563EB;">📎 ${escapeHtmlText(d.companyResponseFileName || 'ไฟล์ใบตอบรับ')}</a>`
+          : `<div style="font-size:11px; color:#64748B;">ไฟล์: ${escapeHtmlText(d.companyResponseFileName || 'ใบตอบรับ_ประทับตรา.pdf')}</div>`}
       `;
     } else {
-      respColHtml = `
-        <div style="font-size:11.5px; color:#B45309; font-weight:600; margin-bottom:5px;">⏳ รอผลใบตอบรับจากบริษัท</div>
-        <div style="display:flex; gap:5px; flex-wrap:wrap;">
-          <button type="button" onclick="recordCompanyResponseAction(${d.studentId}, 'ACCEPTED')"
-            style="background:#10B981; color:white; border:none; padding:5px 9px; border-radius:7px; font-size:11px; font-weight:700; cursor:pointer;">
-            ✓ บริษัทตอบรับ
-          </button>
-          <button type="button" onclick="recordCompanyResponseAction(${d.studentId}, 'REJECTED')"
-            style="background:#EF4444; color:white; border:none; padding:5px 9px; border-radius:7px; font-size:11px; font-weight:700; cursor:pointer;">
-            ✗ ปฏิเสธ (ปลดล็อก+Archive)
-          </button>
-        </div>
-      `;
+      respColHtml = renderCompanyResponseReviewCell(d);
     }
 
     // คอลัมน์ 3: หนังสือส่งตัวนิสิตเข้าฝึกงาน
@@ -4226,10 +4346,15 @@ window.issueGroupRequestLetter = async function(studentIds, companyName, intervi
 };
 
 window.recordCompanyResponseAction = async function(studentId, responseStatus) {
+  const targetDoc = (superAdminData.documentQueue || []).find(d => d.studentId === studentId);
   if (responseStatus === 'REJECTED') {
+    const ocrRejectReason = targetDoc?.companyResponseOcr?.extracted?.rejectReasonText || '';
+    const defaultReason = ocrRejectReason
+      ? `เนื่องจาก: ${ocrRejectReason}`
+      : 'สถานประกอบการแจ้งเต็มอัตรา / ไม่ผ่านการคัดเลือก';
     const reason = prompt(
       'ระบุสาเหตุที่สถานประกอบการปฏิเสธ (ระบบจะเก็บประวัติบริษัทนี้ไว้ใน Archive และปลดล็อกให้นิสิตยื่น Checklist บริษัทแห่งใหม่ได้ทันที):',
-      'สถานประกอบการแจ้งเต็มอัตรา / ไม่ผ่านการคัดเลือก'
+      defaultReason
     );
     if (reason === null) return;
     try {
@@ -4378,7 +4503,7 @@ window.openOfficialLetterPreview = function(type, studentIds, companyName) {
   if (titleEl) {
     titleEl.textContent = type === 'DISPATCH'
       ? `พรีวิวหนังสือส่งตัวนิสิตเข้าฝึกงาน (${docNo})`
-      : `พรีวิวหนังสือขอความอนุเคราะห์ฝึกงาน + แบบฟอร์มใบตอบรับ (${docNo})`;
+      : `พรีวิวหนังสือขอความอนุเคราะห์ฝึกงาน (${docNo})`;
   }
 
   const studentRowsHtml = students.map((s, idx) => `
@@ -4392,30 +4517,7 @@ window.openOfficialLetterPreview = function(type, studentIds, companyName) {
     </tr>
   `).join('');
 
-  const acceptanceFormHtml = type === 'REQUEST' ? `
-    <div style="margin-top:32px; padding-top:24px; border-top:2px dashed #64748B;">
-      <div style="text-align:center; font-weight:800; font-size:16px; margin-bottom:8px;">
-        แบบฟอร์มใบตอบรับการเข้าฝึกงานวิชาชีพ / สหกิจศึกษา (สิ่งที่ส่งมาด้วย)
-      </div>
-      <div style="font-size:13.5px; margin-bottom:12px;">
-        <strong>เรียน</strong> คณบดีคณะเทคโนโลยีสารสนเทศและการสื่อสาร มหาวิทยาลัยพะเยา<br/>
-        <strong>สถานประกอบการ / หน่วยงาน:</strong> ${companyName || first.companyName}
-      </div>
-      <div style="border:1px solid #334155; border-radius:8px; padding:14px 18px; font-size:13.5px; margin-bottom:14px;">
-        <div style="font-weight:700; margin-bottom:8px;">ผลการพิจารณาของสถานประกอบการ (กรุณาทำเครื่องหมาย ✓ ในช่องที่ต้องการ):</div>
-        <div style="margin-bottom:6px;">☐ <strong>ยินดีรับนิสิตเข้าฝึกงาน / สหกิจศึกษา</strong> ตามรายชื่อที่แนบมาพร้อมหนังสือฉบับนี้</div>
-        <div>☐ <strong>ไม่สามารถรับนิสิตเข้าฝึกงานได้ในรอบนี้</strong> เนื่องจาก .........................................................................................</div>
-      </div>
-      <div style="display:flex; justify-content:space-between; font-size:13px; margin-top:20px;">
-        <div>ประทับตราสถานประกอบการ (ถ้ามี)</div>
-        <div style="text-align:center;">
-          ลงชื่อ ............................................................ ผู้มีอำนาจลงนาม / ฝ่ายทรัพยากรบุคคล<br/>
-          (............................................................)<br/>
-          ตำแหน่ง ............................................................ วันที่ ........../........../..........
-        </div>
-      </div>
-    </div>
-  ` : '';
+  const acceptanceFormHtml = '';
 
   areaEl.innerHTML = `
     <div style="max-width:720px; margin:0 auto; font-size:14px; color:#0F172A;">
@@ -4503,7 +4605,10 @@ window.printOfficialLetter = function() {
         <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700;800&display=swap" rel="stylesheet" />
         <style>
           body { font-family: 'Sarabun', sans-serif; padding: 24px 36px; color: #0F172A; line-height: 1.65; }
-          @media print { body { padding: 0; } }
+          @media print {
+            body { padding: 0; }
+            .official-acceptance-page { border-top: none !important; margin-top: 0 !important; padding-top: 12px !important; page-break-before: always; break-before: page; }
+          }
         </style>
       </head>
       <body>
