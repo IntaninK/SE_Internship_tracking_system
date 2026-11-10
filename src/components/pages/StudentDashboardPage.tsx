@@ -21,7 +21,13 @@ export default function StudentDashboardPage() {
       title={PAGE_TITLE}
       styles={PAGE_STYLES}
       scripts={PAGE_SCRIPTS}
-      bodyHtml={PAGE_BODY_HTML}
+      bodyHtml={PAGE_BODY_HTML.replace(
+        'class="rounded-xl border border-gray-200 overflow-hidden">\r\n                <table class="w-full border-collapse text-xs">',
+        'id="student-training-table" class="rounded-xl border border-gray-200 overflow-hidden">\r\n                <div class="student-training-scroll">\r\n                <table class="w-full border-separate border-spacing-0 text-xs">'
+      ).replace(
+        '</table>\r\n              </div>\r\n\r\n              <p class="text-[11px] text-gray-400 flex items-center gap-1 mt-3">',
+        '</table>\r\n                </div>\r\n              </div>\r\n\r\n              <p class="text-[11px] text-gray-400 flex items-center gap-1 mt-3">'
+      )}
     />
   );
 }

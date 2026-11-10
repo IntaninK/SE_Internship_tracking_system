@@ -407,6 +407,62 @@ body {
   padding: 12px 16px;
 }
 
+#student-training-table {
+  overflow: hidden;
+}
+
+#student-training-table .student-training-scroll {
+  max-height: 296px;
+  overflow: auto;
+}
+
+#student-training-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  height: 38px;
+  padding-block: 0 !important;
+  background-color: #1541D2;
+}
+
+#student-training-table table {
+  width: 100%;
+  min-width: 640px;
+  table-layout: fixed;
+}
+
+#student-training-table th,
+#student-training-table td {
+  border: 0 !important;
+  border-right: 1px solid #777 !important;
+  border-bottom: 1px solid #777 !important;
+}
+
+#student-training-table tr > :first-child {
+  border-left: 1px solid #777 !important;
+}
+
+#student-training-table thead th {
+  border-top: 1px solid #777 !important;
+}
+
+#student-training-table tbody td {
+  height: 44px;
+  padding-block: 0 !important;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#student-training-table tfoot td {
+  position: sticky;
+  bottom: 0;
+  z-index: 20;
+  height: 38px;
+  padding-block: 0 !important;
+  background-color: #0B2268;
+}
+
 /* ==========================================================================
    Buttons
    ========================================================================== */
