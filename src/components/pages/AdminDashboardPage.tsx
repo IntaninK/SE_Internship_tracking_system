@@ -1360,12 +1360,20 @@ const PAGE_BODY_HTML = `
 
             <!-- กล่องกรอก/วางรหัสนิสิตจากใบเซ็นชื่อหน้างาน -->
             <div style="margin-bottom:18px; padding:16px; background:#EEF2FF; border:1px solid #C7D2FE; border-radius:14px;">
-              <label style="font-size:12.5px; font-weight:700; color:#1E1B4B; display:block; margin-bottom:4px;">
-                2. กรอกหรือวางรหัสนิสิตจากใบลงชื่อหน้างาน (รองรับทั้งพิมพ์ทีละรหัส หรือก๊อปวางหลายรหัสพร้อมกัน):
-              </label>
-              <p style="font-size:11.5px; color:#4338CA; margin:0 0 8px 0;">
-                * สามารถพิมพ์รหัสนิสิตคั่นด้วยเครื่องหมายจุลภาค (,), เว้นวรรค หรือขึ้นบรรทัดใหม่ได้ทันที ระบบจะตรวจสอบชื่อนิสิตและอนุมัติชั่วโมงให้อัตโนมัติ
-              </p>
+              <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:10px; margin-bottom:8px;">
+                <div>
+                  <label style="font-size:12.5px; font-weight:700; color:#1E1B4B; display:block; margin-bottom:4px;">
+                    2. กรอกหรือวางรหัสนิสิตจากใบลงชื่อหน้างาน (รองรับทั้งพิมพ์ทีละรหัส, ก๊อปวาง หรือนำเข้าไฟล์ Excel / CSV):
+                  </label>
+                  <p style="font-size:11.5px; color:#4338CA; margin:0;">
+                    * สามารถพิมพ์รหัสนิสิตคั่นด้วยเครื่องหมายจุลภาค (,), เว้นวรรค หรือกดปุ่ม <strong>นำเข้าไฟล์ Excel / CSV</strong> เพื่อพรีวิวตรวจสอบรายชื่อก่อนบันทึก
+                  </p>
+                </div>
+                <button type="button" onclick="openCheckInImportModal()" style="background:linear-gradient(135deg, #065F46 0%, #10B981 100%); color:white; border:none; padding:8px 14px; border-radius:10px; font-size:12.5px; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:6px; white-space:nowrap; box-shadow:0 4px 12px rgba(16,185,129,0.25);">
+                  <span class="material-icons" style="font-size:17px;">upload_file</span>
+                  <span>นำเข้าไฟล์ Excel / CSV</span>
+                </button>
+              </div>
               <div style="display:flex; gap:10px; align-items:stretch;" class="max-md:flex-col">
                 <textarea id="checkin-student-codes" class="input-field" rows="3" placeholder="ตัวอย่าง: 67023110, 67023111 หรือวางคอลัมน์รหัสนิสิตจาก Excel..." style="flex:1; font-family:monospace; font-size:13px;"></textarea>
                 <div style="display:flex; flex-direction:column; gap:6px; justify-content:center;">
@@ -2309,6 +2317,114 @@ const PAGE_BODY_HTML = `
           <button id="btn-confirm-import" class="btn btn-sm" onclick="confirmImport()" style="display:none; background:#10B981; color:white; border:none; border-radius:10px; align-items:center; gap:6px; padding:8px 18px; font-weight:600; cursor:pointer;">
             <span class="material-icons" style="font-size:16px;">check_circle</span>
             <span id="btn-confirm-import-text">ยืนยันนำเข้าข้อมูล</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal: [SCRUM-63] นำเข้ารายชื่อนิสิตเข้าร่วมกิจกรรมอบรม (Excel / CSV) พร้อม Preview สรุปจำนวนคน -->
+    <div id="checkin-import-modal" style="display:none; position:fixed; inset:0; background:rgba(15,23,42,0.6); z-index:1000; justify-content:center; align-items:center; backdrop-filter:blur(4px);">
+      <div style="background:white; border-radius:20px; width:760px; max-width:95%; max-height:90vh; display:flex; flex-direction:column; box-shadow:0 25px 60px rgba(15,23,42,0.3); overflow:hidden;">
+        <div style="background:linear-gradient(135deg, #065F46 0%, #10B981 100%); padding:18px 24px; color:white; display:flex; align-items:center; justify-content:space-between;">
+          <div style="display:flex; align-items:center; gap:10px;">
+            <span class="material-icons" style="font-size:24px;">upload_file</span>
+            <div>
+              <h3 style="font-size:16px; font-weight:700; margin:0;">นำเข้ารายชื่อนิสิตเข้าร่วมกิจกรรมอบรม (Excel / CSV)</h3>
+              <p style="font-size:11.5px; color:#D1FAE5; margin:2px 0 0 0;">สแกนรหัสนิสิตจากใบลงชื่อหน้างานอัตโนมัติ พร้อมตรวจสอบรายชื่อก่อนบันทึกชั่วโมง</p>
+            </div>
+          </div>
+          <button onclick="closeCheckInImportModal()" style="background:none; border:none; color:white; cursor:pointer; display:flex; align-items:center; opacity:0.85;">
+            <span class="material-icons" style="font-size:20px;">close</span>
+          </button>
+        </div>
+
+        <div style="padding:20px 24px; overflow-y:auto; flex:1;">
+          <!-- แถบแสดงกิจกรรมและช่วงเวลาที่เลือก -->
+          <div style="margin-bottom:14px; padding:10px 14px; background:#EEF2FF; border:1px solid #C7D2FE; border-radius:12px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+            <div style="font-size:12.5px; color:#1E1B4B;">
+              <strong>🎯 กิจกรรม:</strong> <span id="checkin-import-event-title" style="font-weight:700; color:#312E81;">-</span>
+            </div>
+            <div style="font-size:12px; background:#E0E7FF; color:#3730A3; padding:3px 10px; border-radius:999px; font-weight:700;">
+              🕒 รอบ: <span id="checkin-import-session-title">-</span>
+            </div>
+          </div>
+
+          <!-- Step 1: Upload File Zone -->
+          <div id="checkin-import-upload-zone" style="border:2px dashed #CBD5E1; border-radius:16px; padding:28px 20px; text-align:center; background:#F8FAFC; cursor:pointer; transition:all 0.2s;"
+               onclick="document.getElementById('checkin-import-file-input').click()"
+               ondragover="event.preventDefault(); this.style.borderColor='#10B981'; this.style.background='#ECFDF5';"
+               ondragleave="this.style.borderColor='#CBD5E1'; this.style.background='#F8FAFC';"
+               ondrop="handleCheckInImportDrop(event)">
+            <input type="file" id="checkin-import-file-input" accept=".xlsx,.xls,.csv" style="display:none;" onchange="handleCheckInImportFileSelect(event)" />
+            <span class="material-icons" style="font-size:44px; color:#10B981; margin-bottom:8px;">cloud_upload</span>
+            <p style="font-size:14.5px; font-weight:700; color:#1E293B; margin:0 0 4px 0;">คลิกเพื่อเลือกไฟล์ หรือลากไฟล์ใบลงชื่อหน้างานมาวางที่นี่</p>
+            <p style="font-size:12px; color:#64748B; margin:0;">รองรับไฟล์ <strong>.xlsx, .xls, .csv</strong> จาก Excel หรือ Google Sheets (ระบบตรวจจับรหัสนิสิต 8 หลักให้อัตโนมัติ)</p>
+          </div>
+
+          <!-- Selected File Info -->
+          <div id="checkin-import-selected-file-wrap" style="display:none; margin-top:12px; padding:10px 14px; background:#F0FDF4; border:1px solid #BBF7D0; border-radius:12px; align-items:center; justify-content:space-between;">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span class="material-icons" style="color:#16A34A; font-size:20px;">description</span>
+              <span id="checkin-import-selected-file-name" style="font-size:13px; font-weight:600; color:#166534;">filename.xlsx</span>
+            </div>
+            <button onclick="resetCheckInImportFile()" style="background:none; border:none; color:#DC2626; font-size:12px; font-weight:600; cursor:pointer; display:flex; align-items:center; gap:2px;">
+              <span class="material-icons" style="font-size:15px;">delete</span> เปลี่ยนไฟล์
+            </button>
+          </div>
+
+          <!-- Step 2: Preview & Validation Summary -->
+          <div id="checkin-import-preview-wrap" style="display:none; margin-top:16px;">
+            <div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:10px; margin-bottom:12px;">
+              <div style="padding:10px 12px; background:#F8FAFC; border:1px solid #E2E8F0; border-radius:12px; text-align:center;">
+                <div style="font-size:11px; color:#64748B;">อ่านพบในไฟล์</div>
+                <div id="checkin-import-stat-total" style="font-size:18px; font-weight:800; color:#334155;">0</div>
+              </div>
+              <div style="padding:10px 12px; background:#F0FDF4; border:1px solid #BBF7D0; border-radius:12px; text-align:center;">
+                <div style="font-size:11px; color:#166534;">🟢 พร้อมบันทึก</div>
+                <div id="checkin-import-stat-ready" style="font-size:18px; font-weight:800; color:#15803D;">0</div>
+              </div>
+              <div style="padding:10px 12px; background:#FFFBEB; border:1px solid #FDE68A; border-radius:12px; text-align:center;">
+                <div style="font-size:11px; color:#92400E;">🟡 ซ้ำในรอบนี้</div>
+                <div id="checkin-import-stat-duplicate" style="font-size:18px; font-weight:800; color:#D97706;">0</div>
+              </div>
+              <div style="padding:10px 12px; background:#FFF1F2; border:1px solid #FECDD3; border-radius:12px; text-align:center;">
+                <div style="font-size:11px; color:#9F1239;">🔴 ไม่พบในระบบ</div>
+                <div id="checkin-import-stat-notfound" style="font-size:18px; font-weight:800; color:#E11D48;">0</div>
+              </div>
+            </div>
+
+            <div style="font-size:12px; font-weight:700; color:#475569; margin-bottom:6px; display:flex; justify-content:space-between;">
+              <span>ตารางตรวจสอบรายชื่อนิสิตจากไฟล์ (<span id="checkin-import-preview-count">0</span> รายการ):</span>
+              <span style="color:#64748B; font-weight:400;">* ระบบจะบันทึกเฉพาะสถานะ "พร้อมบันทึก" เท่านั้น</span>
+            </div>
+
+            <div style="max-height:240px; overflow-y:auto; border:1px solid #E2E8F0; border-radius:12px;">
+              <table style="width:100%; border-collapse:collapse; font-size:12px;">
+                <thead style="background:#F1F5F9; position:sticky; top:0;">
+                  <tr>
+                    <th style="padding:8px 10px; text-align:left; color:#475569;">รหัสนิสิต</th>
+                    <th style="padding:8px 10px; text-align:left; color:#475569;">ชื่อ - นามสกุล</th>
+                    <th style="padding:8px 10px; text-align:left; color:#475569;">สาขาวิชา</th>
+                    <th style="padding:8px 10px; text-align:center; color:#475569;">ชั้นปี</th>
+                    <th style="padding:8px 10px; text-align:left; color:#475569;">สถานะการตรวจสอบ</th>
+                  </tr>
+                </thead>
+                <tbody id="checkin-import-preview-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div id="checkin-import-loading" style="display:none; text-align:center; padding:24px;">
+            <span class="inline-block animate-spin rounded-full h-6 w-6 border-2 border-emerald-600 border-t-transparent"></span>
+            <p style="font-size:13px; color:#475569; margin-top:8px;">กำลังสแกนรหัสนิสิตและตรวจสอบข้อมูลกับระบบ...</p>
+          </div>
+        </div>
+
+        <div style="padding:14px 24px; background:#F8FAFC; border-top:1px solid #E2E8F0; display:flex; justify-content:flex-end; gap:8px;">
+          <button class="btn btn-outline btn-sm" onclick="closeCheckInImportModal()" style="border-radius:10px;">ยกเลิก</button>
+          <button id="btn-confirm-checkin-import" class="btn btn-sm" onclick="confirmCheckInImport()" style="display:none; background:#10B981; color:white; border:none; border-radius:10px; align-items:center; gap:6px; padding:8px 18px; font-weight:600; cursor:pointer;">
+            <span class="material-icons" style="font-size:16px;">check_circle</span>
+            <span id="btn-confirm-checkin-import-text">ยืนยันบันทึก Check-in</span>
           </button>
         </div>
       </div>

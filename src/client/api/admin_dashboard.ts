@@ -3238,6 +3238,261 @@ window.submitEventCheckIn = async function() {
   }
 };
 
+// =========================================================================
+// [SCRUM-63] นำเข้ารายชื่อนิสิตเข้าร่วมกิจกรรมอบรมจากไฟล์ Excel / CSV (Preview & Confirm)
+// =========================================================================
+let currentCheckInImportReadyCodes: string[] = [];
+let currentCheckInImportEventId = '';
+let currentCheckInImportSessionId = 'ALL';
+
+window.openCheckInImportModal = function() {
+  const selectEl = document.getElementById('checkin-event-select') as HTMLSelectElement | null;
+  const sessionSelectEl = document.getElementById('checkin-session-select') as HTMLSelectElement | null;
+  const eventId = selectEl?.value;
+  if (!eventId) {
+    alert('กรุณาเลือกกิจกรรมอบรมที่ต้องการนำเข้ารายชื่อก่อน');
+    return;
+  }
+
+  const events = superAdminState?.trainingEvents || [];
+  const event = events.find((e: any) => e.id === eventId);
+  if (!event) {
+    alert('ไม่พบข้อมูลกิจกรรมอบรมที่เลือก');
+    return;
+  }
+
+  currentCheckInImportEventId = eventId;
+  currentCheckInImportSessionId = sessionSelectEl?.value || 'ALL';
+
+  const eventTitleEl = document.getElementById('checkin-import-event-title');
+  const sessionTitleEl = document.getElementById('checkin-import-session-title');
+  if (eventTitleEl) {
+    eventTitleEl.textContent = `[${event.skillType} Skill] ${event.title}`;
+  }
+  if (sessionTitleEl) {
+    const selectedSessionText =
+      sessionSelectEl?.options[sessionSelectEl.selectedIndex]?.text ||
+      `ทั้งกิจกรรม (+${event.creditedHours} ชม.)`;
+    sessionTitleEl.textContent = selectedSessionText;
+  }
+
+  const modal = document.getElementById('checkin-import-modal');
+  if (modal) {
+    modal.style.display = 'flex';
+    window.resetCheckInImportFile();
+  }
+};
+
+window.closeCheckInImportModal = function() {
+  const modal = document.getElementById('checkin-import-modal');
+  if (modal) modal.style.display = 'none';
+  window.resetCheckInImportFile();
+};
+
+window.resetCheckInImportFile = function() {
+  currentCheckInImportReadyCodes = [];
+  const fileInput = document.getElementById('checkin-import-file-input') as HTMLInputElement | null;
+  if (fileInput) fileInput.value = '';
+
+  const uploadZone = document.getElementById('checkin-import-upload-zone');
+  const fileWrap = document.getElementById('checkin-import-selected-file-wrap');
+  const previewWrap = document.getElementById('checkin-import-preview-wrap');
+  const loading = document.getElementById('checkin-import-loading');
+  const btnConfirm = document.getElementById('btn-confirm-checkin-import');
+
+  if (uploadZone) uploadZone.style.display = 'block';
+  if (fileWrap) fileWrap.style.display = 'none';
+  if (previewWrap) previewWrap.style.display = 'none';
+  if (loading) loading.style.display = 'none';
+  if (btnConfirm) btnConfirm.style.display = 'none';
+};
+
+window.handleCheckInImportDrop = function(e: DragEvent) {
+  e.preventDefault();
+  const uploadZone = document.getElementById('checkin-import-upload-zone');
+  if (uploadZone) {
+    uploadZone.style.borderColor = '#CBD5E1';
+    uploadZone.style.background = '#F8FAFC';
+  }
+  if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+    processCheckInImportFile(e.dataTransfer.files[0]);
+  }
+};
+
+window.handleCheckInImportFileSelect = function(e: any) {
+  if (e.target.files && e.target.files.length > 0) {
+    processCheckInImportFile(e.target.files[0]);
+  }
+};
+
+async function processCheckInImportFile(file: File) {
+  if (!file) return;
+
+  const validExts = ['.xlsx', '.xls', '.csv'];
+  const ext = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
+  if (!validExts.includes(ext)) {
+    alert('กรุณาเลือกไฟล์ Excel (.xlsx, .xls) หรือ .csv เท่านั้น');
+    return;
+  }
+
+  const uploadZone = document.getElementById('checkin-import-upload-zone');
+  const fileWrap = document.getElementById('checkin-import-selected-file-wrap');
+  const fileNameEl = document.getElementById('checkin-import-selected-file-name');
+  const loading = document.getElementById('checkin-import-loading');
+  const previewWrap = document.getElementById('checkin-import-preview-wrap');
+  const btnConfirm = document.getElementById('btn-confirm-checkin-import');
+
+  if (uploadZone) uploadZone.style.display = 'none';
+  if (fileWrap) fileWrap.style.display = 'flex';
+  if (fileNameEl) fileNameEl.textContent = `${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
+  if (loading) loading.style.display = 'block';
+  if (previewWrap) previewWrap.style.display = 'none';
+  if (btnConfirm) btnConfirm.style.display = 'none';
+
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('sessionId', currentCheckInImportSessionId);
+
+  try {
+    const res = await fetch(
+      `/api/admin/super-admin/events/${encodeURIComponent(currentCheckInImportEventId)}/checkin-import-preview`,
+      {
+        method: 'POST',
+        body: formData,
+      }
+    );
+    const data = await res.json();
+    if (loading) loading.style.display = 'none';
+
+    if (!data.success) {
+      alert(data.message || 'ไม่สามารถอ่านไฟล์ได้');
+      window.resetCheckInImportFile();
+      return;
+    }
+
+    currentCheckInImportReadyCodes = data.readyCodes || [];
+    const items = data.items || [];
+    const summary = data.summary || {};
+    const creditedHours = data.eventInfo?.creditedHours ?? 0;
+
+    const totalEl = document.getElementById('checkin-import-stat-total');
+    const readyEl = document.getElementById('checkin-import-stat-ready');
+    const dupEl = document.getElementById('checkin-import-stat-duplicate');
+    const notFoundEl = document.getElementById('checkin-import-stat-notfound');
+    const previewCountEl = document.getElementById('checkin-import-preview-count');
+    const tbody = document.getElementById('checkin-import-preview-tbody');
+
+    if (totalEl) totalEl.textContent = String(summary.totalCount ?? items.length);
+    if (readyEl) readyEl.textContent = String(summary.readyCount ?? 0);
+    if (dupEl) dupEl.textContent = String(summary.duplicateCount ?? 0);
+    if (notFoundEl) notFoundEl.textContent = String(summary.notFoundCount ?? 0);
+    if (previewCountEl) previewCountEl.textContent = String(items.length);
+
+    if (tbody) {
+      if (items.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" style="padding:20px; text-align:center; color:#E11D48;">ไม่พบรหัสนิสิตในไฟล์นี้</td></tr>`;
+      } else {
+        tbody.innerHTML = items
+          .map((item: any) => {
+            let statusHtml = '';
+            let rowBg = '';
+            if (item.status === 'READY') {
+              statusHtml = `<span style="color:#059669; font-weight:700;">✅ พร้อมบันทึก (+${creditedHours} ชม.)</span>`;
+            } else if (item.status === 'DUPLICATE') {
+              statusHtml = `<span style="color:#D97706; font-weight:600;">🔄 เช็คอินในรอบนี้แล้ว</span>`;
+              rowBg = 'background:#FFFBEB;';
+            } else {
+              statusHtml = `<span style="color:#E11D48; font-weight:600;">⚠️ ไม่พบรหัสนิสิตในระบบ</span>`;
+              rowBg = 'background:#FFF1F2;';
+            }
+            const yearBadge = item.year
+              ? `<span style="background:#E0E7FF; color:#3730A3; padding:2px 8px; border-radius:9999px; font-size:11px; font-weight:600;">ปี ${item.year}</span>`
+              : '-';
+
+            return `
+              <tr style="border-bottom:1px solid #F1F5F9; ${rowBg}">
+                <td style="padding:7px 10px; font-weight:700; font-family:monospace; color:#1E293B;">${escapeHtml(item.studentCode)}</td>
+                <td style="padding:7px 10px; color:#334155;">${escapeHtml(item.nameTh || '-')}</td>
+                <td style="padding:7px 10px; color:#4338CA; font-weight:600;">${escapeHtml(item.major || '-')}</td>
+                <td style="padding:7px 10px; text-align:center;">${yearBadge}</td>
+                <td style="padding:7px 10px;">${statusHtml}</td>
+              </tr>
+            `;
+          })
+          .join('');
+      }
+    }
+
+    if (previewWrap) previewWrap.style.display = 'block';
+
+    if (currentCheckInImportReadyCodes.length > 0 && btnConfirm) {
+      const btnText = document.getElementById('btn-confirm-checkin-import-text');
+      if (btnText) {
+        btnText.textContent = `ยืนยันบันทึก Check-in (${currentCheckInImportReadyCodes.length} คน)`;
+      }
+      btnConfirm.style.display = 'inline-flex';
+    }
+  } catch (err) {
+    console.error('Check-in import preview error:', err);
+    if (loading) loading.style.display = 'none';
+    alert('เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์');
+    window.resetCheckInImportFile();
+  }
+}
+
+window.confirmCheckInImport = async function() {
+  if (!currentCheckInImportEventId || currentCheckInImportReadyCodes.length === 0) return;
+
+  const btnConfirm = document.getElementById('btn-confirm-checkin-import') as HTMLButtonElement | null;
+  const btnText = document.getElementById('btn-confirm-checkin-import-text');
+  const origText = btnText ? btnText.textContent : 'ยืนยันบันทึก Check-in';
+
+  if (btnConfirm) btnConfirm.disabled = true;
+  if (btnText) btnText.textContent = 'กำลังบันทึกชั่วโมง...';
+
+  try {
+    const res = await fetch(
+      `/api/admin/super-admin/events/${encodeURIComponent(currentCheckInImportEventId)}/checkin`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          studentCodesInput: currentCheckInImportReadyCodes,
+          sessionId: currentCheckInImportSessionId,
+        }),
+      }
+    );
+    const data = await res.json();
+    if (data.success) {
+      const selectEl = document.getElementById('checkin-event-select') as HTMLSelectElement | null;
+      const bannerEl = document.getElementById('checkin-result-banner');
+      if (bannerEl) {
+        bannerEl.style.display = 'block';
+        bannerEl.style.background = '#DCFCE7';
+        bannerEl.style.border = '1px solid #86EFAC';
+        bannerEl.style.color = '#166534';
+        bannerEl.textContent = `✅ นำเข้าจากไฟล์สำเร็จ: ${data.message}`;
+      }
+      window.closeCheckInImportModal();
+      await window.loadSuperAdminOverview();
+      await loadDashboardSummary();
+      await loadStudents();
+      if (selectEl) {
+        selectEl.value = currentCheckInImportEventId;
+        window.renderSelectedEventCheckins();
+      }
+    } else {
+      alert('เกิดข้อผิดพลาด: ' + (data.message || 'บันทึก Check-in ไม่สำเร็จ'));
+    }
+  } catch (err) {
+    console.error('Confirm check-in import error:', err);
+    alert('เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์');
+  } finally {
+    if (btnConfirm) btnConfirm.disabled = false;
+    if (btnText && origText) btnText.textContent = origText;
+  }
+};
+
 window.deleteEventCheckIn = async function(eventId, studentCode, nameTh, trainingRecordId, sessionId) {
   const confirmMsg = `ยืนยันการยกเลิก Check-in ของ "${nameTh}" (${studentCode}) หรือไม่?\n\n* ระบบจะลบรายการนี้ออกจากกิจกรรม และหักชั่วโมงอบรมออกจากนิสิตทันที`;
   if (!confirm(confirmMsg)) return;

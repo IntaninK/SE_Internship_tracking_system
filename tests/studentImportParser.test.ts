@@ -1,8 +1,10 @@
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
+import * as xlsx from "xlsx";
 import {
   calculateCurrentAcademicYear,
   calculateStudentYear,
+  parseCheckInSpreadsheet,
 } from "../src/utils/studentImportParser";
 
 describe("calculateCurrentAcademicYear", () => {
@@ -32,6 +34,43 @@ describe("calculateStudentYear", () => {
   test("defaults to year 1 when no admission data can be determined", () => {
     const year = calculateStudentYear(null, "", 2568);
     assert.equal(year, 1);
+  });
+});
+
+describe("parseCheckInSpreadsheet", () => {
+  test("extracts student codes from Excel with headers and deduplicates", () => {
+    const rows = [
+      ["ลำดับ", "รหัสนิสิต", "ชื่อ - นามสกุล", "สาขาวิชา"],
+      [1, "66023110", "นายสมชาย ใจดี", "วิศวกรรมซอฟต์แวร์"],
+      [2, "66023111", "นางสาวสมหญิง รักเรียน", "วิทยาการคอมพิวเตอร์"],
+      [3, "66023110", "นายสมชาย ใจดี (ซ้ำ)", "วิศวกรรมซอฟต์แวร์"],
+    ];
+    const ws = xlsx.utils.aoa_to_sheet(rows);
+    const wb = xlsx.utils.book_new();
+    xlsx.utils.book_append_sheet(wb, ws, "CheckIn");
+    const buf = xlsx.write(wb, { type: "buffer", bookType: "xlsx" });
+
+    const extracted = parseCheckInSpreadsheet(buf);
+    assert.equal(extracted.length, 2);
+    assert.equal(extracted[0].studentCode, "66023110");
+    assert.equal(extracted[0].hintName, "นายสมชาย ใจดี");
+    assert.equal(extracted[1].studentCode, "66023111");
+  });
+
+  test("extracts student codes from headerless sheet and detects typo codes in student code column", () => {
+    const rows = [
+      ["67023101", "นาย ก ข"],
+      ["67023102", "นางสาว ค ง"],
+    ];
+    const ws = xlsx.utils.aoa_to_sheet(rows);
+    const wb = xlsx.utils.book_new();
+    xlsx.utils.book_append_sheet(wb, ws, "Sheet1");
+    const buf = xlsx.write(wb, { type: "buffer", bookType: "csv" });
+
+    const extracted = parseCheckInSpreadsheet(buf);
+    assert.equal(extracted.length, 2);
+    assert.equal(extracted[0].studentCode, "67023101");
+    assert.equal(extracted[1].studentCode, "67023102");
   });
 });
 

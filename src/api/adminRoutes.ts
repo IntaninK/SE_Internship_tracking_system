@@ -2,7 +2,7 @@ import express, { NextFunction, Request, Response } from "express";
 import multer from "multer";
 import prisma from "../db";
 import requireAdmin from "../auth/requireAdmin";
-import { parseStudentSpreadsheet } from "../utils/studentImportParser";
+import { parseStudentSpreadsheet, parseCheckInSpreadsheet } from "../utils/studentImportParser";
 import {
   loadSuperAdminState,
   saveSuperAdminState,
@@ -2501,6 +2501,146 @@ router.delete("/super-admin/events/:eventId", async (req: Request, res: Response
     res.status(500).json({ success: false, message: "ลบกิจกรรมไม่สำเร็จ" });
   }
 });
+
+// 9.45 พรีวิวการนำเข้าไฟล์ Excel / CSV สำหรับบันทึก Check-in กิจกรรมอบรม (SCRUM-63)
+router.post(
+  "/super-admin/events/:eventId/checkin-import-preview",
+  upload.single("file"),
+  async (req: Request, res: Response) => {
+    try {
+      if (!req.file || !req.file.buffer) {
+        return res.status(400).json({
+          success: false,
+          message: "กรุณาเลือกไฟล์ Excel (.xlsx, .xls) หรือ .csv",
+        });
+      }
+
+      const state = loadSuperAdminState();
+      const { eventId } = req.params;
+      const sessionId = req.body.sessionId || "ALL";
+
+      const event = state.trainingEvents.find((e) => e.id === eventId);
+      if (!event) {
+        return res.status(404).json({ success: false, message: "ไม่พบกิจกรรมอบรมนี้" });
+      }
+
+      if (!event.sessions || event.sessions.length === 0) {
+        event.sessions = [
+          {
+            id: "SES-1",
+            title: "ทั้งกิจกรรม",
+            date: event.eventDate,
+            startTime: event.startTime,
+            endTime: event.endTime,
+            hours: event.creditedHours,
+          },
+        ];
+      }
+
+      const targetSessionId =
+        sessionId || (event.sessions.length === 1 ? event.sessions[0].id : "ALL");
+      const targetSession = event.sessions.find((s) => s.id === targetSessionId);
+      let creditedHoursForCheckIn = event.creditedHours;
+      let sessionTitleForCheckIn = "ทั้งกิจกรรม";
+
+      if (targetSessionId !== "ALL" && targetSession) {
+        creditedHoursForCheckIn = targetSession.hours;
+        sessionTitleForCheckIn = `${targetSession.title} (${targetSession.date})`;
+      }
+
+      const extractedRows = parseCheckInSpreadsheet(req.file.buffer);
+      if (extractedRows.length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: "ไม่พบรหัสนิสิตในไฟล์ที่อัปโหลด กรุณาตรวจสอบว่าในไฟล์มีคอลัมน์รหัสนิสิต (ตัวเลข 8 หลัก)",
+        });
+      }
+
+      const codes = extractedRows.map((r) => r.studentCode);
+      const matchedStudents = await prisma.student.findMany({
+        where: { studentCode: { in: codes } },
+      });
+      const studentMap = new Map(matchedStudents.map((s) => [s.studentCode, s]));
+
+      let readyCount = 0;
+      let duplicateCount = 0;
+      let notFoundCount = 0;
+      const readyCodes: string[] = [];
+
+      const items = extractedRows.map((row) => {
+        const code = row.studentCode;
+        const dbStudent = studentMap.get(code);
+
+        const alreadyCheckedIn = (event.checkIns || []).some((c) => {
+          if (c.studentCode !== code) return false;
+          if (targetSessionId === "ALL") return true;
+          return c.sessionId === targetSessionId || c.sessionId === "ALL";
+        });
+
+        if (alreadyCheckedIn) {
+          duplicateCount++;
+          return {
+            studentCode: code,
+            nameTh: dbStudent?.nameTh || row.hintName || "-",
+            major: dbStudent?.major || row.hintMajor || "-",
+            year: dbStudent?.year || null,
+            status: "DUPLICATE" as const,
+            rowNumber: row.rowNumber,
+          };
+        }
+
+        if (!dbStudent) {
+          notFoundCount++;
+          return {
+            studentCode: code,
+            nameTh: row.hintName ? `(จากไฟล์: ${row.hintName})` : "(ไม่พบชื่อในระบบ)",
+            major: row.hintMajor || "-",
+            year: null,
+            status: "NOT_FOUND" as const,
+            rowNumber: row.rowNumber,
+          };
+        }
+
+        readyCount++;
+        readyCodes.push(code);
+        return {
+          studentCode: code,
+          nameTh: dbStudent.nameTh || row.hintName || "-",
+          major: dbStudent.major || "วิศวกรรมซอฟต์แวร์",
+          year: dbStudent.year || null,
+          status: "READY" as const,
+          rowNumber: row.rowNumber,
+        };
+      });
+
+      res.json({
+        success: true,
+        eventInfo: {
+          id: event.id,
+          title: event.title,
+          skillType: event.skillType,
+          sessionId: targetSessionId,
+          sessionTitle: sessionTitleForCheckIn,
+          creditedHours: creditedHoursForCheckIn,
+        },
+        summary: {
+          totalCount: items.length,
+          readyCount,
+          duplicateCount,
+          notFoundCount,
+        },
+        items,
+        readyCodes,
+      });
+    } catch (err: any) {
+      console.error("POST /api/admin/super-admin/events/:eventId/checkin-import-preview error:", err);
+      res.status(400).json({
+        success: false,
+        message: err.message || "เกิดข้อผิดพลาดในการอ่านไฟล์",
+      });
+    }
+  }
+);
 
 // 9.5 บันทึก Check-in นิสิตเข้ากิจกรรมด้วยรหัสนิสิต (รองรับการเลือกช่วงเวลา/วันที่ หรือทั้งกิจกรรม ตามแบบที่ 1)
 router.post("/super-admin/events/:eventId/checkin", async (req: Request, res: Response) => {

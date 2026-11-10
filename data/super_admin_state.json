@@ -1,0 +1,301 @@
+{
+  "academicConfig": {
+    "currentAcademicYear": "2568",
+    "currentSemester": "2",
+    "defaultDocPrefix": "อว 7316/",
+    "deanSignatory": "ผู้ช่วยศาสตราจารย์ ดร.พรเทพ โรจนวสุ",
+    "deanPosition": "คณบดีคณะเทคโนโลยีสารสนเทศและการสื่อสาร",
+    "signatureDataUrl": "",
+    "updatedAt": "2026-11-10T03:08:55.071Z"
+  },
+  "majorUnlockRules": [
+    {
+      "code": "SE",
+      "majorName": "วิศวกรรมซอฟต์แวร์",
+      "prepSchedule": "ปี 3 เทอม 1",
+      "internSchedule": "ปี 3 เทอม 2 (ออกฝึกงานเทอมถัดไปทันที)",
+      "targetTerm": "2/2568",
+      "isUnlocked": true,
+      "openDate": "2026-01-01",
+      "closeDate": "2026-04-30",
+      "note": "เรียนเตรียมความพร้อมเทอมนี้ และออกฝึกงานในเทอมถัดไปทันที",
+      "updatedAt": "2026-11-10T03:08:55.071Z"
+    },
+    {
+      "code": "CS",
+      "majorName": "วิทยาการคอมพิวเตอร์",
+      "prepSchedule": "ปี 3 เทอม 1-2",
+      "internSchedule": "ปี 4 เทอม 1 หรือ เทอม 2 (เว้นช่วง 1 ปี)",
+      "targetTerm": "1/2569",
+      "isUnlocked": false,
+      "openDate": "2026-06-01",
+      "closeDate": "2026-08-31",
+      "note": "เรียนเตรียมความพร้อมตอนปี 3 รอปลดล็อกยื่นขอฝึกงานตอนขึ้นปี 4",
+      "updatedAt": "2026-11-10T03:08:55.071Z"
+    },
+    {
+      "code": "CPE",
+      "majorName": "วิศวกรรมคอมพิวเตอร์",
+      "prepSchedule": "ปี 3 เทอม 1-2",
+      "internSchedule": "ปี 4 เทอม 1 หรือ เทอม 2 (เว้นช่วง 1 ปี)",
+      "targetTerm": "1/2569",
+      "isUnlocked": false,
+      "openDate": "2026-06-01",
+      "closeDate": "2026-08-31",
+      "note": "เรียนเตรียมความพร้อมตอนปี 3 รอปลดล็อกยื่นขอฝึกงานตอนขึ้นปี 4",
+      "updatedAt": "2026-11-10T03:08:55.071Z"
+    },
+    {
+      "code": "IT",
+      "majorName": "เทคโนโลยีสารสนเทศ",
+      "prepSchedule": "ปี 3 เทอม 2",
+      "internSchedule": "ปี 4 เทอม 1",
+      "targetTerm": "1/2569",
+      "isUnlocked": true,
+      "openDate": "2026-01-15",
+      "closeDate": "2026-05-15",
+      "note": "เปิดให้ยื่น Checklist และขอหนังสือขอความอนุเคราะห์รอบ 1/2569",
+      "updatedAt": "2026-11-10T03:08:55.071Z"
+    },
+    {
+      "code": "DB",
+      "majorName": "ธุรกิจดิจิทัล",
+      "prepSchedule": "ปี 3 เทอม 2",
+      "internSchedule": "ปี 4 เทอม 1",
+      "targetTerm": "1/2569",
+      "isUnlocked": true,
+      "openDate": "2026-01-15",
+      "closeDate": "2026-05-15",
+      "note": "เปิดให้ยื่น Checklist และขอหนังสือขอความอนุเคราะห์รอบ 1/2569",
+      "updatedAt": "2026-11-10T03:08:55.071Z"
+    },
+    {
+      "code": "CGM",
+      "majorName": "คอมพิวเตอร์กราฟิกและมัลติมีเดีย",
+      "prepSchedule": "ปี 3 เทอม 2",
+      "internSchedule": "ปี 4 เทอม 1",
+      "targetTerm": "1/2569",
+      "isUnlocked": false,
+      "openDate": "2026-06-01",
+      "closeDate": "2026-08-31",
+      "note": "อยู่ระหว่างสะสมชั่วโมงเตรียมความพร้อม รอปลดล็อกระบบยื่นบริษัท",
+      "updatedAt": "2026-11-10T03:08:55.071Z"
+    },
+    {
+      "code": "GIS",
+      "majorName": "ภูมิสารสนเทศศาสตร์",
+      "prepSchedule": "ปี 3 เทอม 2",
+      "internSchedule": "ปี 4 เทอม 1",
+      "targetTerm": "1/2569",
+      "isUnlocked": true,
+      "openDate": "2026-01-15",
+      "closeDate": "2026-05-15",
+      "note": "เปิดให้ยื่น Checklist สถานประกอบการตามกำหนดการหลักสูตร",
+      "updatedAt": "2026-11-10T03:08:55.071Z"
+    },
+    {
+      "code": "DSA",
+      "majorName": "วิทยาการข้อมูลและการประยุกต์",
+      "prepSchedule": "ปี 3 เทอม 1-2",
+      "internSchedule": "ปี 4 เทอม 1",
+      "targetTerm": "1/2569",
+      "isUnlocked": false,
+      "openDate": "2026-06-01",
+      "closeDate": "2026-08-31",
+      "note": "เรียนเตรียมความพร้อมปี 3 รอปลดล็อกยื่นสถานประกอบการตอนปี 4",
+      "updatedAt": "2026-11-10T03:08:55.071Z"
+    }
+  ],
+  "trainingEvents": [
+    {
+      "id": "EVT-2568-01",
+      "title": "อบรมเตรียมความพร้อมสหกิจศึกษา: เทคนิคการเขียน Resume และการสัมภาษณ์งาน",
+      "skillType": "SOFT",
+      "eventDate": "2026-01-18",
+      "startTime": "09:00",
+      "endTime": "16:00",
+      "rawHours": 7,
+      "creditedHours": 6,
+      "targetMajor": "ALL",
+      "location": "ห้องประชุม ICT อาคารคณะเทคโนโลยีสารสนเทศและการสื่อสาร",
+      "academicYear": "2568",
+      "createdBy": "พี่จอม (เจ้าหน้าที่คณะ / Super Admin)",
+      "createdAt": "2026-01-10T09:00:00.000Z",
+      "checkIns": []
+    },
+    {
+      "id": "EVT-2568-02",
+      "title": "ICT Project Day & Hackathon เตรียมความพร้อมสายพัฒนาซอฟต์แวร์",
+      "skillType": "HARD",
+      "eventDate": "2026-01-25",
+      "startTime": "08:30",
+      "endTime": "16:30",
+      "rawHours": 8,
+      "creditedHours": 6,
+      "targetMajor": "ALL",
+      "location": "ลานกิจกรรมชั้น 1 คณะ ICT มหาวิทยาลัยพะเยา",
+      "academicYear": "2568",
+      "createdBy": "พี่จอม (เจ้าหน้าที่คณะ / Super Admin)",
+      "createdAt": "2026-01-12T10:30:00.000Z",
+      "checkIns": []
+    }
+  ],
+  "companyMasterData": [
+    {
+      "id": "COMP-NEW-15",
+      "nameTh": "sdkfskdl",
+      "nameEn": "-",
+      "province": "นครนายก",
+      "address": "fefe",
+      "hrContactName": "fefesf",
+      "hrPhone": "098-xxx-xxxx",
+      "hrEmail": "...@gmail.com",
+      "recommendedPositions": "Software Developer",
+      "status": "PENDING_REVIEW",
+      "submittedByStudentCode": "67023110",
+      "submittedByStudentName": "เอกัทร อินทร์สวัสดิ์",
+      "createdAt": "2026-11-09T08:37:38.673Z"
+    },
+    {
+      "id": "COMP-NEW-10",
+      "nameTh": "tesla",
+      "nameEn": "-",
+      "province": "ฉะเชิงเทรา",
+      "address": "13111/1",
+      "hrContactName": "HR",
+      "hrPhone": "098-999-9999",
+      "hrEmail": "sawat@pt.pypt",
+      "recommendedPositions": "Software Developer",
+      "status": "PENDING_REVIEW",
+      "submittedByStudentCode": "67012345",
+      "submittedByStudentName": "เอกภัทร",
+      "createdAt": "2026-09-27T15:48:16.340Z"
+    },
+    {
+      "id": "COMP-M01",
+      "nameTh": "บริษัท เมกัส ซอฟต์แวร์ จำกัด",
+      "nameEn": "Magus Software Co., Ltd.",
+      "province": "เชียงใหม่",
+      "address": "199/8 ถนนห้วยแก้ว ต.สุเทพ อ.เมือง จ.เชียงใหม่ 50200",
+      "hrContactName": "คุณสิริพร ฝ่ายทรัพยากรบุคคล",
+      "hrPhone": "053-218-555",
+      "hrEmail": "hr@magussoftware.com",
+      "recommendedPositions": "Full-stack Developer, Frontend Developer, QA Tester",
+      "status": "PARTNER",
+      "createdAt": "2025-11-01T08:00:00.000Z",
+      "verifiedAt": "2025-11-01T08:00:00.000Z"
+    },
+    {
+      "id": "COMP-M02",
+      "nameTh": "บริษัท บานาน่า โค้ดดิ้ง จำกัด",
+      "nameEn": "Banana Coding Co., Ltd.",
+      "province": "เชียงใหม่",
+      "address": "34/5 ถ.นิมมานเหมินท์ ต.สุเทพ อ.เมือง จ.เชียงใหม่ 50200",
+      "hrContactName": "คุณณัฐพล ฝ่ายบุคคล (HR)",
+      "hrPhone": "053-221-988",
+      "hrEmail": "career@bananacoding.com",
+      "recommendedPositions": "Software Engineer, Ruby on Rails / React Developer, Mobile Dev",
+      "status": "PARTNER",
+      "createdAt": "2025-11-05T08:00:00.000Z",
+      "verifiedAt": "2025-11-05T08:00:00.000Z"
+    },
+    {
+      "id": "COMP-M03",
+      "nameTh": "บริษัท กสิกร บิซิเนส-เทคโนโลยี กรุ๊ป (KBTG)",
+      "nameEn": "KASIKORN Business-Technology Group",
+      "province": "นนทบุรี",
+      "address": "อาคาร KBTG เมืองทองธานี อ.ปากเกร็ด จ.นนทบุรี 11120",
+      "hrContactName": "ทีม People & Internship Recruitment",
+      "hrPhone": "02-008-8888",
+      "hrEmail": "recruitment@kbtg.tech",
+      "recommendedPositions": "Software Engineer, Data Scientist, Cybersecurity, UX/UI",
+      "status": "PARTNER",
+      "createdAt": "2025-11-10T08:00:00.000Z",
+      "verifiedAt": "2025-11-10T08:00:00.000Z"
+    },
+    {
+      "id": "COMP-M04",
+      "nameTh": "บริษัท อาร์ตติซาน ดิจิทัล เอเชีย จำกัด",
+      "nameEn": "Artisan Digital Asia Co., Ltd.",
+      "province": "เชียงใหม่",
+      "address": "ต.ช้างเผือก อ.เมืองเชียงใหม่ จ.เชียงใหม่ 50300",
+      "hrContactName": "ฝ่ายทรัพยากรบุคคล (HR Department)",
+      "hrPhone": "052-001-234",
+      "hrEmail": "people@artisandigital.xyz",
+      "recommendedPositions": "Frontend / Backend Developer, Business Analyst, Digital Marketing",
+      "status": "VERIFIED",
+      "createdAt": "2025-11-15T08:00:00.000Z",
+      "verifiedAt": "2025-11-15T08:00:00.000Z"
+    },
+    {
+      "id": "COMP-M05",
+      "nameTh": "สำนักงานพัฒนาเทคโนโลยีอวกาศและภูมิสารสนเทศ (GISTDA)",
+      "nameEn": "Geo-Informatics and Space Technology Development Agency",
+      "province": "กรุงเทพมหานคร",
+      "address": "120 อาคารรวมหน่วยราชการ ศูนย์ราชการเฉลิมพระเกียรติฯ ถ.แจ้งวัฒนะ กรุงเทพฯ 10210",
+      "hrContactName": "ฝ่ายบริหารทรัพยากรบุคคลและฝึกงาน",
+      "hrPhone": "02-141-4444",
+      "hrEmail": "hr@gistda.or.th",
+      "recommendedPositions": "GIS Analyst, Remote Sensing, Spatial Data Engineer",
+      "status": "PARTNER",
+      "createdAt": "2025-11-18T08:00:00.000Z",
+      "verifiedAt": "2025-11-18T08:00:00.000Z"
+    }
+  ],
+  "docWorkflowMap": {
+    "1": {
+      "studentId": 1,
+      "studentCode": "67024964",
+      "companyName": "บริษัท กสิกร บิซิเนส-เทคโนโลยี กรุ๊ป (KBTG)",
+      "interviewDate": "2026-02-15",
+      "requestLetterIssued": true,
+      "requestLetterDocNo": "อว 7316/ว 857",
+      "requestLetterDate": "2026-11-10",
+      "requestLetterBatchId": "REQ-BATCH-559332",
+      "requestLetterSignatureSnapshot": "",
+      "companyResponseStatus": "WAITING_RESPONSE",
+      "dispatchLetterIssued": false,
+      "dispatchLetterSignatureSnapshot": "",
+      "isLocked": true,
+      "companyResponseFileName": "แบบตอบรับนิสิตฝึกงานะtest_word.pdf",
+      "companyResponseFileUrl": "https://res.cloudinary.com/j5ccelrs/image/upload/v1794293226/se_internship/acceptance_forms/1794293226442-_____________________test_word.pdf",
+      "companyResponseUploadedAt": "2026-11-10T06:47:12.965Z",
+      "companyResponseSubmittedByStudent": true,
+      "companyResponseOcr": {
+        "status": "DONE",
+        "result": "ACCEPTED",
+        "confidence": 0.78,
+        "reasons": [
+          "ไม่พบการติ๊กช่อง ☐ แต่พบรอยเขียนรายละเอียดหลังช่องตอบรับ (จำนวนคน / วันที่ฝึกงาน / ที่พักอาศัย / รายชื่อนิสิต)"
+        ],
+        "warnings": [],
+        "signals": {
+          "acceptCheckboxInk": 0,
+          "rejectCheckboxInk": 0,
+          "acceptZoneInk": 0.1416,
+          "rejectZoneInk": 0.0108,
+          "acceptChecked": false,
+          "rejectChecked": false,
+          "acceptDetailsWritten": true,
+          "rejectDetailsWritten": false
+        },
+        "engine": "builtin-template-analyzer",
+        "analyzedAt": "2026-11-10T06:47:11.326Z"
+      }
+    }
+  },
+  "archivedApplications": [
+    {
+      "id": "ARCH-001",
+      "studentId": 0,
+      "studentCode": "67023115",
+      "studentName": "นายธีรภัทร วงศ์สวัสดิ์",
+      "major": "วิศวกรรมซอฟต์แวร์",
+      "companyName": "บริษัท เทคสตาร์ทอัพ ทดลอง จำกัด",
+      "position": "Web Developer Intern",
+      "reason": "COMPANY_REJECTED",
+      "note": "สถานประกอบการแจ้งเต็มอัตราในรอบเทอมนี้ (ปลดล็อกให้ยื่นบริษัทใหม่แล้ว)",
+      "archivedAt": "2026-01-08T14:20:00.000Z"
+    }
+  ]
+}
