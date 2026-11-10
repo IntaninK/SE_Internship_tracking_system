@@ -14,7 +14,7 @@ const PAGE_BODY_HTML = `
   <div id="header-placeholder"></div>
 
   <!-- Main Content -->
-  <main class="main-content">
+  <main class="main-content dashboard-content">
 
     <!-- [REQ-10 & REQ-06] Top Role Header + Notification Alert Banner -->
     <section class="card" style="margin-bottom: 20px;">
