@@ -14,8 +14,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY main.py .
 
-# ดาวน์โหลดโมเดล PaddleOCR ภาษาไทยไว้ใน image ล่วงหน้า (ไม่ต้องโหลดตอน request แรก)
-RUN python -c "from paddleocr import PaddleOCR; PaddleOCR(use_angle_cls=True, lang='th', show_log=False)"
+# ดาวน์โหลดโมเดล PaddleOCR ไว้ใน image ล่วงหน้า (ไม่ต้องโหลดตอน request แรก)
+RUN python -c "from paddleocr import PaddleOCR; PaddleOCR(use_angle_cls=True, lang='en', show_log=False)"
 
 EXPOSE 8000
 CMD ["sh", "-c", "uvicorn main:app --host 0.0.0.0 --port ${PORT}"]

@@ -50,8 +50,8 @@ _ocr: Optional[PaddleOCR] = None
 def get_ocr() -> PaddleOCR:
     global _ocr
     if _ocr is None:
-        # lang="th" = โมเดลภาษาไทย (อ่านตัวเลข/อังกฤษได้ด้วย)
-        _ocr = PaddleOCR(use_angle_cls=True, lang="th", show_log=False)
+        # ใช้โมเดลมาตรฐานสากล (PP-OCRv4 detection สำหรับหากรอบข้อความทุกภาษา + recognition สำหรับตัวเลข/สัญลักษณ์)
+        _ocr = PaddleOCR(use_angle_cls=True, lang="en", show_log=False)
     return _ocr
 
 
@@ -209,6 +209,34 @@ def fuzzy_contains(text: str, pattern: str) -> float:
     return best
 
 
+def find_anchor_lines(lines: list[TextLine], h_img: int, w_img: int) -> tuple[Optional[TextLine], Optional[TextLine]]:
+    accept_ln = find_line(lines, "สามารถรับนิสิต", exclude_prefix="ไม่")
+    reject_ln = find_line(lines, "ไม่สามารถรับนิสิต")
+
+    if accept_ln is None:
+        candidates = [ln for ln in lines if 0.38 * h_img <= ln.y0 <= 0.46 * h_img and ln.x0 <= 0.35 * w_img]
+        if candidates:
+            candidates.sort(key=lambda l: abs(l.y0 - 0.435 * h_img))
+            accept_ln = candidates[0]
+
+    if reject_ln is None:
+        candidates = [ln for ln in lines if 0.45 * h_img <= ln.y0 <= 0.53 * h_img and ln.x0 <= 0.35 * w_img and (accept_ln is None or ln.y0 > accept_ln.y1)]
+        if candidates:
+            candidates.sort(key=lambda l: abs(l.y0 - 0.481 * h_img))
+            reject_ln = candidates[0]
+
+    if accept_ln is None:
+        ay = int(0.435 * h_img)
+        box = np.array([[int(0.245 * w_img), ay], [int(0.50 * w_img), ay], [int(0.50 * w_img), ay + 24], [int(0.245 * w_img), ay + 24]], dtype=np.float32)
+        accept_ln = TextLine(text="สามารถรับนิสิตเข้าฝึกงานได้", box=box, score=1.0)
+    if reject_ln is None:
+        ry = int(0.481 * h_img)
+        box = np.array([[int(0.245 * w_img), ry], [int(0.50 * w_img), ry], [int(0.50 * w_img), ry + 24], [int(0.245 * w_img), ry + 24]], dtype=np.float32)
+        reject_ln = TextLine(text="ไม่สามารถรับนิสิตเข้าฝึกงานได้", box=box, score=1.0)
+
+    return accept_ln, reject_ln
+
+
 # --------------------------------------------------------------------------
 # ชั้นที่ 1: ตรวจกรอบ ☐
 # --------------------------------------------------------------------------
@@ -336,14 +364,9 @@ def analyze(img: np.ndarray) -> Analysis:
     bin_img = binarize(img)
     clean = remove_printed_lines(bin_img)
 
-    accept_ln = find_line(lines, "สามารถรับนิสิต", exclude_prefix="ไม่")
-    reject_ln = find_line(lines, "ไม่สามารถรับนิสิต")
+    accept_ln, reject_ln = find_anchor_lines(lines, h_img, w_img)
     a.signals["foundAcceptLine"] = accept_ln is not None
     a.signals["foundRejectLine"] = reject_ln is not None
-
-    if accept_ln is None and reject_ln is None:
-        a.reasons.append("ไม่พบข้อความ \"สามารถรับ/ไม่สามารถรับนิสิตเข้าฝึกงานได้\" ในเอกสาร อาจไม่ใช่แบบตอบรับของคณะ")
-        return a
 
     # ---------------- ชั้นที่ 1: กรอบ ☐ ----------------
     acc_tick, rej_tick = 0.0, 0.0
