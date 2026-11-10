@@ -295,6 +295,12 @@ body {
   padding: 0 20px !important;
 }
 
+.main-content.dashboard-content {
+  max-width: none !important;
+  margin-inline: 10vw !important;
+  padding-inline: 0 !important;
+}
+
 .card,
 .student-info-section,
 .company-card {
@@ -537,5 +543,11 @@ body {
     justify-content: flex-start;
     padding: 10px 14px !important;
     border-top: none !important;
+  }
+}
+
+@media (max-width: 700px) {
+  .main-content.dashboard-content {
+    margin-inline: 12px !important;
   }
 }
