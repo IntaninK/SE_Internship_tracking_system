@@ -1451,15 +1451,15 @@ const PAGE_BODY_HTML = `
       <!-- ส่วนที่ 1: ตารางฐานข้อมูลสถานประกอบการกลาง (Verified Master Data) -->
       <section class="card">
         <div class="card-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
-          <div style="display:flex; align-items:center; gap:10px;">
+          <div style="display:flex; align-items:center; gap:10px; min-width:0;">
             <span class="material-icons header-icon">domain_verification</span>
-            <div>
+            <div style="min-width:0;">
               <h2 class="card-title" style="margin:0;">ฐานข้อมูลสถานประกอบการกลาง (Company Master Data)</h2>
-              <p style="margin:2px 0 0 0; font-size:12px; color:#E0E7FF;">รายชื่อบริษัทในตารางนี้จะไปแสดงเป็น Auto-suggest / Dropdown ให้นิสิตเลือกอัตโนมัติตอนทำ Checklist</p>
+              <p style="margin:2px 0 0 0; font-size:12px; color:#E0E7FF;">รายชื่อสถานประกอบการมาตรฐานสำหรับให้นิสิตค้นหาและเลือกอัตโนมัติในขั้นตอนทำ Checklist</p>
             </div>
           </div>
-          <div style="display:flex; align-items:center; gap:8px; flex-shrink:0;">
-            <button type="button" onclick="openAddMasterCompanyModal()" style="background:#10B981; color:white; border:none; padding:8px 16px; border-radius:10px; font-size:12.5px; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:6px;">
+          <div style="display:flex; align-items:center; justify-content:flex-end; gap:8px; flex-shrink:0;">
+            <button type="button" onclick="openAddMasterCompanyModal()" style="background:#10B981; color:white; border:none; padding:8px 16px; border-radius:10px; font-size:12.5px; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:6px; white-space:nowrap;">
               <span class="material-icons" style="font-size:16px;">add_business</span> เพิ่มสถานประกอบการเข้า Master Data
             </button>
             <button type="button" id="master-companies-toggle"
@@ -1467,70 +1467,81 @@ const PAGE_BODY_HTML = `
               aria-expanded="true" aria-controls="master-companies-tbody"
               aria-label="ย่อรายการบริษัท"
               title="ย่อรายการบริษัท"
-              style="width:36px; height:36px; display:inline-flex; align-items:center; justify-content:center; border:1px solid rgba(255,255,255,.55); border-radius:8px; color:#1E3A8A; background:#FFFFFF; cursor:pointer; padding:0;">
+              style="width:36px; height:36px; display:inline-flex; align-items:center; justify-content:center; border:1px solid rgba(255,255,255,.55); border-radius:8px; color:#1E3A8A; background:#FFFFFF; cursor:pointer; padding:0; flex-shrink:0;">
               <span id="master-companies-toggle-icon" class="material-icons" style="transition:transform 180ms ease; transform:rotate(180deg);">expand_more</span>
             </button>
           </div>
         </div>
         <div class="card-body">
-          <div style="display:flex; gap:10px; margin-bottom:14px; flex-wrap:wrap;">
-            <input type="text" id="master-company-search" class="input-field" placeholder="ค้นหาชื่อบริษัท (ไทย/อังกฤษ), จังหวัด หรือตำแหน่งงาน..." oninput="window.searchMasterCompanies()" style="max-width:360px;" />
+          <div style="display:flex; justify-content:center; align-items:center; margin-bottom:14px;">
+            <div style="position:relative; width:min(800px, 65vw);">
+              <input type="search" id="master-company-search" class="input-field"
+                placeholder="ค้นหาชื่อบริษัท (ไทย/อังกฤษ), จังหวัด หรือตำแหน่งงาน..."
+                aria-label="ค้นหาสถานประกอบการใน Master Data"
+                oninput="window.searchMasterCompanies()"
+                style="width:100%; padding:8px 34px 8px 14px !important; color:#0F172A; background:#FFFFFF; border:1px solid #CBD5E1; border-radius:8px; font-size:13px; box-sizing:border-box;" />
+              <button type="button" id="master-company-search-clear"
+                onclick="window.clearMasterCompanySearch(event)"
+                aria-label="ล้างคำค้นหา"
+                style="display:none; position:absolute; right:6px; top:50%; transform:translateY(-50%); border:0; background:transparent; color:#64748B; font-size:18px; line-height:1; cursor:pointer; padding:4px;">×</button>
+            </div>
           </div>
           <table class="data-table">
             <thead>
               <tr>
-                <th style="width:26%;">ชื่อสถานประกอบการ (มาตรฐาน)</th>
-                <th style="width:14%;">จังหวัด</th>
-                <th style="width:24%;">ผู้ติดต่อ (HR) / เบอร์โทร</th>
-                <th style="width:22%;">ตำแหน่งงานที่เปิดรับ</th>
-                <th style="width:14%;" class="text-center">สถานะ</th>
+                <th style="width:24%;">ชื่อสถานประกอบการ (มาตรฐาน)</th>
+                <th style="width:11%;">จังหวัด</th>
+                <th style="width:22%;">ผู้ติดต่อ (HR) / เบอร์โทร</th>
+                <th style="width:19%;">ตำแหน่งงานที่เปิดรับ</th>
+                <th style="width:12%;" class="text-center">สถานะ</th>
+                <th style="width:12%;" class="text-center">จัดการ</th>
               </tr>
             </thead>
             <tbody id="master-companies-tbody">
-              <tr><td colspan="5" class="text-center py-6 text-gray-400">กำลังโหลดฐานข้อมูลบริษัท...</td></tr>
+              <tr><td colspan="6" class="text-center py-6 text-gray-400">กำลังโหลดฐานข้อมูลบริษัท...</td></tr>
             </tbody>
           </table>
           <div id="master-companies-pagination" style="display:flex; align-items:center; justify-content:flex-end; gap:12px; margin-top:12px; color:#475569; font-size:12px;"></div>
         </div>
       </section>
 
-      <!-- ส่วนที่ 2: แจ้งเตือนบริษัทใหม่ที่นิสิตกรอกเข้ามา (Pending Super Admin Confirm) -->
+      <!-- ส่วนที่ 2: รายการสถานประกอบการใหม่รออนุมัติ (Pending Master Data) -->
       <section class="card" id="pending-companies-section">
         <div class="card-header" style="background:linear-gradient(135deg, #92400E 0%, #D97706 100%); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
           <div style="display:flex; align-items:center; gap:10px; min-width:0; flex:1;">
             <span class="material-icons header-icon">notification_important</span>
-            <div>
-              <h2 class="card-title" style="margin:0;">แจ้งเตือน: รายชื่อบริษัทใหม่ที่นิสิตกรอกเพิ่มเข้ามา (รอพี่จอมตรวจสอบและกดยืนยันเข้า Master Data)</h2>
+            <div style="min-width:0;">
+              <h2 class="card-title" style="margin:0;">รายการสถานประกอบการใหม่รออนุมัติ (Pending Master Data)</h2>
               <p style="margin:2px 0 0 0; font-size:12px; color:#FEF3C7;">
-                ป้องกันปัญหาชื่อบริษัทซ้ำซ้อน พิมพ์ตัวเล็ก/ใหญ่ หรือชื่อไทย-อังกฤษไม่ตรงกัน สามารถแก้ชื่อให้เป็นมาตรฐานหรือกดยุบรวมกับบริษัทเดิมได้ทันที
+                ตรวจสอบข้อมูลที่นิสิตกรอกใหม่ ปรับชื่อให้เป็นมาตรฐาน หรือยุบรวมกับสถานประกอบการเดิมเพื่อลดข้อมูลซ้ำซ้อน
               </p>
             </div>
           </div>
           <div style="display:flex; align-items:center; gap:8px; flex-shrink:0;" onclick="event.stopPropagation()">
-            <div style="position:relative;">
-              <input type="search" id="pending-companies-search" class="input-field"
-                placeholder="ค้นหาชื่อบริษัท / รหัสอ้างอิง / นิสิต..."
-                aria-label="ค้นหาบริษัท"
-                oninput="window.setPendingCompanySearch(event)"
-                onclick="event.stopPropagation()"
-                onkeydown="event.stopPropagation()"
-                style="width:min(360px, 42vw); min-width:180px; padding:8px 34px 8px 12px !important; color:#0F172A; background:#FFFFFF; border:1px solid #CBD5E1; border-radius:8px; font-size:13px; box-sizing:border-box;" />
-              <button type="button" id="pending-companies-search-clear"
-                onclick="window.clearPendingCompanySearch(event)"
-                aria-label="ล้างคำค้นหา"
-                style="display:none; position:absolute; right:6px; top:50%; transform:translateY(-50%); border:0; background:transparent; color:#64748B; font-size:18px; line-height:1; cursor:pointer; padding:4px;">×</button>
-            </div>
             <button type="button" id="pending-companies-toggle"
               onclick="window.togglePendingCompanies(event)"
               aria-expanded="true" aria-controls="pending-companies-content"
               aria-label="ย่อหรือขยายรายการบริษัท"
-              style="width:36px; height:36px; display:inline-flex; align-items:center; justify-content:center; border:1px solid rgba(255,255,255,.55); border-radius:8px; color:#92400E; background:#FFFFFF; cursor:pointer; padding:0;">
+              style="width:36px; height:36px; display:inline-flex; align-items:center; justify-content:center; border:1px solid rgba(255,255,255,.55); border-radius:8px; color:#92400E; background:#FFFFFF; cursor:pointer; padding:0; flex-shrink:0;">
               <span id="pending-companies-toggle-icon" class="material-icons" style="transition:transform 180ms ease; transform:rotate(180deg);">expand_more</span>
             </button>
           </div>
         </div>
         <div id="pending-companies-content" style="overflow:hidden; opacity:1; max-height:5000px; transition:max-height 220ms ease, opacity 180ms ease;">
           <div class="card-body">
+            <div style="display:flex; justify-content:center; align-items:center; margin-bottom:14px;">
+              <div style="position:relative; width:min(800px, 65vw);">
+                <input type="search" id="pending-companies-search" class="input-field"
+                  placeholder="ค้นหาชื่อบริษัท / ที่อยู่ / รหัสอ้างอิง / นิสิต..."
+                  aria-label="ค้นหาบริษัท"
+                  oninput="window.setPendingCompanySearch(event)"
+                  style="width:100%; padding:8px 34px 8px 14px !important; color:#0F172A; background:#FFFFFF; border:1px solid #CBD5E1; border-radius:8px; font-size:13px; box-sizing:border-box;" />
+                <button type="button" id="pending-companies-search-clear"
+                  onclick="window.clearPendingCompanySearch(event)"
+                  aria-label="ล้างคำค้นหา"
+                  style="display:none; position:absolute; right:6px; top:50%; transform:translateY(-50%); border:0; background:transparent; color:#64748B; font-size:18px; line-height:1; cursor:pointer; padding:4px;">×</button>
+              </div>
+            </div>
             <div id="pending-companies-bulk-actions" style="display:none; align-items:center; gap:12px; flex-wrap:nowrap; margin-bottom:12px; padding:10px 12px; background:#EFF6FF; border:1px solid #BFDBFE; border-radius:8px;">
               <span id="pending-companies-selected-count" style="font-size:13px; font-weight:600; color:#1E40AF;"></span>
               <div style="display:flex; align-items:center; gap:12px;">
@@ -1556,11 +1567,12 @@ const PAGE_BODY_HTML = `
             <table class="data-table">
               <thead>
                 <tr>
-                  <th style="width:26%;">ชื่อบริษัทที่นิสิตกรอกเข้ามา</th>
-                  <th style="width:20%;">นิสิตที่ยื่นเพิ่ม</th>
-                  <th style="width:28%;">ปรับชื่อมาตรฐาน / ยุบรวมกับบริษัทเดิม</th>
-                  <th style="width:26%;" class="text-center">การอนุมัติเข้า Master Data</th>
-                  <th style="width:90px; min-width:90px;" class="text-center">
+                  <th style="width:20%;">ชื่อบริษัทที่นิสิตกรอกเข้ามา</th>
+                  <th style="width:20%;">ที่อยู่สถานประกอบการ / จังหวัด</th>
+                  <th style="width:14%;">นิสิตที่ยื่นเพิ่ม</th>
+                  <th style="width:22%;">ปรับชื่อมาตรฐาน / ยุบรวมกับบริษัทเดิม</th>
+                  <th style="width:18%;" class="text-center">การอนุมัติเข้า Master Data</th>
+                  <th style="width:85px; min-width:85px;" class="text-center">
                     <label style="display:inline-flex;align-items:center;gap:4px;cursor:pointer;white-space:nowrap;" title="เลือกบริษัททั้งหมดในหน้านี้">
                       <span style="font-size:12px;">เลือกทั้งหมด</span>
                       <input type="checkbox" id="select-all-pending-companies" aria-label="เลือกทั้งหมด" style="width:16px;height:16px;cursor:pointer;" />
@@ -1569,7 +1581,7 @@ const PAGE_BODY_HTML = `
                 </tr>
               </thead>
               <tbody id="pending-companies-tbody">
-                <tr><td colspan="5" class="text-center py-6 text-gray-400">ไม่มีรายการบริษัทใหม่รออนุมัติ</td></tr>
+                <tr><td colspan="6" class="text-center py-6 text-gray-400">ไม่มีรายการบริษัทใหม่รออนุมัติ</td></tr>
               </tbody>
             </table>
             <div id="pending-companies-pagination" style="display:flex; align-items:center; justify-content:flex-end; gap:12px; margin-top:12px; color:#475569; font-size:12px;"></div>
@@ -1695,16 +1707,13 @@ const PAGE_BODY_HTML = `
             <div>
               <h2 class="card-title" style="margin:0;">ส่งออกข้อมูลเชื่อมโยงระบบ Co-op ICT ของพี่แดง (ข้อมูลตั้งต้นแบบฟอร์ม Co-op 01)</h2>
               <p style="margin:2px 0 0 0; font-size:12px; color:#E0E7FF;">
-                Export ข้อมูลนิสิตและสถานประกอบการที่ได้รับการตอบรับออกเป็นไฟล์ CSV / Excel มาตรฐาน เพื่อนำไป Import เข้าสู่ระบบ Co-op ICT โดยที่นิสิตไม่ต้องกรอกข้อมูลซ้ำ
+                Export ข้อมูลนิสิตและสถานประกอบการที่ได้รับการตอบรับออกเป็นไฟล์ CSV มาตรฐาน เพื่อนำไป Import เข้าสู่ระบบ Co-op ICT โดยที่นิสิตไม่ต้องกรอกข้อมูลซ้ำ
               </p>
             </div>
           </div>
           <div style="display:flex; gap:8px; flex-wrap:wrap;">
-            <button type="button" onclick="downloadCoop01Csv('APPROVED_ONLY')" style="background:#10B981; color:white; border:none; padding:9px 16px; border-radius:10px; font-size:12.5px; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:6px;">
-              <span class="material-icons" style="font-size:17px;">download</span> Export เฉพาะนิสิตที่บริษัทตอบรับแล้ว (CSV สำหรับ Co-op 01)
-            </button>
-            <button type="button" onclick="downloadCoop01Csv('ALL')" style="background:#0D6EFD; color:white; border:1px solid rgba(255,255,255,0.3); padding:9px 16px; border-radius:10px; font-size:12.5px; font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:6px;">
-              <span class="material-icons" style="font-size:17px;">table_view</span> Export ข้อมูลทั้งรุ่น (CSV)
+            <button type="button" onclick="window.openCoopExportModal ? window.openCoopExportModal() : null" style="background:#10B981; color:white; border:none; padding:9px 18px; border-radius:10px; font-size:13px; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:6px; box-shadow:0 2px 6px rgba(16,185,129,0.3);">
+              <span class="material-icons" style="font-size:18px;">download</span> ส่งออกข้อมูล Co-op (Export)
             </button>
           </div>
         </div>
@@ -1716,22 +1725,81 @@ const PAGE_BODY_HTML = `
             </div>
           </div>
 
+          <!-- แถบตัวกรอง & ค้นหาข้อมูล Co-op -->
+          <div style="display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-bottom:14px; background:#F8FAFC; padding:12px 16px; border-radius:12px; border:1px solid #E2E8F0;">
+            <div style="position:relative; flex:1; min-width:240px; max-width:340px;">
+              <span class="material-icons" style="position:absolute; left:10px; top:50%; transform:translateY(-50%); color:#94A3B8; font-size:18px; pointer-events:none;">search</span>
+              <input type="search" id="coop-search-input" class="input-field" placeholder="ค้นหารหัสนิสิต, ชื่อ หรือบริษัท..." oninput="window.filterCoopTable ? window.filterCoopTable() : null" style="padding-left:34px !important; width:100%; font-size:12.5px; height:36px; border-radius:8px;" />
+            </div>
+
+            <select id="coop-major-filter" class="input-field" onchange="window.filterCoopTable ? window.filterCoopTable() : null" style="width:auto; min-width:170px; font-size:12.5px; height:36px; padding:4px 10px; border-radius:8px; cursor:pointer; background:#FFFFFF;">
+              <option value="ALL">ทุกสาขาวิชา (คณะ ICT)</option>
+              <option value="วิศวกรรมซอฟต์แวร์">สาขาวิศวกรรมซอฟต์แวร์ (SE)</option>
+              <option value="ธุรกิจดิจิทัล">สาขาธุรกิจดิจิทัล (DB)</option>
+              <option value="วิทยาการคอมพิวเตอร์">สาขาวิทยาการคอมพิวเตอร์ (CS)</option>
+              <option value="เทคโนโลยีสารสนเทศ">สาขาเทคโนโลยีสารสนเทศ (IT)</option>
+              <option value="วิศวกรรมคอมพิวเตอร์">สาขาวิศวกรรมคอมพิวเตอร์ (CPE)</option>
+              <option value="คอมพิวเตอร์กราฟิก">สาขาคอมพิวเตอร์กราฟิกฯ (CGM)</option>
+              <option value="ภูมิสารสนเทศ">สาขาภูมิสารสนเทศศาสตร์ (GIS)</option>
+              <option value="วิทยาการข้อมูล">สาขาวิทยาการข้อมูลฯ (DSA)</option>
+            </select>
+
+            <select id="coop-status-filter" class="input-field" onchange="window.filterCoopTable ? window.filterCoopTable() : null" style="width:auto; min-width:220px; font-size:12.5px; height:36px; padding:4px 10px; border-radius:8px; cursor:pointer; background:#FFFFFF; font-weight:600; color:#1E40AF;">
+              <option value="DISPATCHED" selected>✓ เฉพาะนิสิตที่ออกหนังสือส่งตัวแล้ว (พร้อมส่ง Co-op)</option>
+              <option value="ACCEPTED">✓ เฉพาะนิสิตที่บริษัทตอบรับแล้ว (รอหนังสือส่งตัว)</option>
+              <option value="IN_PROGRESS">⏳ อยู่ระหว่างดำเนินการ (ยังไม่ตอบรับ)</option>
+              <option value="ALL">📋 นิสิตทั้งหมดทุกขั้นตอน</option>
+            </select>
+
+            <button type="button" class="btn btn-outline btn-sm" onclick="window.clearCoopFilters ? window.clearCoopFilters() : null" title="ล้างตัวกรอง" style="height:36px; padding:0 12px; border-radius:8px; font-size:12px; display:inline-flex; align-items:center; gap:4px; color:#64748B; background:#FFFFFF;">
+              <span class="material-icons" style="font-size:16px;">filter_alt_off</span> ล้างตัวกรอง
+            </button>
+
+            <span id="coop-filtered-count-badge" style="margin-left:auto; font-size:12px; color:#475569; font-weight:600;">
+              กำลังโหลดข้อมูล...
+            </span>
+          </div>
+
+          <!-- แถบแสดงจำนวนที่ติ๊กเลือก (Bulk Selection Bar) -->
+          <div id="coop-selected-bar" style="display:none; align-items:center; justify-content:space-between; margin-bottom:12px; padding:10px 16px; background:#EFF6FF; border:1px solid #BFDBFE; border-radius:10px;">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span class="material-icons" style="color:#2563EB; font-size:20px;">check_box</span>
+              <span style="font-size:13px; font-weight:700; color:#1E40AF;">
+                ติ๊กเลือกนิสิตแล้ว <span id="coop-selected-count">0</span> คน
+              </span>
+            </div>
+            <div style="display:flex; align-items:center; gap:8px;">
+              <button type="button" onclick="window.openCoopExportModal ? window.openCoopExportModal('selected') : null" style="background:#2563EB; color:white; border:none; padding:6px 14px; border-radius:8px; font-size:12px; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:4px;">
+                <span class="material-icons" style="font-size:15px;">download</span> ส่งออกเฉพาะ <span id="coop-selected-btn-count">0</span> คนนี้
+              </button>
+              <button type="button" onclick="window.clearCoopSelection ? window.clearCoopSelection() : null" style="background:transparent; border:none; color:#64748B; font-size:12px; font-weight:600; cursor:pointer; padding:6px 10px;">
+                ล้างการเลือก
+              </button>
+            </div>
+          </div>
+
           <div class="table-responsive">
             <table class="data-table">
               <thead>
                 <tr>
-                  <th>รหัสนิสิต</th>
-                  <th>ชื่อ - นามสกุล</th>
-                  <th>สาขาวิชา</th>
-                  <th>GPAX</th>
-                  <th>สถานประกอบการ (Co-op 01)</th>
-                  <th>ตำแหน่งงาน</th>
-                  <th>อาจารย์ที่ปรึกษา / นิเทศก์</th>
-                  <th>สถานะส่งตัว</th>
+                  <th style="width:11%;">รหัสนิสิต</th>
+                  <th style="width:16%;">ชื่อ - นามสกุล</th>
+                  <th style="width:14%;">สาขาวิชา</th>
+                  <th style="width:7%;">GPAX</th>
+                  <th style="width:17%;">สถานประกอบการ (Co-op 01)</th>
+                  <th style="width:12%;">ตำแหน่งงาน</th>
+                  <th style="width:11%;">อาจารย์ที่ปรึกษา / นิเทศก์</th>
+                  <th style="width:12%;">สถานะส่งตัว</th>
+                  <th style="width:75px; min-width:75px;" class="text-center">
+                    <label style="display:inline-flex;align-items:center;gap:4px;cursor:pointer;white-space:nowrap;" title="เลือกนิสิตทั้งหมดในหน้านี้">
+                      <span style="font-size:11.5px;">เลือกทั้งหมด</span>
+                      <input type="checkbox" id="select-all-coop" onchange="window.toggleSelectAllCoop ? window.toggleSelectAllCoop(event) : null" aria-label="เลือกนิสิตทั้งหมด" style="width:16px;height:16px;cursor:pointer;" />
+                    </label>
+                  </th>
                 </tr>
               </thead>
               <tbody id="coop-preview-tbody">
-                <tr><td colspan="8" class="text-center py-6 text-gray-400">กำลังโหลดข้อมูลสำหรับส่งออก Co-op 01...</td></tr>
+                <tr><td colspan="9" class="text-center py-6 text-gray-400">กำลังโหลดข้อมูลสำหรับส่งออก Co-op 01...</td></tr>
               </tbody>
             </table>
           </div>
@@ -1882,10 +1950,11 @@ const PAGE_BODY_HTML = `
       </div>
     </div>
 
-    <!-- Modal: เพิ่มสถานประกอบการเข้า Master Data -->
+    <!-- Modal: เพิ่ม / แก้ไขสถานประกอบการใน Master Data -->
     <div id="add-master-company-modal" style="display:none; position:fixed; inset:0; background:rgba(15,23,42,0.55); z-index:1000; justify-content:center; align-items:center; backdrop-filter:blur(4px);">
-      <div style="background:white; border-radius:20px; padding:24px 28px; width:540px; max-width:94%; box-shadow:0 20px 50px rgba(15,23,42,0.25);">
-        <h3 style="font-size:17px; font-weight:700; margin-bottom:14px; color:#1E293B;">เพิ่มสถานประกอบการเข้าฐานข้อมูลกลาง (Master Data)</h3>
+      <div style="background:white; border-radius:20px; padding:24px 28px; width:560px; max-width:94%; box-shadow:0 20px 50px rgba(15,23,42,0.25);">
+        <h3 id="mc-modal-title" style="font-size:17px; font-weight:700; margin-bottom:14px; color:#1E293B;">เพิ่มสถานประกอบการเข้าฐานข้อมูลกลาง (Master Data)</h3>
+        <input type="hidden" id="mc-company-id" value="" />
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px;">
           <div style="grid-column:span 2;">
             <label style="font-size:12.5px; font-weight:700; color:#475569;">ชื่อสถานประกอบการ (ภาษาไทย / ชื่อทางการ) *</label>
@@ -1911,6 +1980,19 @@ const PAGE_BODY_HTML = `
             <label style="font-size:12.5px; font-weight:700; color:#475569;">เบอร์โทรศัพท์ HR</label>
             <input type="text" id="mc-hr-phone" class="input-field" placeholder="02-xxx-xxxx" style="margin-top:4px;" />
           </div>
+          <div>
+            <label style="font-size:12.5px; font-weight:700; color:#475569;">อีเมลติดต่อ HR</label>
+            <input type="text" id="mc-hr-email" class="input-field" placeholder="hr@company.com" style="margin-top:4px;" />
+          </div>
+          <div>
+            <label style="font-size:12.5px; font-weight:700; color:#475569;">สถานะสถานประกอบการ</label>
+            <select id="mc-status" class="input-field" style="margin-top:4px; cursor:pointer;">
+              <option value="VERIFIED">✅ ยืนยันแล้ว (Master Data)</option>
+              <option value="PARTNER">⭐ พันธมิตรคณะ ICT (Partner / MOU)</option>
+              <option value="BLACKLIST">⛔ งดส่งนิสิต (Blacklist / เฝ้าระวัง)</option>
+              <option id="mc-status-opt-pending" value="PENDING_REVIEW" style="display:none;">⏳ ส่งกลับไปตารางรออนุมัติ / ยุบรวม (เฉพาะที่นิสิตเพิ่ม)</option>
+            </select>
+          </div>
           <div style="grid-column:span 2;">
             <label style="font-size:12.5px; font-weight:700; color:#475569;">ตำแหน่งงานที่แนะนำ</label>
             <input type="text" id="mc-positions" class="input-field" placeholder="เช่น Software Developer, QA, Data Analyst" style="margin-top:4px;" />
@@ -1918,7 +2000,7 @@ const PAGE_BODY_HTML = `
         </div>
         <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:16px;">
           <button class="btn btn-outline btn-sm" onclick="closeAddMasterCompanyModal()">ยกเลิก</button>
-          <button class="btn btn-primary btn-sm" onclick="submitNewMasterCompany()">บันทึกเข้า Master Data</button>
+          <button id="mc-submit-btn" class="btn btn-primary btn-sm" onclick="submitNewMasterCompany()">บันทึกเข้า Master Data</button>
         </div>
       </div>
     </div>
@@ -2490,6 +2572,75 @@ const PAGE_BODY_HTML = `
         <div style="padding:14px 24px; background:#F8FAFC; border-top:1px solid #E2E8F0; display:flex; justify-content:flex-end; gap:8px;">
           <button class="btn btn-outline btn-sm" onclick="closeExportModal()" style="border-radius:10px;">ยกเลิก</button>
           <button id="btn-confirm-export" class="btn btn-primary btn-sm" onclick="confirmExport()" style="border-radius:10px; display:inline-flex; align-items:center; gap:6px; padding:8px 16px;">
+            <span class="material-icons" style="font-size:16px;">download</span> ดาวน์โหลดไฟล์ CSV
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal: เลือกรูปแบบการ Export ข้อมูลเชื่อมโยง Co-op 01 -->
+    <div id="coop-export-modal" style="display:none; position:fixed; inset:0; background:rgba(15,23,42,0.55); z-index:1000; justify-content:center; align-items:center; backdrop-filter:blur(4px);">
+      <div style="background:white; border-radius:20px; width:520px; max-width:92%; box-shadow:0 20px 50px rgba(15,23,42,0.25); overflow:hidden;">
+        <div style="background:linear-gradient(135deg, #065F46 0%, #10B981 100%); padding:18px 24px; color:white; display:flex; align-items:center; justify-content:space-between;">
+          <div style="display:flex; align-items:center; gap:10px;">
+            <span class="material-icons" style="font-size:24px;">sync_alt</span>
+            <div>
+              <h3 style="font-size:16px; font-weight:700; margin:0;">ส่งออกข้อมูล Co-op ICT (Co-op 01 Export)</h3>
+              <p style="font-size:11.5px; color:#D1FAE5; margin:2px 0 0 0;">ไฟล์ CSV มาตรฐานพร้อมนำเข้าสู่ระบบ Co-op ICT ของพี่แดง</p>
+            </div>
+          </div>
+          <button onclick="window.closeCoopExportModal ? window.closeCoopExportModal() : null" style="background:none; border:none; color:white; cursor:pointer; display:flex; align-items:center; opacity:0.85;">
+            <span class="material-icons" style="font-size:20px;">close</span>
+          </button>
+        </div>
+
+        <div style="padding:20px 24px;">
+          <p style="font-size:13px; color:#475569; margin-bottom:14px; font-weight:500;">กรุณาเลือกขอบเขตข้อมูลนิสิตที่ต้องการส่งออก:</p>
+
+          <div style="display:flex; flex-direction:column; gap:10px;">
+            <label id="coop-export-opt-selected-label" style="display:flex; align-items:flex-start; gap:12px; padding:12px 14px; border:2px solid #E2E8F0; background:#FFFFFF; border-radius:12px; cursor:pointer; transition:all 0.15s;">
+              <input type="radio" name="coop-export-scope" value="selected" id="coop-export-scope-selected" onchange="window.updateCoopExportSummary ? window.updateCoopExportSummary() : null" style="margin-top:3px; width:16px; height:16px; accent-color:#10B981; cursor:pointer;" />
+              <div style="flex:1;">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                  <span style="font-size:13.5px; font-weight:700; color:#1E293B;">เฉพาะนิสิตที่ติ๊กเลือก (Selected)</span>
+                  <span id="coop-export-count-selected" style="font-size:11px; font-weight:700; background:#F1F5F9; color:#475569; padding:2px 8px; border-radius:999px;">0 รายการ</span>
+                </div>
+                <p style="font-size:12px; color:#64748B; margin:3px 0 0 0;">ส่งออกเฉพาะรายชื่อที่คุณติ๊กถูกในช่อง Checkbox ด้านขวาของตาราง</p>
+              </div>
+            </label>
+
+            <label id="coop-export-opt-filtered-label" style="display:flex; align-items:flex-start; gap:12px; padding:12px 14px; border:2px solid #10B981; background:#ECFDF5; border-radius:12px; cursor:pointer; transition:all 0.15s;">
+              <input type="radio" name="coop-export-scope" value="filtered" id="coop-export-scope-filtered" checked onchange="window.updateCoopExportSummary ? window.updateCoopExportSummary() : null" style="margin-top:3px; width:16px; height:16px; accent-color:#10B981; cursor:pointer;" />
+              <div style="flex:1;">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                  <span style="font-size:13.5px; font-weight:700; color:#1E293B;">ตามตัวกรองปัจจุบัน (Filtered)</span>
+                  <span id="coop-export-count-filtered" style="font-size:11px; font-weight:700; background:#D1FAE5; color:#065F46; padding:2px 8px; border-radius:999px;">0 รายการ</span>
+                </div>
+                <p style="font-size:12px; color:#64748B; margin:3px 0 0 0;">ส่งออกตามเงื่อนไขตัวกรอง สาขาวิชา หรือสถานะที่เลือกไว้</p>
+              </div>
+            </label>
+
+            <label id="coop-export-opt-all-label" style="display:flex; align-items:flex-start; gap:12px; padding:12px 14px; border:2px solid #E2E8F0; background:#FFFFFF; border-radius:12px; cursor:pointer; transition:all 0.15s;">
+              <input type="radio" name="coop-export-scope" value="all_dispatched" id="coop-export-scope-all" onchange="window.updateCoopExportSummary ? window.updateCoopExportSummary() : null" style="margin-top:3px; width:16px; height:16px; accent-color:#10B981; cursor:pointer;" />
+              <div style="flex:1;">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                  <span style="font-size:13.5px; font-weight:700; color:#1E293B;">นิสิตที่ออกหนังสือส่งตัวแล้วทั้งหมด (All Dispatched)</span>
+                  <span id="coop-export-count-all" style="font-size:11px; font-weight:700; background:#F1F5F9; color:#475569; padding:2px 8px; border-radius:999px;">0 รายการ</span>
+                </div>
+                <p style="font-size:12px; color:#64748B; margin:3px 0 0 0;">ส่งออกนิสิตที่เสร็จสิ้นขั้นตอนออกหนังสือส่งตัวแล้วครบทุกคนในระบบ</p>
+              </div>
+            </label>
+          </div>
+
+          <div style="margin-top:14px; padding:10px 14px; background:#F8FAFC; border:1px solid #E2E8F0; border-radius:10px; display:flex; align-items:center; gap:8px;">
+            <span class="material-icons" style="font-size:18px; color:#10B981;">info</span>
+            <span id="coop-export-summary-text" style="font-size:12px; color:#334155; font-weight:500;">เตรียมส่งออกข้อมูล 0 รายการ</span>
+          </div>
+        </div>
+
+        <div style="padding:14px 24px; background:#F8FAFC; border-top:1px solid #E2E8F0; display:flex; justify-content:flex-end; gap:8px;">
+          <button class="btn btn-outline btn-sm" onclick="window.closeCoopExportModal ? window.closeCoopExportModal() : null" style="border-radius:10px;">ยกเลิก</button>
+          <button id="btn-confirm-coop-export" class="btn btn-sm" onclick="window.confirmCoopExport ? window.confirmCoopExport() : null" style="background:#10B981; color:white; border:none; border-radius:10px; display:inline-flex; align-items:center; gap:6px; padding:8px 18px; font-weight:600; cursor:pointer;">
             <span class="material-icons" style="font-size:16px;">download</span> ดาวน์โหลดไฟล์ CSV
           </button>
         </div>

@@ -3254,12 +3254,8 @@ window.openCheckInImportModal = function() {
     return;
   }
 
-  const events = superAdminState?.trainingEvents || [];
+  const events = (typeof superAdminData !== 'undefined' && superAdminData?.trainingEvents) ? superAdminData.trainingEvents : [];
   const event = events.find((e: any) => e.id === eventId);
-  if (!event) {
-    alert('ไม่พบข้อมูลกิจกรรมอบรมที่เลือก');
-    return;
-  }
 
   currentCheckInImportEventId = eventId;
   currentCheckInImportSessionId = sessionSelectEl?.value || 'ALL';
@@ -3267,12 +3263,14 @@ window.openCheckInImportModal = function() {
   const eventTitleEl = document.getElementById('checkin-import-event-title');
   const sessionTitleEl = document.getElementById('checkin-import-session-title');
   if (eventTitleEl) {
-    eventTitleEl.textContent = `[${event.skillType} Skill] ${event.title}`;
+    eventTitleEl.textContent = event
+      ? `[${event.skillType} Skill] ${event.title}`
+      : (selectEl?.options[selectEl.selectedIndex]?.text || eventId);
   }
   if (sessionTitleEl) {
     const selectedSessionText =
       sessionSelectEl?.options[sessionSelectEl.selectedIndex]?.text ||
-      `ทั้งกิจกรรม (+${event.creditedHours} ชม.)`;
+      (event ? `ทั้งกิจกรรม (+${event.creditedHours} ชม.)` : 'ทั้งกิจกรรม');
     sessionTitleEl.textContent = selectedSessionText;
   }
 
@@ -3411,9 +3409,9 @@ async function processCheckInImportFile(file: File) {
 
             return `
               <tr style="border-bottom:1px solid #F1F5F9; ${rowBg}">
-                <td style="padding:7px 10px; font-weight:700; font-family:monospace; color:#1E293B;">${escapeHtml(item.studentCode)}</td>
-                <td style="padding:7px 10px; color:#334155;">${escapeHtml(item.nameTh || '-')}</td>
-                <td style="padding:7px 10px; color:#4338CA; font-weight:600;">${escapeHtml(item.major || '-')}</td>
+                <td style="padding:7px 10px; font-weight:700; font-family:monospace; color:#1E293B;">${escapeHtmlText(item.studentCode)}</td>
+                <td style="padding:7px 10px; color:#334155;">${escapeHtmlText(item.nameTh || '-')}</td>
+                <td style="padding:7px 10px; color:#4338CA; font-weight:600;">${escapeHtmlText(item.major || '-')}</td>
                 <td style="padding:7px 10px; text-align:center;">${yearBadge}</td>
                 <td style="padding:7px 10px;">${statusHtml}</td>
               </tr>
@@ -3925,6 +3923,8 @@ function renderPendingCompaniesTable() {
     ? pendingList.filter(company => [
         company.nameTh,
         company.id,
+        company.address,
+        company.province,
         company.submittedByStudentName,
         company.submittedByStudentCode,
       ].some(value => String(value ?? '').toLowerCase().includes(pendingCompaniesSearch)))
@@ -3942,11 +3942,13 @@ function renderPendingCompaniesTable() {
       ? 'ไม่พบบริษัทที่ตรงกับคำค้นหา'
       : '✅ ไม่มีรายการบริษัทใหม่ค้างตรวจสอบ (บริษัททั้งหมดในระบบได้รับการยืนยันเข้า Master Data แล้ว)';
     const messageClass = pendingCompaniesSearch ? 'text-gray-400' : 'text-emerald-700 font-semibold';
-    tbody.innerHTML = `<tr><td colspan="5" class="text-center py-6 ${messageClass}">${message}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="6" class="text-center py-6 ${messageClass}">${message}</td></tr>`;
   } else {
     tbody.innerHTML = pageCompanies.map(company => {
       const id = escapePendingCompanyHtml(company.id);
       const name = escapePendingCompanyHtml(company.nameTh);
+      const address = escapePendingCompanyHtml(company.address || 'รอตรวจสอบที่อยู่จากนิสิต');
+      const province = escapePendingCompanyHtml(company.province || 'รอระบุจังหวัด');
       const studentName = escapePendingCompanyHtml(company.submittedByStudentName || 'นิสิตในระบบ');
       const studentCode = escapePendingCompanyHtml(company.submittedByStudentCode || '-');
       const isSelected = selectedPendingCompanyIds.has(String(company.id));
@@ -3954,8 +3956,14 @@ function renderPendingCompaniesTable() {
       return `
         <tr class="${isSelected ? 'bg-blue-50/50' : ''}">
           <td>
-            <div title="${name}" style="font-weight:500; color:#0F172A; font-size:20px; line-height:1.35; overflow-wrap:anywhere;">${name}</div>
-            <div style="margin-top:2px; font-size:12px; color:#64748B;">รหัสอ้างอิง: ${id}</div>
+            <div title="${name}" style="font-weight:700; color:#0F172A; font-size:14.5px; line-height:1.35; overflow-wrap:anywhere;">${name}</div>
+            <div style="margin-top:2px; font-size:11.5px; color:#64748B;">รหัสอ้างอิง: ${id}</div>
+          </td>
+          <td>
+            <div style="font-size:12.5px; color:#1E293B; line-height:1.45; overflow-wrap:anywhere;">${address}</div>
+            <div style="margin-top:3px; font-size:11.5px; font-weight:600; color:#4338CA; display:inline-flex; align-items:center; gap:3px;">
+              <span class="material-icons" style="font-size:13px;">location_on</span> ${province}
+            </div>
           </td>
           <td>
             <div style="font-weight:700; color:#1E293B;">${studentName}</div>
@@ -3973,12 +3981,17 @@ function renderPendingCompaniesTable() {
           <td class="text-center">
             <div style="display:flex; gap:6px; justify-content:center; flex-wrap:wrap;">
               <button type="button" data-pending-action="confirm" data-company-id="${id}"
-                style="background:#10B981; color:white; border:none; padding:7px 12px; border-radius:8px; font-size:12px; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:4px;">
-                <span class="material-icons" style="font-size:15px;">check_circle</span> ยืนยันเข้า Master Data
+                style="background:#10B981; color:white; border:none; padding:6px 10px; border-radius:8px; font-size:11.5px; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:4px;">
+                <span class="material-icons" style="font-size:14px;">check_circle</span> ยืนยันเข้า Master Data
               </button>
               <button type="button" data-pending-action="merge" data-company-id="${id}"
-                style="background:#4338CA; color:white; border:none; padding:7px 12px; border-radius:8px; font-size:12px; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:4px;">
-                <span class="material-icons" style="font-size:15px;">merge_type</span> ยุบรวมชื่อซ้ำ
+                style="background:#4338CA; color:white; border:none; padding:6px 10px; border-radius:8px; font-size:11.5px; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:4px;">
+                <span class="material-icons" style="font-size:14px;">merge_type</span> ยุบรวมชื่อซ้ำ
+              </button>
+              <button type="button" data-pending-action="delete" data-company-id="${id}"
+                title="ลบรายการนี้ออกจากคิวตรวจสอบ"
+                style="background:#FEF2F2; color:#DC2626; border:1px solid #FECACA; padding:6px 10px; border-radius:8px; font-size:11.5px; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:3px;">
+                <span class="material-icons" style="font-size:14px;">delete_outline</span> ลบ
               </button>
             </div>
           </td>
@@ -3996,6 +4009,8 @@ function renderPendingCompaniesTable() {
         const id = button.dataset.companyId || '';
         if (button.dataset.pendingAction === 'merge') {
           window.mergePendingCompany(id);
+        } else if (button.dataset.pendingAction === 'delete') {
+          window.deleteMasterCompany(id);
         } else {
           window.confirmPendingCompany(id);
         }
@@ -4129,6 +4144,24 @@ window.toggleMasterCompanies = function(event) {
 };
 
 window.searchMasterCompanies = function() {
+  const searchInput = document.getElementById('master-company-search') as HTMLInputElement | null;
+  const clearBtn = document.getElementById('master-company-search-clear');
+  if (clearBtn) {
+    clearBtn.style.display = searchInput && searchInput.value.trim().length > 0 ? 'inline-block' : 'none';
+  }
+  masterCompaniesPage = 1;
+  window.renderMasterCompanyTable();
+};
+
+window.clearMasterCompanySearch = function(event) {
+  if (event) event.stopPropagation();
+  const searchInput = document.getElementById('master-company-search') as HTMLInputElement | null;
+  const clearBtn = document.getElementById('master-company-search-clear');
+  if (searchInput) {
+    searchInput.value = '';
+    searchInput.focus();
+  }
+  if (clearBtn) clearBtn.style.display = 'none';
   masterCompaniesPage = 1;
   window.renderMasterCompanyTable();
 };
@@ -4141,7 +4174,7 @@ window.renderMasterCompanyTable = function() {
   let list = (superAdminData.companyMasterData || []).filter(c => c.status !== 'PENDING_REVIEW');
   if (searchVal) {
     list = list.filter(c =>
-      `${c.nameTh} ${c.nameEn} ${c.province} ${c.recommendedPositions}`.toLowerCase().includes(searchVal)
+      `${c.nameTh} ${c.nameEn} ${c.province} ${c.address} ${c.recommendedPositions}`.toLowerCase().includes(searchVal)
     );
   }
 
@@ -4154,7 +4187,7 @@ window.renderMasterCompanyTable = function() {
   const pageCompanies = list.slice(pageStart, pageStart + pageSize);
 
   if (list.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="5" class="text-center py-6 text-gray-400">ไม่พบรายการสถานประกอบการที่ค้นหา</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="6" class="text-center py-6 text-gray-400">ไม่พบรายการสถานประกอบการที่ค้นหา</td></tr>';
   } else {
     tbody.innerHTML = pageCompanies.map(c => {
       let badge = `<span style="background:#DCFCE7; color:#166534; padding:3px 10px; border-radius:999px; font-size:11.5px; font-weight:700;">✅ ยืนยันแล้ว (Master)</span>`;
@@ -4163,21 +4196,36 @@ window.renderMasterCompanyTable = function() {
       } else if (c.status === 'BLACKLIST') {
         badge = `<span style="background:#FEE2E2; color:#991B1B; padding:3px 10px; border-radius:999px; font-size:11.5px; font-weight:700;">⛔ งดส่งนิสิต (Blacklist)</span>`;
       }
+      const safeId = escapePendingCompanyHtml(c.id);
 
       return `
         <tr>
           <td>
-            <div style="font-weight:800; color:#1E1B4B; font-size:13.5px;">${c.nameTh}</div>
-            <div style="font-size:11.5px; color:#64748B;">${c.nameEn || '-'}</div>
-            <div style="font-size:11px; color:#94A3B8; margin-top:2px;">${c.address || ''}</div>
+            <div style="font-weight:800; color:#1E1B4B; font-size:13.5px;">${escapePendingCompanyHtml(c.nameTh)}</div>
+            <div style="font-size:11.5px; color:#64748B;">${escapePendingCompanyHtml(c.nameEn || '-')}</div>
+            <div style="font-size:11px; color:#94A3B8; margin-top:2px;">${escapePendingCompanyHtml(c.address || '')}</div>
           </td>
-          <td style="font-weight:600; color:#334155;">${c.province || '-'}</td>
+          <td style="font-weight:600; color:#334155;">${escapePendingCompanyHtml(c.province || '-')}</td>
           <td>
-            <div style="font-size:12.5px; font-weight:600; color:#1E293B;">${c.hrContactName || '-'}</div>
-            <div style="font-size:11.5px; color:#64748B;">📞 ${c.hrPhone || '-'} | ✉️ ${c.hrEmail || '-'}</div>
+            <div style="font-size:12.5px; font-weight:600; color:#1E293B;">${escapePendingCompanyHtml(c.hrContactName || '-')}</div>
+            <div style="font-size:11.5px; color:#64748B;">📞 ${escapePendingCompanyHtml(c.hrPhone || '-')} | ✉️ ${escapePendingCompanyHtml(c.hrEmail || '-')}</div>
           </td>
-          <td style="font-size:12px; color:#475569;">${c.recommendedPositions || '-'}</td>
+          <td style="font-size:12px; color:#475569;">${escapePendingCompanyHtml(c.recommendedPositions || '-')}</td>
           <td class="text-center">${badge}</td>
+          <td class="text-center">
+            <div style="display:inline-flex; align-items:center; justify-content:center; gap:6px;">
+              <button type="button" onclick="window.openEditMasterCompanyModal('${safeId}')"
+                title="แก้ไขข้อมูลสถานประกอบการ"
+                style="background:#EEF2FF; color:#3730A3; border:1px solid #C7D2FE; padding:5px 10px; border-radius:8px; font-size:11.5px; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:3px;">
+                <span class="material-icons" style="font-size:14px;">edit</span> แก้ไข
+              </button>
+              <button type="button" onclick="window.deleteMasterCompany('${safeId}')"
+                title="ลบสถานประกอบการออกจากระบบ"
+                style="background:#FEF2F2; color:#DC2626; border:1px solid #FECACA; padding:5px 10px; border-radius:8px; font-size:11.5px; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:3px;">
+                <span class="material-icons" style="font-size:14px;">delete_outline</span> ลบ
+              </button>
+            </div>
+          </td>
         </tr>
       `;
     }).join('');
@@ -4209,6 +4257,72 @@ window.renderMasterCompanyTable = function() {
 
 window.openAddMasterCompanyModal = function() {
   const modal = document.getElementById('add-master-company-modal');
+  const titleEl = document.getElementById('mc-modal-title');
+  const submitBtn = document.getElementById('mc-submit-btn');
+  const pendingOpt = document.getElementById('mc-status-opt-pending') as HTMLOptionElement | null;
+  if (titleEl) titleEl.textContent = 'เพิ่มสถานประกอบการเข้าฐานข้อมูลกลาง (Master Data)';
+  if (submitBtn) submitBtn.textContent = 'บันทึกเข้า Master Data';
+  if (pendingOpt) {
+    pendingOpt.style.display = 'none';
+    pendingOpt.disabled = true;
+  }
+
+  const setVal = (id: string, val: string) => {
+    const el = document.getElementById(id) as HTMLInputElement | HTMLSelectElement | null;
+    if (el) el.value = val;
+  };
+  setVal('mc-company-id', '');
+  setVal('mc-name-th', '');
+  setVal('mc-name-en', '');
+  setVal('mc-province', '');
+  setVal('mc-address', '');
+  setVal('mc-hr-name', '');
+  setVal('mc-hr-phone', '');
+  setVal('mc-hr-email', '');
+  setVal('mc-positions', '');
+  setVal('mc-status', 'VERIFIED');
+
+  if (modal) modal.style.display = 'flex';
+};
+
+window.openEditMasterCompanyModal = function(companyId) {
+  const comp = (superAdminData.companyMasterData || []).find(c => String(c.id) === String(companyId));
+  if (!comp) {
+    alert('ไม่พบข้อมูลสถานประกอบการที่ต้องการแก้ไข');
+    return;
+  }
+  const modal = document.getElementById('add-master-company-modal');
+  const titleEl = document.getElementById('mc-modal-title');
+  const submitBtn = document.getElementById('mc-submit-btn');
+  const pendingOpt = document.getElementById('mc-status-opt-pending') as HTMLOptionElement | null;
+  if (titleEl) titleEl.textContent = 'แก้ไขข้อมูลสถานประกอบการ (Company Master Data)';
+  if (submitBtn) submitBtn.textContent = 'บันทึกการแก้ไข';
+
+  const isStudentSubmitted = Boolean(
+    comp.submittedByStudentCode ||
+    comp.submittedByStudentName ||
+    String(comp.id || '').startsWith('COMP-NEW-')
+  );
+  if (pendingOpt) {
+    pendingOpt.style.display = isStudentSubmitted ? '' : 'none';
+    pendingOpt.disabled = !isStudentSubmitted;
+  }
+
+  const setVal = (id: string, val: string) => {
+    const el = document.getElementById(id) as HTMLInputElement | HTMLSelectElement | null;
+    if (el) el.value = val;
+  };
+  setVal('mc-company-id', comp.id || '');
+  setVal('mc-name-th', comp.nameTh || '');
+  setVal('mc-name-en', comp.nameEn && comp.nameEn !== '-' ? comp.nameEn : '');
+  setVal('mc-province', comp.province && comp.province !== '-' ? comp.province : '');
+  setVal('mc-address', comp.address && comp.address !== '-' ? comp.address : '');
+  setVal('mc-hr-name', comp.hrContactName && comp.hrContactName !== '-' ? comp.hrContactName : '');
+  setVal('mc-hr-phone', comp.hrPhone && comp.hrPhone !== '-' ? comp.hrPhone : '');
+  setVal('mc-hr-email', comp.hrEmail && comp.hrEmail !== '-' ? comp.hrEmail : '');
+  setVal('mc-positions', comp.recommendedPositions && comp.recommendedPositions !== '-' ? comp.recommendedPositions : '');
+  setVal('mc-status', comp.status === 'PARTNER' || comp.status === 'BLACKLIST' ? comp.status : 'VERIFIED');
+
   if (modal) modal.style.display = 'flex';
 };
 
@@ -4218,13 +4332,16 @@ window.closeAddMasterCompanyModal = function() {
 };
 
 window.submitNewMasterCompany = async function() {
+  const id = document.getElementById('mc-company-id')?.value?.trim() || undefined;
   const nameTh = document.getElementById('mc-name-th')?.value?.trim();
   const nameEn = document.getElementById('mc-name-en')?.value?.trim();
   const province = document.getElementById('mc-province')?.value?.trim();
   const address = document.getElementById('mc-address')?.value?.trim();
   const hrContactName = document.getElementById('mc-hr-name')?.value?.trim();
   const hrPhone = document.getElementById('mc-hr-phone')?.value?.trim();
+  const hrEmail = document.getElementById('mc-hr-email')?.value?.trim();
   const recommendedPositions = document.getElementById('mc-positions')?.value?.trim();
+  const status = document.getElementById('mc-status')?.value || 'VERIFIED';
 
   if (!nameTh) {
     alert('กรุณากรอกชื่อสถานประกอบการ');
@@ -4236,14 +4353,16 @@ window.submitNewMasterCompany = async function() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
+        id,
         nameTh,
         nameEn,
         province,
         address,
         hrContactName,
         hrPhone,
+        hrEmail,
         recommendedPositions,
-        status: 'VERIFIED',
+        status,
       }),
     });
     const data = await res.json();
@@ -4256,6 +4375,31 @@ window.submitNewMasterCompany = async function() {
     }
   } catch (err) {
     console.error(err);
+  }
+};
+
+window.deleteMasterCompany = async function(companyId) {
+  const comp = (superAdminData.companyMasterData || []).find(c => String(c.id) === String(companyId));
+  const compName = comp?.nameTh || companyId;
+  if (!window.confirm(`ยืนยันการลบสถานประกอบการ "${compName}" ออกจากระบบใช่หรือไม่?`)) {
+    return;
+  }
+
+  try {
+    const res = await fetch(`/api/admin/super-admin/companies/${encodeURIComponent(companyId)}`, {
+      method: 'DELETE',
+    });
+    const data = await res.json();
+    if (data.success) {
+      selectedPendingCompanyIds.delete(String(companyId));
+      pendingCompanyMergeTargets.delete(String(companyId));
+      await window.loadSuperAdminOverview();
+    } else {
+      alert('เกิดข้อผิดพลาด: ' + (data.message || 'ไม่สามารถลบข้อมูลได้'));
+    }
+  } catch (err) {
+    console.error(err);
+    alert('เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์');
   }
 };
 
@@ -4878,50 +5022,257 @@ window.printOfficialLetter = function() {
 // =========================================================================
 // WORKSPACE 6: ส่งออกข้อมูลเชื่อมโยงระบบ Co-op ICT ของพี่แดง (Co-op 01)
 // =========================================================================
+const selectedCoopStudentIds = new Set<number>();
+let currentFilteredCoopList: any[] = [];
+
+window.filterCoopTable = function() {
+  renderCoop01PreviewTable();
+};
+
+window.clearCoopFilters = function() {
+  const searchInput = document.getElementById('coop-search-input') as HTMLInputElement | null;
+  const majorSelect = document.getElementById('coop-major-filter') as HTMLSelectElement | null;
+  const statusSelect = document.getElementById('coop-status-filter') as HTMLSelectElement | null;
+
+  if (searchInput) searchInput.value = '';
+  if (majorSelect) majorSelect.value = 'ALL';
+  if (statusSelect) statusSelect.value = 'DISPATCHED';
+
+  renderCoop01PreviewTable();
+};
+
+window.toggleCoopStudentSelection = function(event: Event, studentId: number) {
+  event.stopPropagation();
+  const checkbox = event.currentTarget as HTMLInputElement;
+  if (checkbox.checked) {
+    selectedCoopStudentIds.add(studentId);
+  } else {
+    selectedCoopStudentIds.delete(studentId);
+  }
+  updateCoopSelectionUi();
+};
+
+window.toggleSelectAllCoop = function(event: Event) {
+  event.stopPropagation();
+  const checkbox = event.currentTarget as HTMLInputElement;
+  if (checkbox.checked) {
+    currentFilteredCoopList.forEach(s => selectedCoopStudentIds.add(s.studentId));
+  } else {
+    currentFilteredCoopList.forEach(s => selectedCoopStudentIds.delete(s.studentId));
+  }
+  renderCoop01PreviewTable();
+};
+
+window.clearCoopSelection = function() {
+  selectedCoopStudentIds.clear();
+  renderCoop01PreviewTable();
+};
+
+function updateCoopSelectionUi() {
+  const selectedBar = document.getElementById('coop-selected-bar');
+  const countEl = document.getElementById('coop-selected-count');
+  const btnCountEl = document.getElementById('coop-selected-btn-count');
+  const selectAllCheckbox = document.getElementById('select-all-coop') as HTMLInputElement | null;
+
+  const count = selectedCoopStudentIds.size;
+  if (countEl) countEl.textContent = String(count);
+  if (btnCountEl) btnCountEl.textContent = String(count);
+
+  if (selectedBar) {
+    selectedBar.style.display = count > 0 ? 'flex' : 'none';
+  }
+
+  if (selectAllCheckbox && currentFilteredCoopList.length > 0) {
+    selectAllCheckbox.checked = currentFilteredCoopList.every(s => selectedCoopStudentIds.has(s.studentId));
+  }
+}
+
 function renderCoop01PreviewTable() {
   const tbody = document.getElementById('coop-preview-tbody');
   if (!tbody) return;
-  const list = superAdminData.documentQueue || [];
+  const rawList = superAdminData.documentQueue || [];
+
+  const searchVal = (document.getElementById('coop-search-input') as HTMLInputElement | null)?.value?.trim().toLowerCase() || '';
+  const majorVal = (document.getElementById('coop-major-filter') as HTMLSelectElement | null)?.value || 'ALL';
+  const statusVal = (document.getElementById('coop-status-filter') as HTMLSelectElement | null)?.value || 'DISPATCHED';
+
+  let list = rawList;
+
+  // กรองตามสถานะส่งตัว
+  if (statusVal === 'DISPATCHED') {
+    list = list.filter(s => Boolean(s.dispatchLetterIssued));
+  } else if (statusVal === 'ACCEPTED') {
+    list = list.filter(s => s.companyResponseStatus === 'ACCEPTED' && !s.dispatchLetterIssued);
+  } else if (statusVal === 'IN_PROGRESS') {
+    list = list.filter(s => !s.dispatchLetterIssued && s.companyResponseStatus !== 'ACCEPTED');
+  }
+
+  // กรองตามสาขาวิชา
+  if (majorVal !== 'ALL') {
+    list = list.filter(s => (s.major || '').includes(majorVal));
+  }
+
+  // กรองตามคำค้นหา (รหัสนิสิต / ชื่อ / บริษัท)
+  if (searchVal) {
+    list = list.filter(s =>
+      `${s.studentCode} ${s.nameTh} ${s.companyName} ${s.position}`.toLowerCase().includes(searchVal)
+    );
+  }
+
+  currentFilteredCoopList = list;
+
+  const countBadge = document.getElementById('coop-filtered-count-badge');
+  if (countBadge) {
+    countBadge.textContent = `แสดง ${list.length} จากทั้งหมด ${rawList.length} รายการ`;
+  }
 
   if (list.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="8" class="text-center py-6 text-gray-400">ไม่มีข้อมูลนิสิตสำหรับส่งออก</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="9" class="text-center py-6 text-gray-400">ไม่พบนิสิตที่ตรงกับเงื่อนไขตัวกรอง</td></tr>';
+    updateCoopSelectionUi();
     return;
   }
 
   tbody.innerHTML = list.map(s => {
+    const isSelected = selectedCoopStudentIds.has(s.studentId);
     const statusBadge = s.dispatchLetterIssued
-      ? `<span style="background:#DCFCE7; color:#166534; padding:2px 8px; border-radius:999px; font-size:11px; font-weight:700;">✓ ออกหนังสือส่งตัวแล้ว (${s.dispatchLetterDocNo})</span>`
+      ? `<span style="background:#DCFCE7; color:#166534; padding:2px 8px; border-radius:999px; font-size:11px; font-weight:700;">✓ ออกหนังสือส่งตัวแล้ว (${s.dispatchLetterDocNo || '-'})</span>`
       : s.companyResponseStatus === 'ACCEPTED'
       ? `<span style="background:#DBEAFE; color:#1E40AF; padding:2px 8px; border-radius:999px; font-size:11px; font-weight:700;">✓ บริษัทตอบรับแล้ว</span>`
       : `<span style="background:#F1F5F9; color:#64748B; padding:2px 8px; border-radius:999px; font-size:11px;">อยู่ระหว่างดำเนินการ</span>`;
 
     return `
-      <tr>
+      <tr class="${isSelected ? 'bg-blue-50/50' : ''}">
         <td style="font-weight:800; color:#1E1B4B;">${s.studentCode}</td>
-        <td>${s.nameTh}</td>
-        <td>${s.major}</td>
+        <td>${escapeHtmlText(s.nameTh)}</td>
+        <td>${escapeHtmlText(s.major)}</td>
         <td style="font-weight:700;">${s.gpa ?? '-'}</td>
-        <td style="font-weight:700; color:#1E293B;">${s.companyName}</td>
-        <td>${s.position}</td>
+        <td style="font-weight:700; color:#1E293B;">${escapeHtmlText(s.companyName)}</td>
+        <td>${escapeHtmlText(s.position)}</td>
         <td>
-          <div style="font-size:12px;">ที่ปรึกษา: ${s.advisorName}</div>
-          <div style="font-size:11.5px; color:#64748B;">นิเทศก์: ${s.supervisorName}</div>
+          <div style="font-size:12px;">ที่ปรึกษา: ${escapeHtmlText(s.advisorName)}</div>
+          <div style="font-size:11.5px; color:#64748B;">นิเทศก์: ${escapeHtmlText(s.supervisorName)}</div>
         </td>
         <td>${statusBadge}</td>
+        <td class="text-center">
+          <input type="checkbox" class="coop-student-checkbox" data-student-id="${s.studentId}"
+            aria-label="เลือกนิสิต ${escapeHtmlText(s.nameTh)}"
+            ${isSelected ? 'checked' : ''}
+            style="width:16px;height:16px;cursor:pointer;" />
+        </td>
       </tr>
     `;
   }).join('');
+
+  tbody.querySelectorAll<HTMLInputElement>('.coop-student-checkbox').forEach(cb => {
+    cb.addEventListener('change', event => {
+      const studentId = Number((event.currentTarget as HTMLInputElement).dataset.studentId);
+      window.toggleCoopStudentSelection(event, studentId);
+    });
+  });
+
+  updateCoopSelectionUi();
 }
 
-window.downloadCoop01Csv = function(mode) {
-  let list = superAdminData.documentQueue || [];
-  if (mode === 'APPROVED_ONLY') {
-    const approved = list.filter(s => s.companyResponseStatus === 'ACCEPTED' || s.dispatchLetterIssued);
-    if (approved.length > 0) {
-      list = approved;
-    }
+window.openCoopExportModal = function(preferredScope?: string) {
+  const modal = document.getElementById('coop-export-modal');
+  if (!modal) return;
+
+  const countSelected = selectedCoopStudentIds.size;
+  const countFiltered = currentFilteredCoopList.length;
+  const countAllDispatched = (superAdminData.documentQueue || []).filter(s => s.dispatchLetterIssued).length;
+
+  const countSelectedEl = document.getElementById('coop-export-count-selected');
+  const countFilteredEl = document.getElementById('coop-export-count-filtered');
+  const countAllEl = document.getElementById('coop-export-count-all');
+
+  if (countSelectedEl) countSelectedEl.textContent = `${countSelected} รายการ`;
+  if (countFilteredEl) countFilteredEl.textContent = `${countFiltered} รายการ`;
+  if (countAllEl) countAllEl.textContent = `${countAllDispatched} รายการ`;
+
+  const radioSelected = document.getElementById('coop-export-scope-selected') as HTMLInputElement | null;
+  const radioFiltered = document.getElementById('coop-export-scope-filtered') as HTMLInputElement | null;
+
+  if (preferredScope === 'selected' || countSelected > 0) {
+    if (radioSelected) radioSelected.checked = true;
+  } else {
+    if (radioFiltered) radioFiltered.checked = true;
   }
 
+  window.updateCoopExportSummary();
+  modal.style.display = 'flex';
+};
+
+window.closeCoopExportModal = function() {
+  const modal = document.getElementById('coop-export-modal');
+  if (modal) modal.style.display = 'none';
+};
+
+window.updateCoopExportSummary = function() {
+  const scopeRadio = document.querySelector('input[name="coop-export-scope"]:checked') as HTMLInputElement | null;
+  const scope = scopeRadio ? scopeRadio.value : 'filtered';
+
+  const labelSelected = document.getElementById('coop-export-opt-selected-label');
+  const labelFiltered = document.getElementById('coop-export-opt-filtered-label');
+  const labelAll = document.getElementById('coop-export-opt-all-label');
+  const summaryEl = document.getElementById('coop-export-summary-text');
+
+  [labelSelected, labelFiltered, labelAll].forEach(lbl => {
+    if (lbl) {
+      lbl.style.borderColor = '#E2E8F0';
+      lbl.style.background = '#FFFFFF';
+    }
+  });
+
+  let count = 0;
+  if (scope === 'selected') {
+    if (labelSelected) {
+      labelSelected.style.borderColor = '#10B981';
+      labelSelected.style.background = '#ECFDF5';
+    }
+    count = selectedCoopStudentIds.size;
+  } else if (scope === 'all_dispatched') {
+    if (labelAll) {
+      labelAll.style.borderColor = '#10B981';
+      labelAll.style.background = '#ECFDF5';
+    }
+    count = (superAdminData.documentQueue || []).filter(s => s.dispatchLetterIssued).length;
+  } else {
+    if (labelFiltered) {
+      labelFiltered.style.borderColor = '#10B981';
+      labelFiltered.style.background = '#ECFDF5';
+    }
+    count = currentFilteredCoopList.length;
+  }
+
+  if (summaryEl) {
+    summaryEl.textContent = `เตรียมส่งออกข้อมูล Co-op 01 จำนวน ${count} รายการ`;
+  }
+};
+
+window.confirmCoopExport = function() {
+  const scopeRadio = document.querySelector('input[name="coop-export-scope"]:checked') as HTMLInputElement | null;
+  const scope = scopeRadio ? scopeRadio.value : 'filtered';
+  const allList = superAdminData.documentQueue || [];
+
+  let exportList: any[] = [];
+  if (scope === 'selected') {
+    exportList = allList.filter(s => selectedCoopStudentIds.has(s.studentId));
+  } else if (scope === 'all_dispatched') {
+    exportList = allList.filter(s => s.dispatchLetterIssued);
+  } else {
+    exportList = currentFilteredCoopList;
+  }
+
+  if (exportList.length === 0) {
+    alert('ไม่พบรายการนิสิตสำหรับส่งออกตามเงื่อนไขที่เลือก');
+    return;
+  }
+
+  executeCoopCsvDownload(exportList, scope);
+  window.closeCoopExportModal();
+};
+
+function executeCoopCsvDownload(list: any[], scopeName: string) {
   const headers = [
     'รหัสนิสิต (Student_ID)',
     'ชื่อ-นามสกุล (Full_Name)',
@@ -4969,9 +5320,18 @@ window.downloadCoop01Csv = function(mode) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `Coop01_ICT_UP_Export_${mode}_${new Date().toISOString().slice(0, 10)}.csv`;
+  a.download = `Coop01_ICT_UP_${scopeName}_${new Date().toISOString().slice(0, 10)}.csv`;
   a.click();
   URL.revokeObjectURL(url);
+}
+
+window.downloadCoop01Csv = function(mode) {
+  let list = superAdminData.documentQueue || [];
+  if (mode === 'APPROVED_ONLY') {
+    const approved = list.filter(s => s.companyResponseStatus === 'ACCEPTED' || s.dispatchLetterIssued);
+    if (approved.length > 0) list = approved;
+  }
+  executeCoopCsvDownload(list, mode || 'direct');
 };
 
 // เรียกโหลดข้อมูล Super Admin ทันทีเมื่อเปิดหน้า

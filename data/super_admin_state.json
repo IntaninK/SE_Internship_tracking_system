@@ -121,7 +121,38 @@
       "academicYear": "2568",
       "createdBy": "พี่จอม (เจ้าหน้าที่คณะ / Super Admin)",
       "createdAt": "2026-01-10T09:00:00.000Z",
-      "checkIns": []
+      "checkIns": [
+        {
+          "studentCode": "67024964",
+          "nameTh": "กันตินันท์ เก่งมาก",
+          "major": "วิศวกรรมซอฟต์แวร์",
+          "checkedInAt": "2026-11-11T02:26:56.935Z",
+          "trainingRecordId": 68,
+          "sessionId": "ALL",
+          "sessionTitle": "ทั้งกิจกรรม",
+          "creditedHours": 6
+        },
+        {
+          "studentCode": "67023110",
+          "nameTh": "เอกัทร อินทร์สวัสดิ์",
+          "major": "วิศวกรรมซอฟต์แวร์",
+          "checkedInAt": "2026-11-11T02:26:56.882Z",
+          "trainingRecordId": 67,
+          "sessionId": "ALL",
+          "sessionTitle": "ทั้งกิจกรรม",
+          "creditedHours": 6
+        }
+      ],
+      "sessions": [
+        {
+          "id": "SES-1",
+          "title": "ทั้งกิจกรรม",
+          "date": "2026-01-18",
+          "startTime": "09:00",
+          "endTime": "16:00",
+          "hours": 6
+        }
+      ]
     },
     {
       "id": "EVT-2568-02",
@@ -151,10 +182,11 @@
       "hrPhone": "098-xxx-xxxx",
       "hrEmail": "...@gmail.com",
       "recommendedPositions": "Software Developer",
-      "status": "PENDING_REVIEW",
+      "status": "VERIFIED",
       "submittedByStudentCode": "67023110",
       "submittedByStudentName": "เอกัทร อินทร์สวัสดิ์",
-      "createdAt": "2026-11-09T08:37:38.673Z"
+      "createdAt": "2026-11-09T08:37:38.673Z",
+      "verifiedAt": "2026-11-11T02:40:47.670Z"
     },
     {
       "id": "COMP-NEW-10",
@@ -166,10 +198,11 @@
       "hrPhone": "098-999-9999",
       "hrEmail": "sawat@pt.pypt",
       "recommendedPositions": "Software Developer",
-      "status": "PENDING_REVIEW",
+      "status": "VERIFIED",
       "submittedByStudentCode": "67012345",
       "submittedByStudentName": "เอกภัทร",
-      "createdAt": "2026-09-27T15:48:16.340Z"
+      "createdAt": "2026-09-27T15:48:16.340Z",
+      "verifiedAt": "2026-11-11T02:40:04.416Z"
     },
     {
       "id": "COMP-M01",

@@ -2080,6 +2080,9 @@ router.get("/super-admin/overview", async (req: Request, res: Response) => {
     const existingMasterNames = new Set(
       state.companyMasterData.map((c) => normalizeName(c.nameTh))
     );
+    const dismissedNames = new Set(
+      (state.dismissedCompanyNames || []).map((n) => normalizeName(n))
+    );
     let stateModified = false;
 
     for (const st of allStudents) {
@@ -2087,7 +2090,7 @@ router.get("/super-admin/overview", async (req: Request, res: Response) => {
         const cleanName = (comp.name || "").trim();
         if (!cleanName) continue;
         const norm = normalizeName(cleanName);
-        if (!existingMasterNames.has(norm)) {
+        if (!existingMasterNames.has(norm) && !dismissedNames.has(norm)) {
           existingMasterNames.add(norm);
           state.companyMasterData.unshift({
             id: `COMP-NEW-${comp.id}`,
@@ -2105,6 +2108,30 @@ router.get("/super-admin/overview", async (req: Request, res: Response) => {
             createdAt: comp.createdAt ? comp.createdAt.toISOString() : new Date().toISOString(),
           });
           stateModified = true;
+        } else {
+          const existingRec = state.companyMasterData.find(
+            (c) => normalizeName(c.nameTh) === norm && c.status === "PENDING_REVIEW"
+          );
+          if (existingRec && st.placement) {
+            if (
+              st.placement.companyAddress &&
+              (!existingRec.address ||
+                existingRec.address === "-" ||
+                existingRec.address === "รอตรวจสอบที่อยู่จากนิสิต")
+            ) {
+              existingRec.address = st.placement.companyAddress;
+              stateModified = true;
+            }
+            if (
+              st.placement.province &&
+              (!existingRec.province ||
+                existingRec.province === "-" ||
+                existingRec.province === "รอระบุจังหวัด")
+            ) {
+              existingRec.province = st.placement.province;
+              stateModified = true;
+            }
+          }
         }
       }
     }
@@ -2994,17 +3021,51 @@ router.post("/super-admin/companies", async (req: Request, res: Response) => {
       if (hrEmail !== undefined) existing.hrEmail = String(hrEmail).trim();
       if (recommendedPositions !== undefined)
         existing.recommendedPositions = String(recommendedPositions).trim();
-      if (status) existing.status = status;
+      if (status) {
+        if (status === "PENDING_REVIEW") {
+          const isStudentSubmitted = Boolean(
+            existing.submittedByStudentCode ||
+              existing.submittedByStudentName ||
+              String(existing.id || "").startsWith("COMP-NEW-")
+          );
+          if (!isStudentSubmitted) {
+            return res.status(400).json({
+              success: false,
+              message: "เฉพาะสถานประกอบการที่นิสิตกรอกเพิ่มเข้ามาเท่านั้นที่สามารถส่งกลับไปตารางรออนุมัติได้",
+            });
+          }
+          existing.status = "PENDING_REVIEW";
+          delete existing.verifiedAt;
+        } else {
+          existing.status = status;
+        }
+      }
       if (status === "VERIFIED" || status === "PARTNER") {
         existing.verifiedAt = new Date().toISOString();
       }
 
-      // หากมีการแก้ชื่อมาตรฐาน ให้อัปเดตชื่อในตาราง Company ของนิสิตให้ตรงกันอัตโนมัติ
+      // หากมีการแก้ชื่อมาตรฐาน ให้อัปเดตชื่อในตาราง Company และ InternshipPlacement ของนิสิตให้ตรงกันอัตโนมัติ
+      const normalizeName = (n: string) => n.replace(/\s+/g, "").toLowerCase();
       if (oldName && oldName !== cleanNameTh) {
         await prisma.company.updateMany({
           where: { name: oldName },
           data: { name: cleanNameTh },
         });
+        await prisma.internshipPlacement.updateMany({
+          where: { companyNameTh: oldName },
+          data: { companyNameTh: cleanNameTh },
+        });
+        if (!Array.isArray(state.dismissedCompanyNames)) {
+          state.dismissedCompanyNames = [];
+        }
+        const oldNorm = normalizeName(oldName);
+        if (oldNorm && !state.dismissedCompanyNames.includes(oldNorm)) {
+          state.dismissedCompanyNames.push(oldNorm);
+        }
+      }
+      if (Array.isArray(state.dismissedCompanyNames)) {
+        const newNorm = normalizeName(cleanNameTh);
+        state.dismissedCompanyNames = state.dismissedCompanyNames.filter((n) => n !== newNorm);
       }
 
       saveSuperAdminState(state);
@@ -3013,6 +3074,12 @@ router.post("/super-admin/companies", async (req: Request, res: Response) => {
         message: `อัปเดตข้อมูลสถานประกอบการ "${cleanNameTh}" ใน Master Data เรียบร้อยแล้ว`,
         company: existing,
       });
+    }
+
+    const normalizeName = (n: string) => n.replace(/\s+/g, "").toLowerCase();
+    if (Array.isArray(state.dismissedCompanyNames)) {
+      const newNorm = normalizeName(cleanNameTh);
+      state.dismissedCompanyNames = state.dismissedCompanyNames.filter((n) => n !== newNorm);
     }
 
     const newCompany = {
@@ -3041,6 +3108,39 @@ router.post("/super-admin/companies", async (req: Request, res: Response) => {
   } catch (err) {
     console.error("POST /api/admin/super-admin/companies error:", err);
     res.status(500).json({ success: false, message: "บันทึกข้อมูลสถานประกอบการไม่สำเร็จ" });
+  }
+});
+
+// 9.6.2 ลบสถานประกอบการออกจาก Master Data หรือรายการรออนุมัติ
+router.delete("/super-admin/companies/:id", async (req: Request, res: Response) => {
+  try {
+    const state = loadSuperAdminState();
+    const { id } = req.params;
+
+    const target = state.companyMasterData.find((c) => c.id === id);
+    if (!target) {
+      return res.status(404).json({ success: false, message: "ไม่พบข้อมูลสถานประกอบการที่ต้องการลบ" });
+    }
+
+    const normalizeName = (n: string) => n.replace(/\s+/g, "").toLowerCase();
+    const norm = normalizeName(target.nameTh);
+    if (!Array.isArray(state.dismissedCompanyNames)) {
+      state.dismissedCompanyNames = [];
+    }
+    if (norm && !state.dismissedCompanyNames.includes(norm)) {
+      state.dismissedCompanyNames.push(norm);
+    }
+
+    state.companyMasterData = state.companyMasterData.filter((c) => c.id !== id);
+    saveSuperAdminState(state);
+
+    return res.json({
+      success: true,
+      message: `ลบสถานประกอบการ "${target.nameTh}" ออกจากฐานข้อมูลเรียบร้อยแล้ว`,
+    });
+  } catch (err) {
+    console.error("DELETE /api/admin/super-admin/companies/:id error:", err);
+    return res.status(500).json({ success: false, message: "ลบข้อมูลสถานประกอบการไม่สำเร็จ" });
   }
 });
 

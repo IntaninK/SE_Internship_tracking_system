@@ -127,6 +127,7 @@ export interface SuperAdminState {
   majorUnlockRules: MajorUnlockRule[];
   trainingEvents: InternalTrainingEvent[];
   companyMasterData: MasterCompanyRecord[];
+  dismissedCompanyNames?: string[];
   docWorkflowMap: Record<string, StudentDocWorkflowRecord>;
   archivedApplications: ArchivedCompanyAttempt[];
 }
@@ -387,6 +388,9 @@ export function loadSuperAdminState(): SuperAdminState {
       companyMasterData: Array.isArray(parsed.companyMasterData) && parsed.companyMasterData.length > 0
         ? parsed.companyMasterData
         : DEFAULT_STATE.companyMasterData,
+      dismissedCompanyNames: Array.isArray(parsed.dismissedCompanyNames)
+        ? parsed.dismissedCompanyNames
+        : [],
       docWorkflowMap: parsed.docWorkflowMap || {},
       archivedApplications: Array.isArray(parsed.archivedApplications)
         ? parsed.archivedApplications
