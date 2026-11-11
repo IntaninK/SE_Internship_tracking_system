@@ -173,20 +173,34 @@
   ],
   "companyMasterData": [
     {
+      "id": "COMP-NEW-57531",
+      "nameTh": "google",
+      "nameEn": "-",
+      "province": "รอระบุจังหวัด",
+      "address": "รอตรวจสอบที่อยู่",
+      "hrContactName": "-",
+      "hrPhone": "-",
+      "hrEmail": "-",
+      "recommendedPositions": "นิสิตฝึกงาน / สหกิจศึกษา",
+      "status": "PENDING_REVIEW",
+      "submittedByStudentCode": "67024965",
+      "submittedByStudentName": "test student",
+      "createdAt": "2026-11-11T06:47:37.531Z"
+    },
+    {
       "id": "COMP-NEW-15",
       "nameTh": "sdkfskdl",
-      "nameEn": "-",
+      "nameEn": "",
       "province": "นครนายก",
       "address": "fefe",
       "hrContactName": "fefesf",
       "hrPhone": "098-xxx-xxxx",
       "hrEmail": "...@gmail.com",
       "recommendedPositions": "Software Developer",
-      "status": "VERIFIED",
+      "status": "PENDING_REVIEW",
       "submittedByStudentCode": "67023110",
       "submittedByStudentName": "เอกัทร อินทร์สวัสดิ์",
-      "createdAt": "2026-11-09T08:37:38.673Z",
-      "verifiedAt": "2026-11-11T02:40:47.670Z"
+      "createdAt": "2026-11-09T08:37:38.673Z"
     },
     {
       "id": "COMP-NEW-10",
@@ -275,49 +289,119 @@
       "verifiedAt": "2025-11-18T08:00:00.000Z"
     }
   ],
+  "dismissedCompanyNames": [],
   "docWorkflowMap": {
     "1": {
       "studentId": 1,
       "studentCode": "67024964",
-      "companyName": "บริษัท กสิกร บิซิเนส-เทคโนโลยี กรุ๊ป (KBTG)",
+      "companyName": "tesla",
       "interviewDate": "2026-02-15",
       "requestLetterIssued": true,
-      "requestLetterDocNo": "อว 7316/ว 857",
-      "requestLetterDate": "2026-11-10",
-      "requestLetterBatchId": "REQ-BATCH-559332",
+      "requestLetterDocNo": "อว 7316/ว 253",
+      "requestLetterDate": "2026-11-11",
+      "requestLetterBatchId": "REQ-BATCH-755139",
       "requestLetterSignatureSnapshot": "",
-      "companyResponseStatus": "WAITING_RESPONSE",
+      "companyResponseStatus": "WAITING_ADVISOR_APPROVAL",
       "dispatchLetterIssued": false,
       "dispatchLetterSignatureSnapshot": "",
-      "isLocked": true,
-      "companyResponseFileName": "แบบตอบรับนิสิตฝึกงานะtest_word.pdf",
-      "companyResponseFileUrl": "https://res.cloudinary.com/j5ccelrs/image/upload/v1794293226/se_internship/acceptance_forms/1794293226442-_____________________test_word.pdf",
-      "companyResponseUploadedAt": "2026-11-10T06:47:12.965Z",
+      "isLocked": false,
+      "unlockedByAdmin": true,
+      "companyResponseFileName": "แบบตอบรับนิสิตฝึกงานtest.pdf",
+      "companyResponseFileUrl": "https://res.cloudinary.com/j5ccelrs/image/upload/v1794388940/se_internship/acceptance_forms/1794388937255-____________________test.pdf",
+      "companyResponseUploadedAt": "2026-11-11T09:22:22.331Z",
       "companyResponseSubmittedByStudent": true,
       "companyResponseOcr": {
         "status": "DONE",
         "result": "ACCEPTED",
-        "confidence": 0.78,
+        "confidence": 0.92,
         "reasons": [
-          "ไม่พบการติ๊กช่อง ☐ แต่พบรอยเขียนรายละเอียดหลังช่องตอบรับ (จำนวนคน / วันที่ฝึกงาน / ที่พักอาศัย / รายชื่อนิสิต)"
+          "ตรวจพบรอยติ๊กในช่อง ☐ \"สามารถรับนิสิตเข้าฝึกงานได้\""
         ],
         "warnings": [],
         "signals": {
-          "acceptCheckboxInk": 0,
+          "acceptCheckboxInk": 0.1403,
           "rejectCheckboxInk": 0,
           "acceptZoneInk": 0.1416,
           "rejectZoneInk": 0.0108,
-          "acceptChecked": false,
+          "acceptChecked": true,
           "rejectChecked": false,
           "acceptDetailsWritten": true,
           "rejectDetailsWritten": false
         },
         "engine": "builtin-template-analyzer",
-        "analyzedAt": "2026-11-10T06:47:11.326Z"
-      }
+        "analyzedAt": "2026-11-11T09:22:20.869Z"
+      },
+      "advisorAcceptanceStatus": "PENDING",
+      "advisorAcceptanceNote": "",
+      "advisorAcceptanceReviewedAt": ""
+    },
+    "97": {
+      "studentId": 97,
+      "studentCode": "67024965",
+      "companyName": "google",
+      "interviewDate": "2026-02-15",
+      "requestLetterIssued": true,
+      "requestLetterDocNo": "อว 7316/ว 188",
+      "requestLetterDate": "2026-11-11",
+      "requestLetterBatchId": "REQ-BATCH-739527",
+      "requestLetterSignatureSnapshot": "",
+      "companyResponseStatus": "WAITING_RESPONSE",
+      "dispatchLetterIssued": false,
+      "dispatchLetterSignatureSnapshot": "",
+      "isLocked": true,
+      "companyResponseFileName": "แบบตอบรับนิสิตฝึกงานtest.pdf",
+      "companyResponseFileUrl": "https://res.cloudinary.com/j5ccelrs/image/upload/v1794379761/se_internship/acceptance_forms/1794379759054-____________________test.pdf",
+      "companyResponseUploadedAt": "2026-11-11T06:49:28.337Z",
+      "companyResponseSubmittedByStudent": true,
+      "companyResponseOcr": {
+        "status": "DONE",
+        "result": "ACCEPTED",
+        "confidence": 0.92,
+        "reasons": [
+          "ตรวจพบรอยติ๊กในช่อง ☐ \"สามารถรับนิสิตเข้าฝึกงานได้\""
+        ],
+        "warnings": [],
+        "signals": {
+          "acceptCheckboxInk": 0.1403,
+          "rejectCheckboxInk": 0,
+          "acceptZoneInk": 0.1416,
+          "rejectZoneInk": 0.0108,
+          "acceptChecked": true,
+          "rejectChecked": false,
+          "acceptDetailsWritten": true,
+          "rejectDetailsWritten": false
+        },
+        "engine": "builtin-template-analyzer",
+        "analyzedAt": "2026-11-11T06:55:27.837Z"
+      },
+      "unlockedByAdmin": false
     }
   },
   "archivedApplications": [
+    {
+      "id": "ARCH-658302",
+      "studentId": 1,
+      "studentCode": "67024964",
+      "studentName": "กันตินันท์ เก่งมาก",
+      "major": "วิศวกรรมซอฟต์แวร์",
+      "companyName": "tesla",
+      "position": "Software Developer",
+      "reason": "COMPANY_REJECTED",
+      "note": "สถานประกอบการแจ้งเต็มอัตรา / ไม่ผ่านการคัดเลือก",
+      "archivedAt": "2026-11-11T06:14:18.302Z"
+    },
+    {
+      "id": "ARCH-449818",
+      "studentId": 1,
+      "studentCode": "67024964",
+      "studentName": "กันตินันท์ เก่งมาก",
+      "major": "วิศวกรรมซอฟต์แวร์",
+      "companyName": "tesla",
+      "position": "Software Developer",
+      "reason": "COMPANY_REJECTED",
+      "note": "สถานประกอบการแจ้งเต็มอัตรา / ไม่ผ่านการคัดเลือก",
+      "archivedAt": "2026-11-11T05:04:09.818Z"
+    },
     {
       "id": "ARCH-001",
       "studentId": 0,

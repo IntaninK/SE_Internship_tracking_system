@@ -15,14 +15,19 @@ const PAGE_BODY_HTML = `
 
   <main class="main-content">
 
-    <!-- ปุ่มกลับ + ป้ายสถานะ -->
+    <!-- ปุ่มกลับ + ปุ่มตรวจ Checklist + ป้ายสถานะ -->
     <div style="margin-bottom: 18px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;">
-      <a href="/admin-dashboard" style="display:inline-flex; align-items:center; gap:6px; background:#FFFFFF; border:1px solid #CBD5E1; color:#1E293B; padding:8px 16px; border-radius:12px; text-decoration:none; font-weight:600; font-size:13.5px; box-shadow:0 2px 6px rgba(15,23,42,0.04);">
-        <span class="material-icons" style="font-size:18px; color:#4338CA;">arrow_back</span> กลับหน้า Dashboard
-      </a>
+      <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+        <a href="/admin-dashboard" style="display:inline-flex; align-items:center; gap:6px; background:#FFFFFF; border:1px solid #CBD5E1; color:#1E293B; padding:8px 16px; border-radius:12px; text-decoration:none; font-weight:600; font-size:13.5px; box-shadow:0 2px 6px rgba(15,23,42,0.04);">
+          <span class="material-icons" style="font-size:18px; color:#4338CA;">arrow_back</span> กลับหน้า Dashboard
+        </a>
+        <a id="btn-goto-checklist-review" href="#" style="display:inline-flex; align-items:center; gap:6px; background:linear-gradient(135deg, #312E81 0%, #4338CA 100%); color:white; padding:8px 18px; border-radius:12px; text-decoration:none; font-weight:700; font-size:13px; box-shadow:0 2px 8px rgba(67,56,202,0.25);">
+          <span class="material-icons" style="font-size:18px;">fact_check</span> ตรวจประเมิน Checklist &amp; แบบตอบรับ
+        </a>
+      </div>
       <div style="display:flex; align-items:center; gap:8px;">
         <span class="srs-reg-lock-tag">🔒 ข้อมูลวิชาการจากระบบ REG</span>
-        <span class="srs-editable-tag">📋 ตรวจสอบ 7 ขั้นตอนครบวงจร</span>
+        <span class="srs-editable-tag">📋 ตรวจสอบครบวงจร</span>
       </div>
     </div>
 
@@ -276,18 +281,29 @@ const PAGE_BODY_HTML = `
       </div>
     </section>
 
-    <!-- 6. ข้อมูลบริษัท ที่เข้าฝึกงาน (พร้อม [REQ-06] Match Verification) -->
+    <!-- 6. ข้อมูลสถานประกอบการจาก Checklist (ที่ยื่นขอฝึกงาน) -->
     <section class="card" id="admin-placement-section" style="display:none;">
       <div class="card-header">
         <span class="material-icons header-icon">business</span>
-        <h2 class="card-title">ข้อมูลสถานประกอบการจริงที่เข้าฝึกงาน &amp; การตรวจสอบความตรงกัน [REQ-06]</h2>
+        <h2 class="card-title">ข้อมูลสถานประกอบการจาก Checklist (ที่ยื่นขอฝึกงาน)</h2>
       </div>
       <div class="card-body" id="admin-placement-body">
         <p class="text-gray-400 text-center py-4">กำลังโหลด...</p>
       </div>
     </section>
 
-    <!-- 7. สรุปข้อมูลเอกสาร -->
+    <!-- 7. ตรวจสอบเอกสารแบบตอบรับจากสถานประกอบการ (Acceptance Form Review) -->
+    <section class="card" id="admin-acceptance-section">
+      <div class="card-header" style="background:linear-gradient(135deg, #1E1B4B 0%, #312E81 100%);">
+        <span class="material-icons header-icon" style="color:#A5B4FC;">assignment_turned_in</span>
+        <h2 class="card-title">เอกสารแบบตอบรับจากสถานประกอบการ (Acceptance Form) &amp; การอนุมัติของที่ปรึกษา</h2>
+      </div>
+      <div class="card-body" id="admin-acceptance-body">
+        <p class="text-gray-400 text-center py-4">กำลังโหลด...</p>
+      </div>
+    </section>
+
+    <!-- 8. สรุปข้อมูลเอกสาร -->
     <section class="card">
       <div class="card-header">
         <span class="material-icons header-icon">summarize</span>

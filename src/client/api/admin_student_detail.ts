@@ -43,7 +43,13 @@ async function initStudentDetail() {
     renderCompanies(data.companies);
     renderSubmissions(data.companies);
     renderPlacement(data.placement);
+    renderAcceptanceFormReview(data.acceptanceWorkflow);
     renderDocumentSummary(data);
+
+    const btnGoToChecklist = document.getElementById('btn-goto-checklist-review') as HTMLAnchorElement | null;
+    if (btnGoToChecklist) {
+      btnGoToChecklist.href = `/advisor-checklist-review?studentId=${studentId}`;
+    }
 
     const addTrainingBox = document.getElementById('admin-add-training-box');
     if (addTrainingBox) {
@@ -60,11 +66,6 @@ async function initStudentDetail() {
       if (cvStatusSelect && cvStatusSelect.parentElement) {
         cvStatusSelect.parentElement.style.display = 'none';
       }
-    }
-
-    const placementApproval = document.getElementById('placement-approval-area');
-    if (placementApproval) {
-      placementApproval.style.display = currentUserFlags.isAdvisor ? 'flex' : 'none';
     }
   } catch (err) {
     console.error('Load student detail error:', err);
@@ -489,89 +490,189 @@ function renderSubmissions(companies) {
 }
 
 // ==========================================
-// 6. ข้อมูลบริษัท ที่เข้าฝึกงาน (admin อนุมัติได้)
+// 6. ข้อมูลสถานประกอบการจาก Checklist (อ่านอย่างเดียว)
 // ==========================================
 function renderPlacement(placement) {
   const section = document.getElementById('admin-placement-section');
   const body = document.getElementById('admin-placement-body');
+  if (!section || !body) return;
 
-  if (!placement) {
+  if (!placement || !placement.companyNameTh) {
     section.style.display = 'none';
     return;
   }
 
   section.style.display = 'block';
 
-  let statusBadge = '<span class="status-wait">☐ รอผล</span>';
-  if (placement.status === 'APPROVED') statusBadge = '<span class="status-pass">✓ อนุมัติที่ฝึกงาน</span>';
-  else if (placement.status === 'REJECTED') statusBadge = '<span class="status-fail">✗ ไม่อนุมัติที่ฝึกงาน</span>';
-
   body.innerHTML = `
-    <div style="margin-bottom:16px; padding:12px 18px; border-radius:8px; background:#f8fafc; border:1px solid #e2e8f0; display:flex; align-items:center; gap:10px;">
-      <strong>สถานะปัจจุบัน:</strong> ${statusBadge}
-      ${placement.isMatchedWithChecklist === false ? `<span style="background:#FEE2E2; color:#B91C1C; border:1px solid #FCA5A5; padding:3px 10px; border-radius:999px; font-size:12px; font-weight:700;">🚨 [REQ-06] บริษัทไม่ตรงกับ Checklist เดิม!</span>` : ''}
-      ${placement.isMatchedWithChecklist === true ? `<span style="background:#DCFCE7; color:#15803D; border:1px solid #86EFAC; padding:3px 10px; border-radius:999px; font-size:12px; font-weight:700;">✅ [REQ-06] ตรงกับ Checklist ที่อนุมัติ</span>` : ''}
-      ${placement.note ? `<span style="color:#64748b; font-size:13px;">หมายเหตุ: ${placement.note}</span>` : ''}
+    <div style="margin-bottom:14px; padding:10px 16px; border-radius:10px; background:#F8FAFC; border:1px solid #E2E8F0; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+      <div style="font-size:12.5px; color:#475569;">
+        📌 ข้อมูลนี้ถูกดึงมาจากแบบประเมิน Checklist ที่นิสิตได้กรอกและยื่นผ่านระบบ
+      </div>
+      <a href="/advisor-checklist-review?studentId=${studentId}" style="background:#EEF2FF; color:#312E81; border:1px solid #C7D2FE; padding:6px 14px; border-radius:8px; font-size:12px; font-weight:700; text-decoration:none; display:inline-flex; align-items:center; gap:5px;">
+        <span class="material-icons" style="font-size:16px;">fact_check</span> ไปหน้าตรวจประเมิน Checklist
+      </a>
     </div>
     <div class="form-grid">
-      <div class="form-group"><label class="form-label" style="font-size:16px; font-weight:600;">ตำแหน่งที่ฝึก</label><input class="input-field" value="${placement.position || '-'}" readonly /></div>
-      <div class="form-group"><label class="form-label" style="font-size:16px; font-weight:600;">ชื่อแหล่งฝึกงาน</label><input class="input-field" value="${placement.companyNameTh || '-'}" readonly /></div>
-      <div class="form-group"><label class="form-label" style="font-size:16px; font-weight:600;">บุคคลที่ให้ทำหนังสือ</label><input class="input-field" value="${placement.contactPersonName || '-'}" readonly /></div>
-      <div class="form-group"><label class="form-label" style="font-size:16px; font-weight:600;">ตำแหน่งบุคคล</label><input class="input-field" value="${placement.contactPersonPosition || '-'}" readonly /></div>
-      <div class="form-group"><label class="form-label" style="font-size:16px; font-weight:600;">ที่อยู่บริษัท</label><input class="input-field" value="${placement.companyAddress || '-'}" readonly /></div>
-      <div class="form-group"><label class="form-label" style="font-size:16px; font-weight:600;">เบอร์โทร 1</label><input class="input-field" value="${placement.companyPhone1 || '-'}" readonly /></div>
-      <div class="form-group"><label class="form-label" style="font-size:16px; font-weight:600;">เบอร์โทร 2</label><input class="input-field" value="${placement.companyPhone2 || '-'}" readonly /></div>
-      <div class="form-group"><label class="form-label" style="font-size:16px; font-weight:600;">Email</label><input class="input-field" value="${placement.companyEmail || '-'}" readonly /></div>
-      <div class="form-group"><label class="form-label" style="font-size:16px; font-weight:600;">จังหวัด</label><input class="input-field" value="${placement.province || '-'}" readonly /></div>
-    </div>
-    <div id="placement-approval-area" style="margin: 16px auto 0; display:${currentUserRole === 'ADVISOR' ? 'flex' : 'none'}; flex-direction:column; gap:10px; max-width:350px;">
-      <label style="font-size:13px; font-weight:600; color:#334155;">ตั้งสถานะอนุมัติที่ฝึกงาน (อาจารย์ที่ปรึกษา)</label>
-      <select class="input-field" id="placement-admin-status" style="font-size:13px; padding:8px 10px;">
-        <option value="PENDING" ${placement.status === 'PENDING' ? 'selected' : ''}>☐ รอผล</option>
-        <option value="APPROVED" ${placement.status === 'APPROVED' ? 'selected' : ''}>✓ อนุมัติที่ฝึกงาน</option>
-        <option value="REJECTED" ${placement.status === 'REJECTED' ? 'selected' : ''}>✗ ไม่อนุมัติที่ฝึกงาน / เปลี่ยนที่ฝึกงาน</option>
-      </select>
-      <input type="text" class="input-field" id="placement-admin-note" value="${placement.note || ''}" placeholder="Comment / หมายเหตุ..." />
-      <button class="btn btn-primary btn-sm" onclick="savePlacementStatus()" style="width:fit-content;">💾 บันทึกสถานะอนุมัติ</button>
+      <div class="form-group"><label class="form-label" style="font-size:14px; font-weight:600;">ตำแหน่งที่ฝึก</label><input class="input-field" value="${placement.position || '-'}" readonly /></div>
+      <div class="form-group"><label class="form-label" style="font-size:14px; font-weight:600;">ชื่อแหล่งฝึกงาน</label><input class="input-field" value="${placement.companyNameTh || '-'}" readonly /></div>
+      <div class="form-group"><label class="form-label" style="font-size:14px; font-weight:600;">บุคคลที่ให้ทำหนังสือ</label><input class="input-field" value="${placement.contactPersonName || '-'}" readonly /></div>
+      <div class="form-group"><label class="form-label" style="font-size:14px; font-weight:600;">ตำแหน่งบุคคล</label><input class="input-field" value="${placement.contactPersonPosition || '-'}" readonly /></div>
+      <div class="form-group"><label class="form-label" style="font-size:14px; font-weight:600;">ที่อยู่บริษัท</label><input class="input-field" value="${placement.companyAddress || '-'}" readonly /></div>
+      <div class="form-group"><label class="form-label" style="font-size:14px; font-weight:600;">เบอร์โทร 1</label><input class="input-field" value="${placement.companyPhone1 || '-'}" readonly /></div>
+      <div class="form-group"><label class="form-label" style="font-size:14px; font-weight:600;">เบอร์โทร 2</label><input class="input-field" value="${placement.companyPhone2 || '-'}" readonly /></div>
+      <div class="form-group"><label class="form-label" style="font-size:14px; font-weight:600;">Email</label><input class="input-field" value="${placement.companyEmail || '-'}" readonly /></div>
+      <div class="form-group"><label class="form-label" style="font-size:14px; font-weight:600;">จังหวัด</label><input class="input-field" value="${placement.province || '-'}" readonly /></div>
     </div>
   `;
 }
 
-window.savePlacementStatus = async function() {
-  const selectEl = document.getElementById('placement-admin-status');
-  const noteEl = document.getElementById('placement-admin-note');
-  const status = selectEl ? selectEl.value : 'PENDING';
-  const note = noteEl ? noteEl.value : '';
+// ==========================================
+// 7. ตรวจสอบเอกสารแบบตอบรับจากสถานประกอบการ (Acceptance Form Review)
+// ==========================================
+function renderAcceptanceFormReview(wf) {
+  const section = document.getElementById('admin-acceptance-section');
+  const body = document.getElementById('admin-acceptance-body');
+  if (!section || !body) return;
 
+  section.style.display = 'block';
+
+  if (!wf || !wf.companyResponseFileUrl) {
+    body.innerHTML = `
+      <div style="text-align:center; padding:28px 16px; color:#94A3B8;">
+        <span class="material-icons" style="font-size:42px; opacity:0.6; color:#CBD5E1;">hourglass_empty</span>
+        <p style="margin:8px 0 0 0; font-size:13.5px; font-weight:700; color:#64748B;">
+          นิสิตยังไม่ได้อัปโหลดเอกสารแบบตอบรับกลับมา
+        </p>
+        <p style="margin:4px 0 0 0; font-size:12px; color:#94A3B8;">
+          (จะปรากฏเมื่อนิสิตนำหนังสือขอความอนุเคราะห์ไปสัมภาษณ์และอัปโหลดแบบตอบรับกลับเข้าระบบ)
+        </p>
+      </div>
+    `;
+    return;
+  }
+
+  const ocr = wf.companyResponseOcr;
+  let ocrBoxHtml = '';
+  if (ocr && ocr.status === 'DONE') {
+    const isAccepted = ocr.result === 'ACCEPTED';
+    const confPct = Math.round((Number(ocr.confidence) || 0.85) * 100);
+    ocrBoxHtml = `
+      <div style="background:${isAccepted ? '#ECFDF5' : '#FEF2F2'}; border:1px solid ${isAccepted ? '#6EE7B7' : '#FCA5A5'}; border-radius:10px; padding:10px 14px; margin:12px 0;">
+        <div style="font-size:13px; font-weight:800; color:${isAccepted ? '#065F46' : '#991B1B'}; display:flex; align-items:center; gap:6px;">
+          <span>🤖 ผลการวิเคราะห์ AI OCR:</span>
+          <span>คาดว่า "${isAccepted ? 'บริษัทตอบรับเข้าฝึกงาน' : 'บริษัทปฏิเสธ'}" (${confPct}%)</span>
+        </div>
+        ${(ocr.reasons && ocr.reasons[0]) ? `<div style="font-size:12px; color:${isAccepted ? '#047857' : '#B91C1C'}; margin-top:3px;">${ocr.reasons[0]}</div>` : ''}
+      </div>
+    `;
+  }
+
+  const status = wf.companyResponseStatus;
+  const isPendingAdvisor = status === 'WAITING_ADVISOR_APPROVAL';
+  const isAdvisorApproved = status === 'ADVISOR_APPROVED';
+  const isAccepted = status === 'ACCEPTED';
+  const isRejected = status === 'REJECTED';
+
+  body.innerHTML = `
+    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:14px; padding-bottom:14px; border-bottom:1px solid #E2E8F0;">
+      <div>
+        <div style="font-size:15px; font-weight:800; color:#1E1B4B;">
+          🏢 สถานประกอบการ: ${wf.companyName || 'ไม่ระบุ'}
+        </div>
+        <div style="font-size:12px; color:#64748B; margin-top:2px;">
+          อัปโหลดเมื่อ: ${wf.companyResponseUploadedAt ? new Date(wf.companyResponseUploadedAt).toLocaleDateString('th-TH', { year:'numeric', month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' }) : '-'}
+        </div>
+      </div>
+      <div>
+        <a href="${wf.companyResponseFileUrl}" target="_blank" rel="noopener" style="background:#EEF2FF; color:#312E81; border:1px solid #C7D2FE; padding:8px 16px; border-radius:10px; font-size:13px; font-weight:700; text-decoration:none; display:inline-flex; align-items:center; gap:6px; box-shadow:0 2px 6px rgba(49,46,129,0.1);">
+          <span class="material-icons" style="font-size:18px;">visibility</span> 👁️ เปิดดูใบตอบรับที่นิสิตแนบ (${wf.companyResponseFileName || 'ไฟล์เอกสาร'})
+        </a>
+      </div>
+    </div>
+
+    ${ocrBoxHtml}
+
+    <div style="margin-top:14px;">
+      ${isPendingAdvisor ? `
+        <div style="padding:16px 20px; background:#FFFBEB; border:1.5px solid #FCD34D; border-radius:14px;">
+          <div style="font-size:13.5px; font-weight:800; color:#B45309; display:flex; align-items:center; gap:8px;">
+            <span class="material-icons" style="font-size:22px; color:#D97706;">hourglass_top</span>
+            <span>สถานะ: นิสิตอัปโหลดแบบตอบรับแล้ว — รออาจารย์ที่ปรึกษาตรวจประเมิน</span>
+          </div>
+          <p style="font-size:12px; color:#92400E; margin:4px 0 14px 30px;">
+            กรุณาเปิดตรวจสอบเอกสารใบตอบรับด้านบน หากถูกต้องให้อนุมัติเพื่อส่งต่อให้ Super Admin ดำเนินการออกหนังสือส่งตัว
+          </p>
+
+          <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; padding-left:30px;">
+            <input type="text" id="admin-detail-acceptance-note" placeholder="หมายเหตุ / คำแนะนำ (ถ้ามี)..." class="input-field" style="flex:1; min-width:240px; font-size:12.5px; padding:8px 12px; background:white;" />
+            <button type="button" onclick="window.submitAdvisorAcceptanceReview('APPROVED')" style="background:#10B981; color:white; border:none; padding:9px 18px; border-radius:10px; font-size:13px; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:6px; box-shadow:0 2px 6px rgba(16,185,129,0.3);">
+              <span class="material-icons" style="font-size:18px;">check_circle</span> ✓ อนุมัติแบบตอบรับ
+            </button>
+            <button type="button" onclick="window.submitAdvisorAcceptanceReview('REJECTED')" style="background:#EF4444; color:white; border:none; padding:9px 18px; border-radius:10px; font-size:13px; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:6px; box-shadow:0 2px 6px rgba(239,68,68,0.3);">
+              <span class="material-icons" style="font-size:18px;">cancel</span> ✗ ไม่อนุมัติ / บริษัทปฏิเสธ
+            </button>
+          </div>
+        </div>
+      ` : isAdvisorApproved ? `
+        <div style="padding:14px 18px; background:#ECFDF5; border:1px solid #6EE7B7; border-radius:12px; display:flex; align-items:center; gap:10px;">
+          <span class="material-icons" style="color:#059669; font-size:24px;">verified</span>
+          <div>
+            <div style="font-size:13.5px; font-weight:800; color:#065F46;">
+              ✓ อาจารย์ที่ปรึกษาอนุมัติแบบตอบรับเรียบร้อยแล้ว
+            </div>
+            <div style="font-size:12px; color:#047857; margin-top:2px;">
+              ส่งต่อไปยังคิวของ Super Admin (พี่จอม) เพื่อออกหนังสือส่งตัวเรียบร้อยแล้ว
+              ${wf.advisorAcceptanceNote ? ` • หมายเหตุ: "${wf.advisorAcceptanceNote}"` : ''}
+            </div>
+          </div>
+        </div>
+      ` : isAccepted ? `
+        <div style="padding:14px 18px; background:#ECFDF5; border:1px solid #6EE7B7; border-radius:12px; display:flex; align-items:center; gap:10px;">
+          <span class="material-icons" style="color:#059669; font-size:24px;">task_alt</span>
+          <div style="font-size:13.5px; font-weight:800; color:#065F46;">
+            ✓ บริษัทตอบรับเข้าฝึกงานอย่างเป็นทางการและเจ้าหน้าที่ได้ยืนยันเรียบร้อยแล้ว
+          </div>
+        </div>
+      ` : isRejected ? `
+        <div style="padding:14px 18px; background:#FEF2F2; border:1px solid #FCA5A5; border-radius:12px; display:flex; align-items:center; gap:10px;">
+          <span class="material-icons" style="color:#DC2626; font-size:24px;">highlight_off</span>
+          <div>
+            <div style="font-size:13.5px; font-weight:800; color:#991B1B;">
+              ✗ แบบตอบรับไม่ผ่าน / บริษัทปฏิเสธ (บันทึกประวัติเข้า Archive แล้ว)
+            </div>
+            <div style="font-size:12px; color:#B91C1C; margin-top:2px;">
+              ระบบได้ปลดล็อกให้นิสิตยื่นขอฝึกงานกับสถานประกอบการแห่งใหม่แล้ว
+            </div>
+          </div>
+        </div>
+      ` : ''}
+    </div>
+  `;
+}
+
+window.submitAdvisorAcceptanceReview = async function(status) {
+  const noteEl = document.getElementById('admin-detail-acceptance-note') as HTMLInputElement | null;
+  const note = noteEl?.value?.trim() || '';
+  if (status === 'REJECTED' && !confirm('ยืนยันไม่อนุมัติแบบตอบรับนี้ใช่หรือไม่? ระบบจะบันทึกประวัติเข้า Archive และปลดล็อกให้นิสิตยื่นบริษัทใหม่')) {
+    return;
+  }
   try {
-    const url = currentUserRole === 'ADVISOR'
-      ? `/api/advisor/students/${studentId}/placement-status`
-      : `/api/admin/students/${studentId}/placement-status`;
-
-    let res = await fetch(url, {
-      method: 'PUT',
+    const res = await fetch('/api/advisor/documents/review-acceptance', {
+      method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status, note }),
+      body: JSON.stringify({ studentId, status, note }),
     });
-
-    if (res.status === 404 && currentUserRole === 'ADVISOR') {
-      res = await fetch(`/api/admin/students/${studentId}/placement-status`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status, note }),
-      });
-    }
-
     const data = await res.json();
     if (data.success) {
-      alert('✅ อัปเดตสถานะอนุมัติที่ฝึกงานสำเร็จ');
+      alert('✅ ' + data.message);
       initStudentDetail();
     } else {
-      alert('เกิดข้อผิดพลาด: ' + data.message);
+      alert('เกิดข้อผิดพลาด: ' + (data.message || 'บันทึกไม่สำเร็จ'));
     }
   } catch (err) {
     console.error(err);
-    alert('เกิดข้อผิดพลาดในการเชื่อมต่อ');
+    alert('เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์');
   }
 };
 

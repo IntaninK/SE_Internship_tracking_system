@@ -444,6 +444,9 @@ function toStudentAcceptanceView(wf: any, state?: any, student?: any, letterStud
     companyName: wf.companyName || student?.placement?.companyNameTh || student?.companies?.[0]?.name || "",
     companyAddress: student?.placement?.companyAddress || "",
     status: wf.companyResponseStatus || "NOT_SENT",
+    advisorAcceptanceStatus: wf.advisorAcceptanceStatus || "NONE",
+    advisorAcceptanceNote: wf.advisorAcceptanceNote || "",
+    advisorName: student?.advisor?.name || "อาจารย์ที่ปรึกษา",
     fileName: wf.companyResponseFileName || "",
     fileUrl: wf.companyResponseFileUrl || "",
     uploadedAt: wf.companyResponseUploadedAt || "",
@@ -501,6 +504,7 @@ router.get("/acceptance-form", async (req: Request, res: Response) => {
   }
 });
 
+// 4.1 อัปโหลดแบบตอบรับจากสถานประกอบการ (ส่งต่อให้อาจารย์ที่ปรึกษาตรวจก่อน)
 router.post("/acceptance-form", upload.single("file"), async (req: Request, res: Response) => {
   try {
     const student = await prisma.student.findUnique({ where: { userId: req.session.user!.id } });
@@ -520,10 +524,10 @@ router.post("/acceptance-form", upload.single("file"), async (req: Request, res:
         message: "ยังไม่มีการออกหนังสือขอความอนุเคราะห์ จึงยังอัปโหลดแบบตอบรับไม่ได้",
       });
     }
-    if (wf.companyResponseStatus === "ACCEPTED" || wf.companyResponseStatus === "REJECTED") {
+    if (wf.companyResponseStatus === "ACCEPTED") {
       return res.status(400).json({
         success: false,
-        message: "เจ้าหน้าที่ยืนยันผลแบบตอบรับนี้แล้ว หากต้องการแก้ไขกรุณาติดต่อเจ้าหน้าที่คณะ",
+        message: "เจ้าหน้าที่ยืนยันผลการตอบรับเรียบร้อยแล้ว หากต้องการแก้ไขกรุณาติดต่อเจ้าหน้าที่คณะ",
       });
     }
 
@@ -544,19 +548,22 @@ router.post("/acceptance-form", upload.single("file"), async (req: Request, res:
     const current = latest.docWorkflowMap[wfKey] || wf;
     latest.docWorkflowMap[wfKey] = {
       ...current,
-      companyResponseStatus: "WAITING_RESPONSE",
+      companyResponseStatus: "WAITING_ADVISOR_APPROVAL",
       companyResponseFileName: cleanFileName,
       companyResponseFileUrl: fileUrl,
       companyResponseUploadedAt: new Date().toISOString(),
       companyResponseSubmittedByStudent: true,
       companyResponseOcr: ocr,
+      advisorAcceptanceStatus: "PENDING",
+      advisorAcceptanceNote: "",
+      advisorAcceptanceReviewedAt: "",
     };
     saveSuperAdminState(latest);
 
     res.json({
       success: true,
-      message: "อัปโหลดแบบตอบรับเรียบร้อยแล้ว รอเจ้าหน้าที่คณะตรวจสอบและยืนยันผล",
-      acceptance: toStudentAcceptanceView(latest.docWorkflowMap[wfKey]),
+      message: "อัปโหลดแบบตอบรับเรียบร้อยแล้ว ระบบได้ส่งเรื่องให้อาจารย์ที่ปรึกษาตรวจสอบก่อน",
+      acceptance: toStudentAcceptanceView(latest.docWorkflowMap[wfKey], latest, student),
     });
   } catch (err: any) {
     console.error("POST /api/student/acceptance-form error:", err);
@@ -646,6 +653,7 @@ router.get("/companies", async (req: Request, res: Response) => {
       masterCompanies,
       archivedCompanies,
       majorRule,
+      placement: student.placement || null,
     });
   } catch (err) {
     console.error("GET /api/student/companies error:", err);
@@ -731,7 +739,18 @@ router.post("/companies", async (req: Request, res: Response) => {
       await prisma.company.delete({ where: { id: rej.id } });
     }
 
-    const { name, answers } = req.body;
+    const {
+      name,
+      answers,
+      position,
+      contactPersonName,
+      contactPersonPosition,
+      companyAddress,
+      province,
+      companyPhone1,
+      companyPhone2,
+      companyEmail,
+    } = req.body;
     if (!name || !name.trim()) {
       return res.status(400).json({ success: false, message: "กรุณาระบุชื่อบริษัท" });
     }
@@ -747,18 +766,84 @@ router.post("/companies", async (req: Request, res: Response) => {
         id: `COMP-NEW-${Date.now().toString().slice(-5)}`,
         nameTh: cleanName,
         nameEn: "-",
-        province: "รอระบุจังหวัด",
-        address: "รอตรวจสอบที่อยู่",
-        hrContactName: "-",
-        hrPhone: "-",
-        hrEmail: "-",
-        recommendedPositions: "นิสิตฝึกงาน / สหกิจศึกษา",
+        province: province || "รอระบุจังหวัด",
+        address: companyAddress || "รอตรวจสอบที่อยู่",
+        hrContactName: contactPersonName || "-",
+        hrPhone: companyPhone1 || "-",
+        hrEmail: companyEmail || "-",
+        recommendedPositions: position || "นิสิตฝึกงาน / สหกิจศึกษา",
         status: "PENDING_REVIEW",
         submittedByStudentCode: student.studentCode,
         submittedByStudentName: student.nameTh,
         createdAt: new Date().toISOString(),
       });
     }
+
+    // สร้างหรืออัปเดตข้อมูลสถานที่ฝึกงาน (InternshipPlacement) ให้ตรงกับที่นิสิตกรอกใน Checklist
+    const finalCompName = matchedMaster ? matchedMaster.nameTh : cleanName;
+    const finalAddress = companyAddress || matchedMaster?.address || "รอระบุที่อยู่";
+    const finalProvince = province || matchedMaster?.province || "รอระบุจังหวัด";
+    const finalContact = contactPersonName || matchedMaster?.hrContactName || "ฝ่ายทรัพยากรบุคคล (HR)";
+    const finalContactPos = contactPersonPosition || "ผู้จัดการฝ่ายบุคคล";
+    const finalPhone = companyPhone1 || matchedMaster?.hrPhone || "-";
+    const finalPhone2 = companyPhone2 || "-";
+    const finalEmail = companyEmail || matchedMaster?.hrEmail || "-";
+    const finalPosition = position || "Software Developer";
+
+    if (student.placement) {
+      await prisma.internshipPlacement.update({
+        where: { id: student.placement.id },
+        data: {
+          companyNameTh: finalCompName,
+          position: finalPosition,
+          contactPersonName: finalContact,
+          contactPersonPosition: finalContactPos,
+          companyAddress: finalAddress,
+          province: finalProvince,
+          companyPhone1: finalPhone,
+          companyPhone2: finalPhone2,
+          companyEmail: finalEmail,
+          status: "PENDING",
+        },
+      });
+    } else {
+      await prisma.internshipPlacement.create({
+        data: {
+          studentId: student.id,
+          companyNameTh: finalCompName,
+          position: finalPosition,
+          contactPersonName: finalContact,
+          contactPersonPosition: finalContactPos,
+          companyAddress: finalAddress,
+          province: finalProvince,
+          companyPhone1: finalPhone,
+          companyPhone2: finalPhone2,
+          companyEmail: finalEmail,
+          status: "PENDING",
+        },
+      });
+    }
+
+    // รีเซ็ตคิวงานเอกสารให้พร้อมสำหรับบริษัทใหม่
+    const wfKey = String(student.id);
+    state.docWorkflowMap[wfKey] = {
+      studentId: student.id,
+      studentCode: student.studentCode,
+      companyName: finalCompName,
+      interviewDate: "2026-02-15",
+      requestLetterIssued: false,
+      requestLetterDocNo: "",
+      requestLetterDate: "",
+      companyResponseStatus: "NOT_SENT",
+      companyResponseFileName: "",
+      companyResponseFileUrl: "",
+      companyResponseUploadedAt: "",
+      companyResponseSubmittedByStudent: false,
+      companyResponseOcr: undefined,
+      advisorAcceptanceStatus: "NONE",
+      dispatchLetterIssued: false,
+      isLocked: false,
+    };
     saveSuperAdminState(state);
 
     // สร้างบริษัทใหม่
@@ -817,7 +902,18 @@ router.put("/companies/:id", async (req: Request, res: Response) => {
       return res.status(404).json({ success: false, message: "ไม่พบข้อมูลนิสิต" });
     }
     const companyId = parseInt(req.params.id as string, 10);
-    const { name, answers } = req.body;
+    const {
+      name,
+      answers,
+      position,
+      contactPersonName,
+      contactPersonPosition,
+      companyAddress,
+      province,
+      companyPhone1,
+      companyPhone2,
+      companyEmail,
+    } = req.body;
 
     const company = await prisma.company.findFirst({
       where: { id: companyId, studentId: student.id },
@@ -827,12 +923,56 @@ router.put("/companies/:id", async (req: Request, res: Response) => {
       return res.status(404).json({ success: false, message: "ไม่พบบริษัทนี้" });
     }
 
+    if (company.checklistStatus === "APPROVED") {
+      return res.status(400).json({
+        success: false,
+        message: "อาจารย์ที่ปรึกษาอนุมัติ Checklist แล้ว ไม่สามารถแก้ไขข้อมูลได้",
+      });
+    }
+
     // อัปเดตชื่อบริษัท
     if (name && name.trim()) {
       await prisma.company.update({
         where: { id: companyId },
         data: { name: name.trim() },
       });
+    }
+
+    // อัปเดตข้อมูลสถานที่ฝึกงาน (InternshipPlacement) ถ้ามีส่งมา
+    if (position || companyAddress || contactPersonName || province || companyPhone1) {
+      const placementData: any = {};
+      if (name && name.trim()) placementData.companyNameTh = name.trim();
+      if (position) placementData.position = position;
+      if (contactPersonName) placementData.contactPersonName = contactPersonName;
+      if (contactPersonPosition) placementData.contactPersonPosition = contactPersonPosition;
+      if (companyAddress) placementData.companyAddress = companyAddress;
+      if (province) placementData.province = province;
+      if (companyPhone1) placementData.companyPhone1 = companyPhone1;
+      if (companyPhone2) placementData.companyPhone2 = companyPhone2;
+      if (companyEmail) placementData.companyEmail = companyEmail;
+
+      if (student.placement) {
+        await prisma.internshipPlacement.update({
+          where: { id: student.placement.id },
+          data: placementData,
+        });
+      } else {
+        await prisma.internshipPlacement.create({
+          data: {
+            studentId: student.id,
+            companyNameTh: name?.trim() || "สถานประกอบการ",
+            position: position || "Software Developer",
+            contactPersonName: contactPersonName || "ฝ่ายทรัพยากรบุคคล (HR)",
+            contactPersonPosition: contactPersonPosition || "-",
+            companyAddress: companyAddress || "-",
+            province: province || "-",
+            companyPhone1: companyPhone1 || "-",
+            companyPhone2: companyPhone2 || "-",
+            companyEmail: companyEmail || "-",
+            status: "PENDING",
+          },
+        });
+      }
     }
 
     // อัปเดตคำตอบ checklist
@@ -922,6 +1062,13 @@ router.put("/submissions/:companyId", async (req: Request, res: Response) => {
 
     if (!company) {
       return res.status(404).json({ success: false, message: "ไม่พบบริษัทนี้" });
+    }
+
+    if (company.checklistStatus === "APPROVED") {
+      return res.status(400).json({
+        success: false,
+        message: "อาจารย์ที่ปรึกษาอนุมัติ Checklist แล้ว ไม่สามารถแก้ไขข้อมูลได้",
+      });
     }
 
     const validStatuses = [

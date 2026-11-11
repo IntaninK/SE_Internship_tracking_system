@@ -512,13 +512,17 @@ function renderStudentAcceptanceCard() {
     return;
   }
 
-  const isFinalized = acc.status === 'ACCEPTED' || acc.status === 'REJECTED';
+  const isFinalized = acc.status === 'ACCEPTED';
   const statusBanner = acc.status === 'ACCEPTED'
     ? `<div style="background:#DCFCE7; color:#166534; padding:8px 12px; border-radius:8px; font-size:13px; font-weight:700;">✅ เจ้าหน้าที่คณะตรวจสอบและยืนยันผล "บริษัทตอบรับเข้าฝึกงาน" เรียบร้อยแล้ว ${acc.dispatchLetterIssued ? `(ออกหนังสือส่งตัวเลขที่ ${escapeStudentHtml(acc.dispatchLetterDocNo || '-')} แล้ว)` : '(รอออกหนังสือส่งตัว)'}</div>`
+    : acc.status === 'WAITING_ADVISOR_APPROVAL'
+    ? `<div style="background:#FEF3C7; color:#92400E; padding:8px 12px; border-radius:8px; font-size:13px; font-weight:700;">⏳ อัปโหลดไฟล์ "${escapeStudentHtml(acc.fileName || 'ใบตอบรับ')}" แล้ว — อยู่ระหว่างรออาจารย์ที่ปรึกษา (${escapeStudentHtml(acc.advisorName || 'ที่ปรึกษา')}) ตรวจสอบและอนุมัติแบบตอบรับ</div>`
+    : acc.status === 'ADVISOR_APPROVED'
+    ? `<div style="background:#EFF6FF; color:#1E40AF; padding:8px 12px; border-radius:8px; font-size:13px; font-weight:700;">✓ อาจารย์ที่ปรึกษาอนุมัติแบบตอบรับแล้ว — อยู่ระหว่างรอเจ้าหน้าที่คณะ (Super Admin) ยืนยันผลรับเข้าฝึกงานขั้นสุดท้าย</div>`
     : acc.status === 'REJECTED'
-    ? `<div style="background:#FEE2E2; color:#991B1B; padding:8px 12px; border-radius:8px; font-size:13px; font-weight:700;">✗ เจ้าหน้าที่บันทึกผล "บริษัทปฏิเสธ" (${escapeStudentHtml(acc.note || '-')}) — ระบบปลดล็อกให้ยื่นบริษัทใหม่แล้ว</div>`
+    ? `<div style="background:#FEE2E2; color:#991B1B; padding:8px 12px; border-radius:8px; font-size:13px; font-weight:700;">✗ บันทึกผล "บริษัทปฏิเสธ" (${escapeStudentHtml(acc.note || '-')}) — หากได้รับหนังสือขอความอนุเคราะห์ฉบับใหม่แล้ว สามารถอัปโหลดใบตอบรับใหม่ได้ทันที</div>`
     : acc.fileUrl
-    ? `<div style="background:#FEF3C7; color:#92400E; padding:8px 12px; border-radius:8px; font-size:13px; font-weight:600;">⏳ อัปโหลดไฟล์ "${escapeStudentHtml(acc.fileName || 'ใบตอบรับ')}" แล้ว — ระบบกำลังให้เจ้าหน้าที่คณะตรวจสอบและกดยืนยันผล</div>`
+    ? `<div style="background:#FEF3C7; color:#92400E; padding:8px 12px; border-radius:8px; font-size:13px; font-weight:600;">⏳ อัปโหลดไฟล์ "${escapeStudentHtml(acc.fileName || 'ใบตอบรับ')}" แล้ว — ระบบกำลังส่งให้อาจารย์ที่ปรึกษาตรวจสอบ</div>`
     : `<div style="background:#EFF6FF; color:#1E40AF; padding:8px 12px; border-radius:8px; font-size:13px; font-weight:600;">📄 คณะออกหนังสือขอความอนุเคราะห์ (${escapeStudentHtml(acc.requestLetterDocNo || '-')}) แล้ว กดดาวน์โหลดหนังสือขอความอนุเคราะห์และแบบตอบรับเปล่าด้านขวาเพื่อนำไปยื่นให้บริษัท และเมื่อบริษัทกรอกแบบตอบรับกลับมา กรุณาอัปโหลดไฟล์ที่นี่</div>`;
 
   container.innerHTML = `

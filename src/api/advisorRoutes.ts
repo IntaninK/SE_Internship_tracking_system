@@ -1,6 +1,7 @@
 import express, { Request, Response } from "express";
 import prisma from "../db";
 import requireAdvisor from "../auth/requireAdvisor";
+import { loadSuperAdminState, saveSuperAdminState } from "../utils/superAdminStore";
 
 const router = express.Router();
 
@@ -224,9 +225,17 @@ router.get("/students", async (req: Request, res: Response) => {
       orderBy: { studentCode: "desc" },
     });
 
+    const state = loadSuperAdminState();
+
     let mapped = allStudents.map((s) => {
       const cStatus = getStudentChecklistStatus(s);
       const rStatus = getStudentReadinessStatus(s);
+
+      const wf = state.docWorkflowMap[String(s.id)];
+      const hasPendingAcceptance = Boolean(wf && wf.companyResponseStatus === "WAITING_ADVISOR_APPROVAL");
+      const acceptanceStatus = wf?.companyResponseStatus || "NONE";
+      const acceptanceFileName = wf?.companyResponseFileName || "";
+      const acceptanceFileUrl = wf?.companyResponseFileUrl || "";
 
       const approvedTrainings = (s.trainingRecords || []).filter((t) => t.status === "APPROVED");
       const softHours = approvedTrainings
@@ -270,6 +279,10 @@ router.get("/students", async (req: Request, res: Response) => {
         isMatchedWithChecklist,
         hasPendingChecklist,
         hasPendingPlacement,
+        hasPendingAcceptance,
+        acceptanceStatus,
+        acceptanceFileName,
+        acceptanceFileUrl,
       };
     });
 
@@ -661,6 +674,13 @@ router.get("/students/:studentId/checklist", async (req: Request, res: Response)
       ? checkPlacementMatchesChecklist(student.placement, student.companies || [])
       : false;
 
+    const state = loadSuperAdminState();
+    const wfKey = String(student.id);
+    const acceptanceWorkflow = state.docWorkflowMap[wfKey] || null;
+    const studentArchives = state.archivedApplications.filter(
+      (a) => a.studentId === student.id || a.studentCode === student.studentCode
+    );
+
     res.json({
       success: true,
       canReview,
@@ -679,6 +699,8 @@ router.get("/students/:studentId/checklist", async (req: Request, res: Response)
       },
       sections,
       companies: student.companies,
+      acceptanceWorkflow,
+      archivedApplications: studentArchives,
       placement: student.placement
         ? {
             ...student.placement,
@@ -1026,6 +1048,153 @@ router.put("/students/:studentId/placement-status", async (req: Request, res: Re
   } catch (err) {
     console.error("PUT /api/advisor/students/:id/placement-status error:", err);
     res.status(500).json({ success: false, message: "อัพเดตสถานะอนุมัติฝึกงานไม่สำเร็จ" });
+  }
+});
+
+// ==========================================
+// 8. อาจารย์ที่ปรึกษาตรวจและอนุมัติแบบตอบรับจากสถานประกอบการ
+// (เมื่อผ่าน จะส่งต่อไปให้ Super Admin กดอนุมัติรับเข้าฝึกงาน / ถ้าไม่ผ่าน จะปลดล็อกให้นิสิตยื่นใหม่)
+// ==========================================
+router.post("/documents/review-acceptance", async (req: Request, res: Response) => {
+  try {
+    const advisorStaffId = req.staff!.id;
+    const { studentId, status, note } = req.body;
+    const student = await prisma.student.findUnique({
+      where: { id: Number(studentId) },
+      include: { companies: true, placement: true, advisor: true },
+    });
+    if (!student) {
+      return res.status(404).json({ success: false, message: "ไม่พบข้อมูลนิสิต" });
+    }
+
+    const isCourseAdminOrStaff = Boolean(
+      req.staff?.isCourseAdmin ||
+      req.staff?.isStaff ||
+      req.session.user!.role === "ADMIN" ||
+      req.session.user!.role === "STAFF"
+    );
+
+    if (!isCourseAdminOrStaff && student.advisorId !== advisorStaffId && student.supervisorId !== advisorStaffId) {
+      return res.status(403).json({
+        success: false,
+        message: "คุณไม่มีสิทธิ์ตรวจแบบตอบรับของนิสิตท่านนี้",
+      });
+    }
+
+    const state = loadSuperAdminState();
+    const wfKey = String(student.id);
+    const wf = state.docWorkflowMap[wfKey];
+    if (!wf || !wf.companyResponseFileUrl) {
+      return res.status(400).json({ success: false, message: "ไม่พบไฟล์แบบตอบรับของนิสิต" });
+    }
+
+    if (status === "APPROVED") {
+      state.docWorkflowMap[wfKey] = {
+        ...wf,
+        companyResponseStatus: "ADVISOR_APPROVED",
+        advisorAcceptanceStatus: "APPROVED",
+        advisorAcceptanceNote: note || "อาจารย์ที่ปรึกษาตรวจสอบและอนุมัติแบบตอบรับแล้ว",
+        advisorAcceptanceReviewedAt: new Date().toISOString(),
+        advisorAcceptanceReviewedBy: req.staff?.name || req.session.user?.username || "",
+      };
+      saveSuperAdminState(state);
+      return res.json({
+        success: true,
+        message: `อนุมัติแบบตอบรับของ ${student.nameTh} เรียบร้อยแล้ว ระบบได้ส่งเรื่องต่อไปยังเจ้าหน้าที่คณะ (Super Admin) เพื่อยืนยันและออกหนังสือส่งตัว`,
+      });
+    } else {
+      // อาจารย์ที่ปรึกษาไม่อนุมัติแบบตอบรับ -> ย้ายเข้า Archive ฉบับเต็มและปลดล็อก
+      const activeComp = student.companies.find((c) => c.checklistStatus === "APPROVED") || student.companies[0];
+      const companyName = student.placement?.companyNameTh || activeComp?.name || wf.companyName || "สถานประกอบการ";
+      const position = student.placement?.position || "นิสิตฝึกงาน / สหกิจศึกษา";
+
+      const existingAnswers = activeComp
+        ? await prisma.companyChecklistAnswer.findMany({
+            where: { companyId: activeComp.id },
+            include: { checklistItem: true },
+          })
+        : [];
+
+      state.archivedApplications.unshift({
+        id: `ARCH-${Date.now().toString().slice(-6)}`,
+        studentId: student.id,
+        studentCode: student.studentCode,
+        studentName: student.nameTh,
+        major: student.major || "วิศวกรรมซอฟต์แวร์",
+        companyName,
+        position,
+        companyAddress: student.placement?.companyAddress || "-",
+        province: student.placement?.province || "-",
+        contactPersonName: student.placement?.contactPersonName || "-",
+        phone: student.placement?.companyPhone1 || "-",
+        email: student.placement?.companyEmail || "-",
+        reason: "ADVISOR_REJECTED",
+        note: note || "อาจารย์ที่ปรึกษาไม่อนุมัติแบบตอบรับ / สถานประกอบการปฏิเสธ (ปลดล็อกให้ยื่นบริษัทใหม่)",
+        fileName: wf.companyResponseFileName || "",
+        fileUrl: wf.companyResponseFileUrl || "",
+        ocr: wf.companyResponseOcr || undefined,
+        answers: existingAnswers.map((a) => ({
+          itemId: a.checklistItemId,
+          description: a.checklistItem?.description || "",
+          checked: a.checked,
+          detail: a.detail || "",
+        })),
+        archivedAt: new Date().toISOString(),
+      });
+
+      if (activeComp) {
+        await prisma.companyChecklistAnswer.deleteMany({ where: { companyId: activeComp.id } });
+        await prisma.companySubmission.deleteMany({ where: { companyId: activeComp.id } });
+        await prisma.company.delete({ where: { id: activeComp.id } });
+      }
+
+      if (student.placement) {
+        await prisma.internshipPlacement.update({
+          where: { id: student.placement.id },
+          data: {
+            companyNameTh: null,
+            position: null,
+            companyAddress: null,
+            province: null,
+            contactPersonName: null,
+            contactPersonPosition: null,
+            companyPhone1: null,
+            companyPhone2: null,
+            companyEmail: null,
+            status: "REJECTED",
+            note: note || "อาจารย์ที่ปรึกษาไม่อนุมัติแบบตอบรับ",
+          },
+        });
+      }
+
+      state.docWorkflowMap[wfKey] = {
+        studentId: student.id,
+        studentCode: student.studentCode,
+        companyName: "รอเลือกบริษัทใหม่ (ปลดล็อกแล้ว)",
+        requestLetterIssued: false,
+        requestLetterDocNo: "",
+        requestLetterDate: "",
+        companyResponseStatus: "REJECTED",
+        companyResponseNote: note || "อาจารย์ที่ปรึกษาไม่อนุมัติแบบตอบรับ — เก็บประวัติเข้า Archive แล้ว",
+        companyResponseFileName: "",
+        companyResponseFileUrl: "",
+        companyResponseUploadedAt: "",
+        companyResponseSubmittedByStudent: false,
+        companyResponseOcr: undefined,
+        advisorAcceptanceStatus: "REJECTED",
+        dispatchLetterIssued: false,
+        isLocked: false,
+      };
+
+      saveSuperAdminState(state);
+      return res.json({
+        success: true,
+        message: `บันทึกไม่อนุมัติแบบตอบรับของ ${student.nameTh} เรียบร้อยแล้ว ระบบได้เก็บประวัติเข้า Archive และปลดล็อกให้นิสิตยื่นบริษัทใหม่`,
+      });
+    }
+  } catch (err) {
+    console.error("POST /api/advisor/documents/review-acceptance error:", err);
+    res.status(500).json({ success: false, message: "บันทึกผลการตรวจแบบตอบรับไม่สำเร็จ" });
   }
 });
 

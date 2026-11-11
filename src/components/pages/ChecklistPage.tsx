@@ -131,6 +131,24 @@ const PAGE_BODY_HTML = `
     <!-- Datalist สำหรับ Auto-suggest รายชื่อบริษัทจาก Master Data -->
     <datalist id="master-companies-datalist"></datalist>
 
+    <!-- Datalist สำหรับเลือกจังหวัด -->
+    <datalist id="provinces-datalist">
+      <option value="กรุงเทพมหานคร"></option>
+      <option value="เชียงใหม่"></option>
+      <option value="พะเยา"></option>
+      <option value="เชียงราย"></option>
+      <option value="ลำปาง"></option>
+      <option value="นนทบุรี"></option>
+      <option value="ปทุมธานี"></option>
+      <option value="สมุทรปราการ"></option>
+      <option value="ชลบุรี"></option>
+      <option value="ขอนแก่น"></option>
+      <option value="นครราชสีมา"></option>
+      <option value="สงขลา"></option>
+      <option value="ภูเก็ต"></option>
+      <option value="พิษณุโลก"></option>
+    </datalist>
+
     <!-- Container สำหรับใส่กล่องบริษัทปัจจุบัน (ทีละ 1 แห่ง) -->
     <div id="companies-container">
       <div class="text-center py-10 text-gray-500 font-medium" id="loading-spinner">กำลังโหลดแบบฟอร์ม Checklist...</div>

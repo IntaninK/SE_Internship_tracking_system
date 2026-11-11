@@ -833,6 +833,8 @@ router.get("/students/:studentId", async (req: Request, res: Response) => {
       ? checkPlacementMatchesChecklist(student.placement, student.companies || [])
       : false;
 
+    const state = loadSuperAdminState();
+
     res.json({
       success: true,
       student: {
@@ -873,6 +875,7 @@ router.get("/students/:studentId", async (req: Request, res: Response) => {
             isMatchedWithChecklist,
           }
         : null,
+      acceptanceWorkflow: state.docWorkflowMap[String(student.id)] || null,
     });
   } catch (err) {
     console.error("GET /api/admin/students/:id error:", err);
@@ -2215,6 +2218,9 @@ router.get("/super-admin/overview", async (req: Request, res: Response) => {
         companyResponseUploadedAt: wf.companyResponseUploadedAt || "",
         companyResponseSubmittedByStudent: Boolean(wf.companyResponseSubmittedByStudent),
         companyResponseOcr: wf.companyResponseOcr || null,
+        advisorAcceptanceStatus: wf.advisorAcceptanceStatus || "NONE",
+        advisorAcceptanceNote: wf.advisorAcceptanceNote || "",
+        advisorAcceptanceReviewedAt: wf.advisorAcceptanceReviewedAt || "",
         companyResponseConfirmedAt: wf.companyResponseConfirmedAt || "",
         dispatchLetterIssued: Boolean(wf.dispatchLetterIssued),
         dispatchLetterDocNo: wf.dispatchLetterDocNo || "",
@@ -3237,6 +3243,17 @@ router.post("/super-admin/documents/issue-request-letter", async (req: Request, 
     const finalDate = letterDate || new Date().toISOString().slice(0, 10);
     const batchId = `REQ-BATCH-${Date.now().toString().slice(-6)}`;
 
+    // ตรวจสอบว่านิสิตทุกคนต้องผ่านการอนุมัติ Checklist จากอาจารย์ที่ปรึกษาก่อน (SCRUM-71)
+    for (const s of students) {
+      const activeComp = s.companies?.find((c) => c.checklistStatus === "APPROVED");
+      if (!activeComp && !s.placement?.companyNameTh) {
+        return res.status(400).json({
+          success: false,
+          message: `นิสิต ${s.nameTh} (${s.studentCode}) ยังไม่ได้รับการอนุมัติ Checklist และข้อมูลสถานประกอบการจากอาจารย์ที่ปรึกษา`,
+        });
+      }
+    }
+
     for (const s of students) {
       const wfKey = String(s.id);
       const compName =
@@ -3258,14 +3275,19 @@ router.post("/super-admin/documents/issue-request-letter", async (req: Request, 
         requestLetterSignatureSnapshot: existingWf?.requestLetterIssued
           ? existingWf.requestLetterSignatureSnapshot || ""
           : state.academicConfig.signatureDataUrl || "",
-        companyResponseStatus:
-          existingWf?.companyResponseStatus && existingWf.companyResponseStatus !== "NOT_SENT"
-            ? existingWf.companyResponseStatus
-            : "WAITING_RESPONSE",
-        dispatchLetterIssued: existingWf?.dispatchLetterIssued || false,
-        dispatchLetterDocNo: existingWf?.dispatchLetterDocNo,
-        dispatchLetterDate: existingWf?.dispatchLetterDate,
-        dispatchLetterSignatureSnapshot: existingWf?.dispatchLetterSignatureSnapshot || "",
+        companyResponseStatus: "WAITING_RESPONSE",
+        companyResponseFileName: "",
+        companyResponseFileUrl: "",
+        companyResponseUploadedAt: "",
+        companyResponseSubmittedByStudent: false,
+        companyResponseOcr: undefined,
+        advisorAcceptanceStatus: "NONE",
+        advisorAcceptanceNote: "",
+        advisorAcceptanceReviewedAt: "",
+        dispatchLetterIssued: false,
+        dispatchLetterDocNo: "",
+        dispatchLetterDate: "",
+        dispatchLetterSignatureSnapshot: "",
         isLocked: true,
       };
     }
@@ -3314,6 +3336,14 @@ router.post("/super-admin/documents/record-company-response", async (req: Reques
     // กรณีบริษัทส่งแบบตอบรับว่า "ปฏิเสธ" (REJECTED):
     // ย้ายข้อมูลบริษัทเดิมเข้า Archive แบบย่อ และปลดล็อกให้นิสิตยื่น Checklist บริษัทแห่งใหม่ได้ทันที!
     if (responseStatus === "REJECTED") {
+      // บันทึก Snapshot ข้อมูล Checklist และเอกสารทั้งหมดเข้าสู่ Archive เพื่อเก็บประวัติไว้ไม่ให้สูญหาย
+      const existingAnswers = activeComp
+        ? await prisma.companyChecklistAnswer.findMany({
+            where: { companyId: activeComp.id },
+            include: { checklistItem: true },
+          })
+        : [];
+
       state.archivedApplications.unshift({
         id: `ARCH-${Date.now().toString().slice(-6)}`,
         studentId: student.id,
@@ -3322,12 +3352,26 @@ router.post("/super-admin/documents/record-company-response", async (req: Reques
         major: student.major || "วิศวกรรมซอฟต์แวร์",
         companyName,
         position,
+        companyAddress: student.placement?.companyAddress || "-",
+        province: student.placement?.province || "-",
+        contactPersonName: student.placement?.contactPersonName || "-",
+        phone: student.placement?.companyPhone1 || "-",
+        email: student.placement?.companyEmail || "-",
         reason: "COMPANY_REJECTED",
         note: note || "สถานประกอบการแจ้งปฏิเสธในใบตอบรับ (ปลดล็อกให้ยื่นบริษัทแห่งใหม่แล้ว)",
+        fileName: prevWf?.companyResponseFileName || "",
+        fileUrl: prevWf?.companyResponseFileUrl || "",
+        ocr: prevWf?.companyResponseOcr || undefined,
+        answers: existingAnswers.map((a) => ({
+          itemId: a.checklistItemId,
+          description: a.checklistItem?.description || "",
+          checked: a.checked,
+          detail: a.detail || "",
+        })),
         archivedAt: new Date().toISOString(),
       });
 
-      // ลบหรือรีเซ็ต Company เดิมในตาราง Company เพื่อปลดล็อกให้นิสิตยื่น Checklist บริษัทแห่งใหม่ได้ทีละ 1 แห่ง
+      // ลบ Company เดิมในตาราง Company เพื่อปลดล็อกให้นิสิตยื่น Checklist บริษัทแห่งใหม่ได้ทีละ 1 แห่ง
       if (activeComp) {
         await prisma.companyChecklistAnswer.deleteMany({
           where: { companyId: activeComp.id },
@@ -3340,10 +3384,20 @@ router.post("/super-admin/documents/record-company-response", async (req: Reques
         });
       }
 
+      // รีเซ็ตข้อมูลใน InternshipPlacement ของนิสิต เพื่อไม่ให้ค้างชื่อบริษัทเดิม
       if (student.placement) {
         await prisma.internshipPlacement.update({
           where: { id: student.placement.id },
           data: {
+            companyNameTh: null,
+            position: null,
+            companyAddress: null,
+            province: null,
+            contactPersonName: null,
+            contactPersonPosition: null,
+            companyPhone1: null,
+            companyPhone2: null,
+            companyEmail: null,
             status: "REJECTED",
             note: note || "สถานประกอบการปฏิเสธการรับเข้าฝึกงาน (ปลดล็อกให้ยื่นบริษัทใหม่)",
           },
@@ -3355,12 +3409,16 @@ router.post("/super-admin/documents/record-company-response", async (req: Reques
         studentCode: student.studentCode,
         companyName: "รอเลือกบริษัทใหม่ (ปลดล็อกแล้ว)",
         requestLetterIssued: false,
+        requestLetterDocNo: "",
+        requestLetterDate: "",
         companyResponseStatus: "REJECTED",
         companyResponseNote: note || "บริษัทปฏิเสธ — เก็บประวัติเข้า Archive แล้ว",
-        companyResponseFileName: prevWf?.companyResponseFileName,
-        companyResponseFileUrl: prevWf?.companyResponseFileUrl,
-        companyResponseUploadedAt: prevWf?.companyResponseUploadedAt,
-        companyResponseOcr: prevWf?.companyResponseOcr,
+        companyResponseFileName: "",
+        companyResponseFileUrl: "",
+        companyResponseUploadedAt: "",
+        companyResponseSubmittedByStudent: false,
+        companyResponseOcr: undefined,
+        advisorAcceptanceStatus: "NONE",
         companyResponseConfirmedAt: new Date().toISOString(),
         companyResponseConfirmedBy: req.session?.user?.email || req.session?.user?.username || "",
         dispatchLetterIssued: false,

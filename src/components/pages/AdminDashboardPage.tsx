@@ -2647,6 +2647,32 @@ const PAGE_BODY_HTML = `
       </div>
     </div>
 
+    <!-- Modal: ดูประวัติการยื่นบริษัทเดิมที่ไม่ผ่าน (Student Archive Details) -->
+    <div id="student-archive-modal" style="display:none; position:fixed; inset:0; background:rgba(15,23,42,0.6); z-index:1000; justify-content:center; align-items:center; backdrop-filter:blur(4px);">
+      <div style="background:white; border-radius:20px; width:740px; max-width:94%; max-height:85vh; display:flex; flex-direction:column; box-shadow:0 20px 50px rgba(15,23,42,0.25); overflow:hidden;">
+        <div style="background:linear-gradient(135deg, #1E1B4B 0%, #312E81 100%); padding:18px 24px; color:white; display:flex; align-items:center; justify-content:space-between;">
+          <div style="display:flex; align-items:center; gap:10px;">
+            <span class="material-icons" style="font-size:24px; color:#FCD34D;">history_edu</span>
+            <div>
+              <h3 style="font-size:16px; font-weight:700; margin:0;" id="student-archive-modal-title">ประวัติการยื่นบริษัทเดิม (Archive)</h3>
+              <p style="font-size:11.5px; color:#C7D2FE; margin:2px 0 0 0;" id="student-archive-modal-subtitle">รายการบริษัทที่เคยถูกปฏิเสธหรือยกเลิกในรอบก่อนหน้า</p>
+            </div>
+          </div>
+          <button onclick="window.closeStudentArchiveModal ? window.closeStudentArchiveModal() : null" style="background:none; border:none; color:white; cursor:pointer; display:flex; align-items:center; opacity:0.85;">
+            <span class="material-icons" style="font-size:20px;">close</span>
+          </button>
+        </div>
+
+        <div id="student-archive-modal-body" style="padding:20px 24px; overflow-y:auto; flex:1;">
+          <!-- รายการประวัติจะถูกเรนเดอร์ผ่าน JS -->
+        </div>
+
+        <div style="padding:14px 24px; background:#F8FAFC; border-top:1px solid #E2E8F0; display:flex; justify-content:flex-end;">
+          <button class="btn btn-outline btn-sm" onclick="window.closeStudentArchiveModal ? window.closeStudentArchiveModal() : null" style="border-radius:10px; padding:7px 18px; font-weight:600;">ปิดหน้าต่าง</button>
+        </div>
+      </div>
+    </div>
+
       </main>
     </div>
   </div>

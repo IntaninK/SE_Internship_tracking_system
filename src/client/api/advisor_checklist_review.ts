@@ -34,24 +34,11 @@ async function loadStudentChecklistData() {
       return;
     }
 
-    const { student, sections, companies, canReview } = data;
+    const { student, sections, companies, canReview, acceptanceWorkflow, archivedApplications } = data;
 
     // อัปเดตข้อมูลหัวเว็บ
     if (subtitle) {
       subtitle.textContent = `รหัสนิสิต: ${student.studentCode} | ชื่อ: ${student.nameTh} (${student.nameEn}) | ชั้นปี: ${student.year || '-'} | อีเมล: ${student.email}`;
-    }
-
-    if (!companies || companies.length === 0) {
-      container.innerHTML = `
-        <div class="bg-white rounded-2xl p-12 text-center shadow-sm border border-gray-200">
-          <span class="material-icons text-5xl text-gray-400 mb-3">info</span>
-          <p class="text-gray-600 text-lg font-medium">นิสิตยังไม่ได้เพิ่มข้อมูลบริษัทหรือกรอก Checklist</p>
-          <a href="/advisor-dashboard" class="inline-block mt-4 px-6 py-2 bg-blue-600 text-white rounded-xl text-sm font-medium no-underline">
-            กลับหน้า Dashboard
-          </a>
-        </div>
-      `;
-      return;
     }
 
     container.innerHTML = '';
@@ -70,24 +57,42 @@ async function loadStudentChecklistData() {
       container.appendChild(banner);
     }
 
-    // ปรับปุ่มย้อนกลับให้ตรงกับหน้าที่อาจารย์เปิดมา (Dashboard หรือ Profile นิสิต)
-    const fromDetail = params.get('from') === 'detail' || (document.referrer && document.referrer.includes('admin_student_detail'));
-    const backBtn = document.querySelector('a[href*="dashboard_ที่ปรึกษา"]');
-    if (backBtn) {
-      if (fromDetail) {
-        backBtn.href = `/admin-student-detail?id=${studentId}`;
-        backBtn.innerHTML = '<span class="material-icons text-base">arrow_back</span><span>กลับไปหน้า Profile นิสิต</span>';
-      } else if (!canReview) {
-        backBtn.href = '/admin-dashboard';
-        backBtn.innerHTML = '<span class="material-icons text-base">arrow_back</span><span>กลับไปหน้า Dashboard</span>';
-      }
+    // 1. ถ้ามีใบตอบรับที่นิสิตอัปโหลดส่งมา ให้อาจารย์ที่ปรึกษาตรวจอนุมัติก่อนส่งให้ Super Admin
+    if (acceptanceWorkflow && acceptanceWorkflow.companyResponseFileUrl) {
+      const acceptanceCard = renderAcceptanceReviewCard(acceptanceWorkflow, canReview);
+      if (acceptanceCard) container.appendChild(acceptanceCard);
     }
 
-    // Render บริษัทแต่ละแห่งเป็น Accordion
-    companies.forEach((comp, idx) => {
-      const card = renderCompanyReviewCard(comp, sections, idx, canReview);
-      container.appendChild(card);
-    });
+    // 2. ถ้าไม่มีบริษัทรอบปัจจุบัน (เช่น เพิ่งถูกปฏิเสธและยังไม่ยื่นบริษัทใหม่)
+    if (!companies || companies.length === 0) {
+      const emptyCard = document.createElement('div');
+      emptyCard.className = 'bg-white rounded-2xl p-8 text-center shadow-sm border border-gray-200 mb-6';
+      if (archivedApplications && archivedApplications.length > 0) {
+        emptyCard.innerHTML = `
+          <span class="material-icons text-5xl text-amber-500 mb-2">pending_actions</span>
+          <h4 class="text-gray-800 text-lg font-bold">นิสิตอยู่ระหว่างรอกรอก Checklist สถานประกอบการแห่งใหม่ (รอบที่ ${archivedApplications.length + 1})</h4>
+          <p class="text-gray-500 text-sm mt-1">รอบก่อนหน้าได้รับการบันทึกผลและปลดล็อกเรียบร้อยแล้ว อาจารย์สามารถดูประวัติรอบก่อนหน้าได้ที่ด้านล่าง</p>
+        `;
+      } else {
+        emptyCard.innerHTML = `
+          <span class="material-icons text-5xl text-gray-400 mb-3">info</span>
+          <p class="text-gray-600 text-lg font-medium">นิสิตยังไม่ได้เพิ่มข้อมูลบริษัทหรือกรอก Checklist</p>
+        `;
+      }
+      container.appendChild(emptyCard);
+    } else {
+      // Render บริษัทรอบปัจจุบัน
+      companies.forEach((comp, idx) => {
+        const card = renderCompanyReviewCard(comp, sections, idx, canReview);
+        container.appendChild(card);
+      });
+    }
+
+    // 3. แสดงประวัติรอบก่อนหน้า (Archive) แบบ Accordion (ตามข้อกำหนด SCRUM-73)
+    if (archivedApplications && archivedApplications.length > 0) {
+      const archiveSection = renderArchivedApplicationsSection(archivedApplications);
+      if (archiveSection) container.appendChild(archiveSection);
+    }
 
     // ถ้ามี companyId ส่งมาเจาะจง ให้เลื่อนจอไปยังการ์ดของบริษัทนั้นทันที
     const targetCompId = params.get('companyId');
@@ -339,5 +344,179 @@ window.saveCompanyChecklistReview = async function(companyId) {
   } catch (err) {
     console.error('Error saving checklist review:', err);
     alert('เกิดข้อผิดพลาดในการเชื่อมต่อกับเซิร์ฟเวอร์');
+  }
+};
+
+function escapeHtmlText(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function renderAcceptanceReviewCard(wf, canReview) {
+  if (!wf || !wf.companyResponseFileUrl) return null;
+  const card = document.createElement('div');
+  card.className = 'mb-6 p-6 bg-white rounded-2xl shadow-sm border border-indigo-200';
+  
+  const ocr = wf.companyResponseOcr;
+  let ocrBoxHtml = '';
+  if (ocr && ocr.status === 'DONE') {
+    const isAccepted = ocr.result === 'ACCEPTED';
+    const confPct = Math.round((Number(ocr.confidence) || 0.85) * 100);
+    ocrBoxHtml = `
+      <div style="background:${isAccepted ? '#ECFDF5' : '#FEF2F2'}; border:1px solid ${isAccepted ? '#6EE7B7' : '#FCA5A5'}; border-radius:10px; padding:10px 14px; margin:12px 0;">
+        <div style="font-size:13px; font-weight:800; color:${isAccepted ? '#065F46' : '#991B1B'};">
+          🤖 OCR ตรวจพบ: คาดว่า "${isAccepted ? 'บริษัทตอบรับเข้าฝึกงาน' : 'บริษัทปฏิเสธ'}" (${confPct}%)
+        </div>
+        <div style="font-size:12px; color:${isAccepted ? '#047857' : '#B91C1C'}; margin-top:2px;">
+          ${(ocr.reasons && ocr.reasons[0]) || ''}
+        </div>
+      </div>
+    `;
+  }
+
+  const isApprovedByAdvisor = wf.companyResponseStatus === 'ADVISOR_APPROVED' || wf.companyResponseStatus === 'ACCEPTED';
+
+  card.innerHTML = `
+    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:12px;">
+      <div style="display:flex; align-items:center; gap:8px;">
+        <span class="material-icons text-indigo-600" style="font-size:26px;">assignment_turned_in</span>
+        <div>
+          <h3 style="font-size:16px; font-weight:800; color:#1E1B4B; margin:0;">
+            ตรวจสอบแบบตอบรับจากสถานประกอบการ (${escapeHtmlText(wf.companyName || 'บริษัท')})
+          </h3>
+          <p style="font-size:12.5px; color:#64748B; margin:2px 0 0 0;">
+            นิสิตได้อัปโหลดเอกสารแบบตอบรับกลับมาแล้ว กรุณาเปิดตรวจสอบความถูกต้องและกดยืนยันผล
+          </p>
+        </div>
+      </div>
+      <div>
+        <a href="${wf.companyResponseFileUrl}" target="_blank" rel="noopener" style="background:#EEF2FF; color:#312E81; border:1px solid #C7D2FE; padding:7px 14px; border-radius:8px; font-size:12.5px; font-weight:700; text-decoration:none; display:inline-flex; align-items:center; gap:5px;">
+          👁️ เปิดดูใบตอบรับที่นิสิตแนบ (PDF / รูปภาพ)
+        </a>
+      </div>
+    </div>
+    ${ocrBoxHtml}
+    <div style="margin-top:14px; padding-top:12px; border-top:1px solid #E2E8F0; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+      <div>
+        ${isApprovedByAdvisor ? `
+          <span style="background:#DCFCE7; color:#166534; font-weight:700; padding:5px 12px; border-radius:999px; font-size:12.5px;">
+            ✓ อาจารย์ที่ปรึกษาอนุมัติแบบตอบรับแล้ว (ส่งต่อไปยังคิวของ Super Admin แล้ว)
+          </span>
+        ` : `
+          <span style="background:#FEF3C7; color:#92400E; font-weight:700; padding:5px 12px; border-radius:999px; font-size:12.5px;">
+            ⏳ รออาจารย์ที่ปรึกษาตรวจและอนุมัติแบบตอบรับ
+          </span>
+        `}
+      </div>
+      ${canReview && !isApprovedByAdvisor ? `
+        <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+          <input type="text" id="advisor-acceptance-note" placeholder="หมายเหตุ (ถ้ามี)..." class="input-field" style="padding:6px 10px; font-size:12px; border:1px solid #CBD5E1; border-radius:8px; width:200px;" />
+          <button type="button" onclick="window.advisorReviewAcceptance('APPROVED')" style="background:#10B981; color:white; border:none; padding:7px 14px; border-radius:8px; font-size:12.5px; font-weight:700; cursor:pointer;">
+            ✓ อนุมัติแบบตอบรับ
+          </button>
+          <button type="button" onclick="window.advisorReviewAcceptance('REJECTED')" style="background:#EF4444; color:white; border:none; padding:7px 14px; border-radius:8px; font-size:12.5px; font-weight:700; cursor:pointer;">
+            ✗ ไม่อนุมัติ / บริษัทปฏิเสธ
+          </button>
+        </div>
+      ` : ''}
+    </div>
+  `;
+  return card;
+}
+
+window.advisorReviewAcceptance = async function(status) {
+  const note = document.getElementById('advisor-acceptance-note')?.value?.trim() || '';
+  if (status === 'REJECTED' && !confirm('ยืนยันไม่อนุมัติแบบตอบรับนี้ใช่หรือไม่? ระบบจะบันทึกประวัติเข้า Archive และปลดล็อกให้นิสิตยื่นบริษัทใหม่')) {
+    return;
+  }
+  try {
+    const res = await fetch('/api/advisor/documents/review-acceptance', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ studentId, status, note }),
+    });
+    const data = await res.json();
+    if (data.success) {
+      alert('✅ ' + data.message);
+      window.location.reload();
+    } else {
+      alert('เกิดข้อผิดพลาด: ' + (data.message || 'บันทึกไม่สำเร็จ'));
+    }
+  } catch (err) {
+    console.error(err);
+    alert('เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์');
+  }
+};
+
+function renderArchivedApplicationsSection(archives) {
+  if (!archives || archives.length === 0) return null;
+  const section = document.createElement('div');
+  section.className = 'mt-8 bg-slate-50 border border-slate-200 rounded-2xl p-6';
+  section.innerHTML = `
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; flex-wrap:wrap; gap:8px;">
+      <div style="display:flex; align-items:center; gap:8px;">
+        <span class="material-icons text-slate-500">inventory_2</span>
+        <h3 style="font-size:15px; font-weight:800; color:#1E293B; margin:0;">
+          📜 ประวัติการยื่น Checklist รอบก่อนหน้า (Archive - ${archives.length} รายการ)
+        </h3>
+      </div>
+      <span style="font-size:12px; color:#64748B;">ตามข้อกำหนด SCRUM-73 (พับเก็บและกางดูข้อมูลเดิมได้)</span>
+    </div>
+    <div style="display:flex; flex-direction:column; gap:10px;">
+      ${archives.map((a, idx) => `
+        <div style="background:white; border:1px solid #E2E8F0; border-radius:12px; padding:12px 16px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+            <div>
+              <span style="font-weight:800; color:#1E1B4B; font-size:14px;">รอบที่ ${idx + 1}: ${escapeHtmlText(a.companyName)}</span>
+              <span style="font-size:12.5px; color:#475569; margin-left:8px;">ตำแหน่ง: ${escapeHtmlText(a.position || 'นิสิตฝึกงาน')}</span>
+              <span style="background:#FEE2E2; color:#991B1B; font-size:11px; font-weight:700; padding:2px 8px; border-radius:999px; margin-left:8px;">
+                ${a.reason === 'COMPANY_REJECTED' ? '✗ สถานประกอบการปฏิเสธ' : '✗ อาจารย์ที่ปรึกษาไม่อนุมัติ'}
+              </span>
+              <div style="font-size:12px; color:#64748B; margin-top:3px;">
+                หมายเหตุ: ${escapeHtmlText(a.note || '-')}
+              </div>
+            </div>
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span style="font-size:11.5px; color:#94A3B8;">${new Date(a.archivedAt).toLocaleDateString('th-TH')}</span>
+              ${a.fileUrl ? `
+                <a href="${a.fileUrl}" target="_blank" rel="noopener" style="background:#F1F5F9; color:#334155; border:1px solid #CBD5E1; padding:3px 8px; border-radius:6px; font-size:11px; font-weight:600; text-decoration:none;">
+                  📎 ไฟล์เดิม
+                </a>
+              ` : ''}
+              ${Array.isArray(a.answers) && a.answers.length > 0 ? `
+                <button type="button" onclick="window.toggleArchivedChecklistAnswers(${idx})" style="background:#EFF6FF; color:#1D4ED8; border:1px solid #BFDBFE; padding:3px 9px; border-radius:6px; font-size:11px; font-weight:700; cursor:pointer;">
+                  👁️ ดูคำตอบ Checklist เดิม (${a.answers.length} ข้อ)
+                </button>
+              ` : ''}
+            </div>
+          </div>
+          ${Array.isArray(a.answers) && a.answers.length > 0 ? `
+            <div id="advisor-archived-answers-${idx}" style="display:none; margin-top:10px; border-top:1px dashed #CBD5E1; padding-top:10px; font-size:12px;">
+              <div style="font-weight:700; color:#334155; margin-bottom:6px;">รายการ Checklist ที่นิสิตเคยตอบไว้:</div>
+              <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:6px;">
+                ${a.answers.map(ans => `
+                  <div style="display:flex; align-items:flex-start; gap:6px; color:#334155; background:#F8FAFC; padding:5px 8px; border-radius:6px;">
+                    <span>${ans.checked ? '☑️' : '⬜'}</span>
+                    <span style="flex:1;">${escapeHtmlText(ans.description)} ${ans.detail ? `<span style="color:#2563EB;">(${escapeHtmlText(ans.detail)})</span>` : ''}</span>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+          ` : ''}
+        </div>
+      `).join('')}
+    </div>
+  `;
+  return section;
+}
+
+window.toggleArchivedChecklistAnswers = function(idx) {
+  const el = document.getElementById(`advisor-archived-answers-${idx}`);
+  if (el) {
+    el.style.display = el.style.display === 'none' ? 'block' : 'none';
   }
 };

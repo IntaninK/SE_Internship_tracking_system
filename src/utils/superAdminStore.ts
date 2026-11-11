@@ -81,15 +81,20 @@ export interface StudentDocWorkflowRecord {
   requestLetterDate?: string;
   requestLetterBatchId?: string;
   requestLetterSignatureSnapshot?: string;
-  companyResponseStatus: "NOT_SENT" | "WAITING_RESPONSE" | "ACCEPTED" | "REJECTED";
+  companyResponseStatus: "NOT_SENT" | "WAITING_RESPONSE" | "WAITING_ADVISOR_APPROVAL" | "ADVISOR_APPROVED" | "ACCEPTED" | "REJECTED";
   companyResponseFileName?: string;
   companyResponseFileUrl?: string;
   companyResponseUploadedAt?: string;
   companyResponseNote?: string;
-  /** นิสิตอัปโหลดไฟล์ใบตอบรับเองแล้ว (รอพี่จอมยืนยันผล) */
+  /** นิสิตอัปโหลดไฟล์ใบตอบรับเองแล้ว (รออาจารย์ที่ปรึกษาตรวจ หรือพี่จอมยืนยัน) */
   companyResponseSubmittedByStudent?: boolean;
-  /** ผลตรวจ OCR (PaddleOCR) ของไฟล์ใบตอบรับล่าสุด — เป็นข้อเสนอแนะ ต้องให้ Super Admin ยืนยัน */
+  /** ผลตรวจ OCR (PaddleOCR) ของไฟล์ใบตอบรับล่าสุด — เป็นข้อเสนอแนะ */
   companyResponseOcr?: AcceptanceOcrResult;
+  /** การตรวจและอนุมัติแบบตอบรับโดยอาจารย์ที่ปรึกษา (Advisor Review) ก่อนส่งให้ Super Admin */
+  advisorAcceptanceStatus?: "NONE" | "PENDING" | "APPROVED" | "REJECTED";
+  advisorAcceptanceNote?: string;
+  advisorAcceptanceReviewedAt?: string;
+  advisorAcceptanceReviewedBy?: string;
   /** ผู้ยืนยันผลใบตอบรับ และผลยืนยันตรง/ไม่ตรงกับ OCR */
   companyResponseConfirmedAt?: string;
   companyResponseConfirmedBy?: string;
@@ -109,8 +114,17 @@ export interface ArchivedCompanyAttempt {
   major: string;
   companyName: string;
   position: string;
+  companyAddress?: string;
+  province?: string;
+  contactPersonName?: string;
+  phone?: string;
+  email?: string;
   reason: "ADVISOR_REJECTED" | "COMPANY_REJECTED";
   note: string;
+  fileName?: string;
+  fileUrl?: string;
+  ocr?: AcceptanceOcrResult;
+  answers?: Array<{ itemId: number; description: string; checked: boolean; detail?: string }>;
   archivedAt: string;
 }
 

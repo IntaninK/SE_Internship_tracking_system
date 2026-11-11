@@ -397,6 +397,18 @@ function renderStudentTable(students, total, page, totalPages) {
             ${badgeText}
           </span>
           ${alertTags.join('')}
+          ${s.hasPendingAcceptance ? `
+            <a href="/advisor-checklist-review?studentId=${s.id}"
+               class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold rounded-lg bg-indigo-100 text-indigo-900 border border-indigo-300 shadow-sm hover:bg-indigo-200 no-underline transition-all"
+               title="นิสิตอัปโหลดใบตอบรับแล้ว คลิกเพื่อตรวจและอนุมัติ">
+              <span class="material-icons text-sm text-indigo-700">assignment_turned_in</span>
+              <span>📥 รอตรวจแบบตอบรับ!</span>
+            </a>
+          ` : s.acceptanceStatus === 'ADVISOR_APPROVED' || s.acceptanceStatus === 'ACCEPTED' ? `
+            <span class="inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium rounded bg-emerald-50 text-emerald-800 border border-emerald-200">
+              ✓ แบบตอบรับอนุมัติแล้ว
+            </span>
+          ` : ''}
         </div>
       </td>
       <td class="text-center">
@@ -406,15 +418,21 @@ function renderStudentTable(students, total, page, totalPages) {
           </button>
           <input type="checkbox" class="student-checkbox" data-id="${s.id}" ${isChecked ? 'checked' : ''} style="width:16px;height:16px;cursor:pointer;" />
 
-          <!-- Dropdown เมนู (Profile / Check list) -->
-          <div id="dropdown-${s.id}" class="action-dropdown hidden absolute right-0 top-8 bg-white border border-gray-200 rounded-xl shadow-lg z-30 py-1 w-32 text-left">
+          <!-- Dropdown เมนู (Profile / Check list / ตรวจแบบตอบรับ) -->
+          <div id="dropdown-${s.id}" class="action-dropdown hidden absolute right-0 top-8 bg-white border border-gray-200 rounded-xl shadow-lg z-30 py-1 w-44 text-left">
             <a href="/admin-student-detail?id=${s.id}" class="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 no-underline transition-colors">
-              <span class="material-icons text-base">person</span> Profile
+              <span class="material-icons text-base">person</span> Profile นิสิต
             </a>
             <div class="border-t border-gray-100 my-1"></div>
             <a href="/advisor-checklist-review?studentId=${s.id}" class="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 no-underline transition-colors font-medium">
-              <span class="material-icons text-base">fact_check</span> Check list
+              <span class="material-icons text-base">fact_check</span> ตรวจ Checklist
             </a>
+            ${s.hasPendingAcceptance ? `
+              <div class="border-t border-gray-100 my-1"></div>
+              <a href="/advisor-checklist-review?studentId=${s.id}" class="flex items-center gap-2 px-3 py-2 text-sm text-indigo-700 bg-indigo-50 hover:bg-indigo-100 no-underline transition-colors font-bold">
+                <span class="material-icons text-base text-indigo-600">assignment_turned_in</span> ตรวจแบบตอบรับ
+              </a>
+            ` : ''}
           </div>
         </div>
       </td>

@@ -36,6 +36,7 @@
     --color-emerald-200: oklch(90.5% 0.093 164.15);
     --color-emerald-600: oklch(59.6% 0.145 163.225);
     --color-emerald-700: oklch(50.8% 0.118 165.612);
+    --color-emerald-800: oklch(43.2% 0.095 166.913);
     --color-blue-50: oklch(97% 0.014 254.604);
     --color-blue-100: oklch(93.2% 0.032 255.585);
     --color-blue-200: oklch(88.2% 0.059 254.128);
@@ -48,8 +49,10 @@
     --color-indigo-50: oklch(96.2% 0.018 272.314);
     --color-indigo-100: oklch(93% 0.034 272.788);
     --color-indigo-200: oklch(87% 0.065 274.039);
+    --color-indigo-300: oklch(78.5% 0.115 274.713);
     --color-indigo-600: oklch(51.1% 0.262 276.966);
     --color-indigo-700: oklch(45.7% 0.24 277.023);
+    --color-indigo-900: oklch(35.9% 0.144 278.697);
     --color-purple-50: oklch(97.7% 0.014 308.299);
     --color-purple-100: oklch(94.6% 0.033 307.174);
     --color-rose-50: oklch(96.9% 0.015 12.422);
@@ -380,6 +383,9 @@
   .w-32 {
     width: calc(var(--spacing) * 32);
   }
+  .w-44 {
+    width: calc(var(--spacing) * 44);
+  }
   .w-\[85px\] {
     width: 85px;
   }
@@ -692,6 +698,9 @@
   .border-indigo-200 {
     border-color: var(--color-indigo-200);
   }
+  .border-indigo-300 {
+    border-color: var(--color-indigo-300);
+  }
   .border-red-200 {
     border-color: var(--color-red-200);
   }
@@ -794,6 +803,9 @@
   .bg-indigo-50 {
     background-color: var(--color-indigo-50);
   }
+  .bg-indigo-100 {
+    background-color: var(--color-indigo-100);
+  }
   .bg-orange-50 {
     background-color: var(--color-orange-50);
   }
@@ -894,6 +906,9 @@
   }
   .p-6 {
     padding: calc(var(--spacing) * 6);
+  }
+  .p-8 {
+    padding: calc(var(--spacing) * 8);
   }
   .p-12 {
     padding: calc(var(--spacing) * 12);
@@ -1129,6 +1144,9 @@
   .text-\[\#323639\] {
     color: #323639;
   }
+  .text-amber-500 {
+    color: var(--color-amber-500);
+  }
   .text-amber-600 {
     color: var(--color-amber-600);
   }
@@ -1149,6 +1167,9 @@
   }
   .text-emerald-700 {
     color: var(--color-emerald-700);
+  }
+  .text-emerald-800 {
+    color: var(--color-emerald-800);
   }
   .text-gray-400 {
     color: var(--color-gray-400);
@@ -1188,6 +1209,9 @@
   }
   .text-indigo-700 {
     color: var(--color-indigo-700);
+  }
+  .text-indigo-900 {
+    color: var(--color-indigo-900);
   }
   .text-orange-600 {
     color: var(--color-orange-600);
@@ -1355,6 +1379,9 @@
     }
     .hover\:bg-indigo-100:hover {
       background-color: var(--color-indigo-100);
+    }
+    .hover\:bg-indigo-200:hover {
+      background-color: var(--color-indigo-200);
     }
     .hover\:bg-purple-50:hover {
       background-color: var(--color-purple-50);

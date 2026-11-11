@@ -4614,8 +4614,8 @@ window.renderDocumentQueueTable = function() {
 
     // คอลัมน์ 1: หนังสือขอความอนุเคราะห์ (+แบบฟอร์มใบตอบรับ)
     let reqColHtml = '';
-    if (d.companyName === 'ยังไม่ยื่นบริษัท') {
-      reqColHtml = `<span style="font-size:11.5px; color:#94A3B8;">รอนิสิตยื่นบริษัท</span>`;
+    if (d.companyName === 'ยังไม่ยื่นบริษัท' || d.companyName === 'รอเลือกบริษัทใหม่ (ปลดล็อกแล้ว)') {
+      reqColHtml = `<span style="font-size:11.5px; color:#94A3B8;">รอนิสิตยื่นบริษัทใหม่</span>`;
     } else if (d.requestLetterIssued) {
       reqColHtml = `
         <div style="font-size:11.5px; font-weight:700; color:#059669;">✓ ออกหนังสือแล้ว (${d.requestLetterDocNo})</div>
@@ -4635,6 +4635,8 @@ window.renderDocumentQueueTable = function() {
           </button>
         </div>
       `;
+    } else if (d.checklistStatus !== 'APPROVED') {
+      reqColHtml = `<span style="font-size:11.5px; color:#94A3B8;">รอ อ.ที่ปรึกษาอนุมัติ Checklist ก่อน</span>`;
     } else {
       reqColHtml = `
         <div style="margin-bottom:4px;">
@@ -4650,14 +4652,59 @@ window.renderDocumentQueueTable = function() {
 
     // คอลัมน์ 2: ผลใบตอบรับจากสถานประกอบการ (รับเข้าฝึกงาน vs ปฏิเสธ)
     let respColHtml = '';
-    if (!d.requestLetterIssued && d.companyResponseStatus === 'NOT_SENT') {
-      respColHtml = `<span style="font-size:11.5px; color:#94A3B8;">รอออกหนังสือขอความอนุเคราะห์ก่อน</span>`;
+    if (!d.requestLetterIssued && (d.companyResponseStatus === 'NOT_SENT' || d.companyResponseStatus === 'REJECTED')) {
+      if (d.companyResponseStatus === 'REJECTED') {
+        respColHtml = `
+          <div style="background:#FEE2E2; color:#991B1B; padding:4px 8px; border-radius:6px; font-size:11px; font-weight:700;">
+            ✗ บริษัทเดิมปฏิเสธ (ย้ายเข้า Archive แล้ว)
+          </div>
+          <div style="font-size:11px; color:#64748B; margin-top:2px;">รอนิสิตยื่นบริษัทใหม่</div>
+        `;
+      } else {
+        respColHtml = `<span style="font-size:11.5px; color:#94A3B8;">รอออกหนังสือขอความอนุเคราะห์ก่อน</span>`;
+      }
     } else if (d.companyResponseStatus === 'ACCEPTED') {
       respColHtml = `
         <div style="font-size:12px; font-weight:700; color:#166534;">✅ บริษัทตอบรับเข้าฝึกงานแล้ว</div>
         ${d.companyResponseFileUrl
           ? `<a href="${d.companyResponseFileUrl}" target="_blank" rel="noopener" style="font-size:11px; color:#2563EB;">📎 ${escapeHtmlText(d.companyResponseFileName || 'ไฟล์ใบตอบรับ')}</a>`
           : `<div style="font-size:11px; color:#64748B;">ไฟล์: ${escapeHtmlText(d.companyResponseFileName || 'ใบตอบรับ_ประทับตรา.pdf')}</div>`}
+      `;
+    } else if (d.companyResponseStatus === 'WAITING_ADVISOR_APPROVAL') {
+      respColHtml = `
+        <div style="background:#FFFBEB; border:1px solid #FCD34D; border-radius:8px; padding:7px 9px; margin-bottom:4px;">
+          <div style="font-size:11.5px; font-weight:800; color:#B45309;">
+            ⏳ นิสิตอัปโหลดแล้ว (รอ อ.ที่ปรึกษาตรวจ)
+          </div>
+          <div style="font-size:10.5px; color:#92400E; margin-top:2px;">
+            ที่ปรึกษา: ${escapeHtmlText(d.advisorName || 'ยังไม่ระบุ')}
+          </div>
+        </div>
+        <div style="display:flex; gap:5px; align-items:center; flex-wrap:wrap;">
+          ${d.companyResponseFileUrl
+            ? `<a href="${d.companyResponseFileUrl}" target="_blank" rel="noopener"
+                style="background:#EFF6FF; color:#1D4ED8; border:1px solid #BFDBFE; padding:3px 8px; border-radius:6px; font-size:11px; font-weight:700; text-decoration:none;">
+                👁️ เปิดดูใบตอบรับที่นิสิตแนบ
+              </a>`
+            : ''}
+        </div>
+      `;
+    } else if (d.companyResponseStatus === 'ADVISOR_APPROVED') {
+      respColHtml = `
+        <div style="background:#ECFDF5; border:1px solid #6EE7B7; border-radius:8px; padding:6px 9px; margin-bottom:5px;">
+          <div style="font-size:11.5px; font-weight:800; color:#065F46;">
+            ✓ ที่ปรึกษาอนุมัติใบตอบรับแล้ว
+          </div>
+          ${d.advisorAcceptanceNote ? `<div style="font-size:10.5px; color:#047857;">ข้อความ: "${escapeHtmlText(d.advisorAcceptanceNote)}"</div>` : ''}
+        </div>
+        ${renderCompanyResponseReviewCell(d)}
+      `;
+    } else if (d.companyResponseStatus === 'REJECTED') {
+      respColHtml = `
+        <div style="background:#FEE2E2; color:#991B1B; padding:4px 8px; border-radius:6px; font-size:11px; font-weight:700;">
+          ✗ บริษัทเดิมปฏิเสธ (ย้ายเข้า Archive แล้ว)
+        </div>
+        <div style="font-size:11px; color:#64748B; margin-top:2px;">รอนิสิตยื่นบริษัทใหม่</div>
       `;
     } else {
       respColHtml = renderCompanyResponseReviewCell(d);
@@ -4695,7 +4742,15 @@ window.renderDocumentQueueTable = function() {
         <td>
           <div style="font-weight:700; color:#1E293B;">${d.companyName}</div>
           <div style="font-size:11.5px; color:#64748B;">ตำแหน่ง: ${d.position}</div>
-          ${d.archiveCount > 0 ? `<div style="font-size:10.5px; color:#D97706; font-weight:600;">(มีประวัติใน Archive ${d.archiveCount} แห่ง)</div>` : ''}
+          ${d.archiveCount > 0 ? `
+            <div style="margin-top:4px;">
+              <button type="button" onclick="window.openStudentArchiveModal(${d.studentId})"
+                style="background:#FEF3C7; color:#92400E; border:1px solid #FCD34D; padding:2px 8px; border-radius:6px; font-size:10.5px; font-weight:700; cursor:pointer;"
+                title="คลิกเพื่อดูประวัติรอบก่อนหน้าที่ถูกปฏิเสธ">
+                📜 มีประวัติใน Archive (${d.archiveCount} แห่ง)
+              </button>
+            </div>
+          ` : ''}
         </td>
         <td>${checklistBadge}</td>
         <td>${reqColHtml}</td>
@@ -4863,6 +4918,125 @@ function renderArchiveHistoryTable() {
     </tr>
   `).join('');
 }
+
+window.openStudentArchiveModal = function(studentId: number) {
+  const modal = document.getElementById('student-archive-modal');
+  const bodyEl = document.getElementById('student-archive-modal-body');
+  const titleEl = document.getElementById('student-archive-modal-title');
+  const subEl = document.getElementById('student-archive-modal-subtitle');
+  if (!modal || !bodyEl) return;
+
+  const allArchives = superAdminData.archivedApplications || [];
+  const archives = allArchives.filter((a: any) => a.studentId === studentId || a.studentCode === String(studentId));
+  const student = (superAdminData.documentQueue || []).find((d: any) => d.studentId === studentId);
+
+  const studentName = student ? `${student.nameTh} (${student.studentCode})` : (archives[0]?.studentName ? `${archives[0].studentName} (${archives[0].studentCode})` : `รหัสนิสิต ${studentId}`);
+  const major = student?.major || archives[0]?.major || '';
+
+  if (titleEl) titleEl.textContent = `ประวัติการยื่นบริษัทเดิม (Archive) - ${studentName}`;
+  if (subEl) subEl.textContent = `สาขาวิชา${major} • มีประวัติรอบที่ไม่ผ่านทั้งหมด ${archives.length} รายการ`;
+
+  if (archives.length === 0) {
+    bodyEl.innerHTML = `
+      <div style="text-align:center; padding:40px 20px; color:#94A3B8;">
+        <span class="material-icons" style="font-size:48px; opacity:0.5;">inventory_2</span>
+        <p style="margin-top:8px; font-weight:600;">ยังไม่มีประวัติรอบก่อนหน้าในระบบ Archive สำหรับนิสิตคนนี้</p>
+      </div>
+    `;
+  } else {
+    bodyEl.innerHTML = `
+      <div style="display:flex; flex-direction:column; gap:14px;">
+        ${archives.map((a: any, idx: number) => {
+          const reasonLabel = a.reason === 'COMPANY_REJECTED'
+            ? 'บริษัทปฏิเสธในใบตอบรับ'
+            : a.reason === 'ADVISOR_REJECTED'
+            ? 'ที่ปรึกษาไม่อนุมัติ Checklist'
+            : 'ยกเลิกการสมัคร';
+          const reasonColor = a.reason === 'COMPANY_REJECTED' ? '#DC2626' : '#D97706';
+          const reasonBg = a.reason === 'COMPANY_REJECTED' ? '#FEF2F2' : '#FFFBEB';
+          const dateStr = a.archivedAt ? new Date(a.archivedAt).toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '-';
+
+          return `
+            <div style="background:#F8FAFC; border:1px solid #E2E8F0; border-radius:14px; padding:16px;">
+              <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:8px;">
+                <div>
+                  <div style="display:flex; align-items:center; gap:8px;">
+                    <span style="background:#EEF2FF; color:#4338CA; font-weight:800; font-size:11px; padding:2px 8px; border-radius:999px;">รอบที่ ${archives.length - idx}</span>
+                    <span style="font-weight:800; color:#1E1B4B; font-size:15px;">${escapeHtmlText(a.companyName || '-')}</span>
+                  </div>
+                  <div style="font-size:12.5px; color:#475569; margin-top:4px;">
+                    ตำแหน่ง: <strong>${escapeHtmlText(a.position || 'นิสิตฝึกงาน')}</strong>
+                    ${a.province ? ` • จังหวัด: <strong>${escapeHtmlText(a.province)}</strong>` : ''}
+                  </div>
+                  ${a.contactPersonName || a.phone || a.email ? `
+                    <div style="font-size:11.5px; color:#64748B; margin-top:3px;">
+                      ผู้ติดต่อ: ${escapeHtmlText(a.contactPersonName || '-')} ${a.phone ? `| โทร: ${escapeHtmlText(a.phone)}` : ''} ${a.email ? `| อีเมล: ${escapeHtmlText(a.email)}` : ''}
+                    </div>
+                  ` : ''}
+                  ${a.companyAddress ? `
+                    <div style="font-size:11.5px; color:#64748B; margin-top:2px;">
+                      ที่อยู่: ${escapeHtmlText(a.companyAddress)}
+                    </div>
+                  ` : ''}
+                </div>
+                <div style="text-align:right;">
+                  <span style="display:inline-block; background:${reasonBg}; color:${reasonColor}; border:1px solid ${reasonColor}33; font-weight:700; font-size:11.5px; padding:3px 10px; border-radius:999px;">
+                    ${reasonLabel}
+                  </span>
+                  <div style="font-size:11px; color:#94A3B8; margin-top:4px;">${dateStr}</div>
+                </div>
+              </div>
+
+              ${a.note ? `
+                <div style="margin-top:10px; padding:8px 12px; background:#FFFFFF; border-left:3px solid ${reasonColor}; border-radius:4px; font-size:12px; color:#334155;">
+                  <strong>หมายเหตุ / สาเหตุ:</strong> ${escapeHtmlText(a.note)}
+                </div>
+              ` : ''}
+
+              ${a.fileName || a.fileUrl ? `
+                <div style="margin-top:10px; padding:8px 12px; background:#F1F5F9; border-radius:8px; display:flex; align-items:center; justify-content:space-between;">
+                  <div style="display:flex; align-items:center; gap:6px; font-size:12px; color:#1E293B;">
+                    <span class="material-icons" style="font-size:16px; color:#475569;">attach_file</span>
+                    <span>ไฟล์ใบตอบรับที่แนบ: <strong>${escapeHtmlText(a.fileName || 'ไฟล์เอกสาร')}</strong></span>
+                  </div>
+                  ${a.fileUrl ? `<a href="${a.fileUrl}" target="_blank" style="font-size:11.5px; color:#2563EB; font-weight:700; text-decoration:none;">ดูไฟล์ ↗</a>` : ''}
+                </div>
+              ` : ''}
+
+              ${a.ocr ? `
+                <div style="margin-top:8px; font-size:11.5px; color:#64748B;">
+                  ผล OCR: คาดว่าเป็น "${a.ocr.suggestedResult === 'ACCEPTED' ? 'ตอบรับ' : 'ปฏิเสธ'}" (ความมั่นใจ ${Math.round((a.ocr.confidence || 0) * 100)}%)
+                </div>
+              ` : ''}
+
+              ${a.answers && Object.keys(a.answers).length > 0 ? `
+                <details style="margin-top:10px; font-size:12px;">
+                  <summary style="cursor:pointer; color:#4F46E5; font-weight:600; user-select:none;">
+                    ดูรายละเอียดคำตอบ Checklist ในรอบนี้ (${Object.keys(a.answers).length} ข้อ)
+                  </summary>
+                  <div style="margin-top:8px; padding:10px; background:white; border-radius:8px; border:1px solid #E2E8F0; max-height:200px; overflow-y:auto;">
+                    <ul style="margin:0; padding-left:18px; color:#334155; line-height:1.6;">
+                      ${Object.entries(a.answers).map(([k, v]: [string, any]) => `
+                        <li>ข้อที่ ${k}: <strong>${v.checked ? '✓ ผ่าน' : '✗ ไม่ผ่าน'}</strong> ${v.text ? `(${escapeHtmlText(v.text)})` : ''}</li>
+                      `).join('')}
+                    </ul>
+                  </div>
+                </details>
+              ` : ''}
+            </div>
+          `;
+        }).join('')}
+      </div>
+    `;
+  }
+
+  modal.style.display = 'flex';
+};
+
+window.closeStudentArchiveModal = function() {
+  const modal = document.getElementById('student-archive-modal');
+  if (modal) modal.style.display = 'none';
+};
 
 // พรีวิวและพิมพ์หนังสือราชการ PDF (หนังสือขอความอนุเคราะห์ + แบบฟอร์มใบตอบรับ หรือ หนังสือส่งตัว)
 window.openOfficialLetterPreview = function(type, studentIds, companyName) {
