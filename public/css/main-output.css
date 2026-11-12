@@ -1976,6 +1976,12 @@
     color: #475569 !important;
     cursor: not-allowed !important;
   }
+  .student-profile-education-fields .student-profile-field label {
+    font-size: 17px;
+  }
+  .student-profile-education-fields .input-field {
+    font-size: 18px !important;
+  }
   .student-profile-reg-badge {
     flex-shrink: 0;
     padding: 2px 6px;
