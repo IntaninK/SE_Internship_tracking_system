@@ -301,7 +301,7 @@
       "requestLetterDate": "2026-11-11",
       "requestLetterBatchId": "REQ-BATCH-755139",
       "requestLetterSignatureSnapshot": "",
-      "companyResponseStatus": "WAITING_ADVISOR_APPROVAL",
+      "companyResponseStatus": "ADVISOR_APPROVED",
       "dispatchLetterIssued": false,
       "dispatchLetterSignatureSnapshot": "",
       "isLocked": false,
@@ -331,9 +331,10 @@
         "engine": "builtin-template-analyzer",
         "analyzedAt": "2026-11-11T09:22:20.869Z"
       },
-      "advisorAcceptanceStatus": "PENDING",
-      "advisorAcceptanceNote": "",
-      "advisorAcceptanceReviewedAt": ""
+      "advisorAcceptanceStatus": "APPROVED",
+      "advisorAcceptanceNote": "อาจารย์ที่ปรึกษาตรวจสอบและอนุมัติแบบตอบรับแล้ว",
+      "advisorAcceptanceReviewedAt": "2026-11-12T03:01:39.982Z",
+      "advisorAcceptanceReviewedBy": "Kantinan Kengkla"
     },
     "97": {
       "studentId": 97,

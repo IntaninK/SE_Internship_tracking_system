@@ -128,42 +128,6 @@ const PAGE_BODY_HTML = `
         <span id="training-summary-text" style="background:rgba(255,255,255,0.16); color:white; padding:4px 12px; border-radius:999px; font-size:12px; font-weight:700;"></span>
       </div>
       <div class="card-body">
-
-        <!-- กล่องเพิ่มชั่วโมงกิจกรรมคณะสำหรับอาจารย์ประจำวิชา / เจ้าหน้าที่คณะ (Hackathon, Project Day, Co-op) -->
-        <div id="admin-add-training-box" style="display:none; margin-bottom:20px; padding:16px 20px; background:#F8FAFC; border:1px solid #CBD5E1; border-radius:16px;">
-          <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px; margin-bottom:10px;">
-            <div style="display:flex; align-items:center; gap:6px; font-size:13.5px; font-weight:700; color:#1E1B4B;">
-              <span class="material-icons" style="font-size:18px; color:#4338CA;">add_task</span>
-              <span>เพิ่ม/บันทึกชั่วโมงกิจกรรมเตรียมความพร้อมโดยอาจารย์ประจำวิชา (อนุมัติอัตโนมัติ)</span>
-            </div>
-            <div style="display:flex; gap:6px; flex-wrap:wrap;">
-              <button type="button" onclick="fillPresetTraining('กิจกรรม ICT Hackathon', 'HARD', 12)" style="font-size:11px; font-weight:600; padding:3px 10px; border-radius:999px; background:#EDE9FE; color:#5B21B6; border:1px solid #DDD6FE; cursor:pointer;">+ Hackathon (Hard 12 ชม.)</button>
-              <button type="button" onclick="fillPresetTraining('กิจกรรม ICT Project Day', 'HARD', 6)" style="font-size:11px; font-weight:600; padding:3px 10px; border-radius:999px; background:#DBEAFE; color:#1E40AF; border:1px solid #BFDBFE; cursor:pointer;">+ Project Day (Hard 6 ชม.)</button>
-              <button type="button" onclick="fillPresetTraining('อบรมเตรียมความพร้อมสหกิจศึกษา (Co-op)', 'SOFT', 6)" style="font-size:11px; font-weight:600; padding:3px 10px; border-radius:999px; background:#D1FAE5; color:#065F46; border:1px solid #A7F3D0; cursor:pointer;">+ Co-op (Soft 6 ชม.)</button>
-            </div>
-          </div>
-          <div style="display:flex; flex-wrap:wrap; gap:10px; align-items:flex-end;">
-            <div style="flex:2; min-width:200px;">
-              <label style="font-size:12px; font-weight:600; color:#475569;">ชื่อกิจกรรมอบรม / โครงการคณะ</label>
-              <input type="text" id="admin-new-training-title" class="input-field" placeholder="เช่น กิจกรรม ICT Hackathon หรือ อบรมเตรียมความพร้อม..." style="margin-top:4px;" />
-            </div>
-            <div style="flex:1; min-width:130px;">
-              <label style="font-size:12px; font-weight:600; color:#475569;">ประเภททักษะ</label>
-              <select id="admin-new-training-type" class="input-field" style="margin-top:4px;">
-                <option value="HARD">Hard Skill</option>
-                <option value="SOFT">Soft Skill</option>
-              </select>
-            </div>
-            <div style="width:110px;">
-              <label style="font-size:12px; font-weight:600; color:#475569;">จำนวนชั่วโมง</label>
-              <input type="number" id="admin-new-training-hours" class="input-field" min="1" value="6" style="margin-top:4px; text-align:center;" />
-            </div>
-            <button type="button" class="btn btn-primary btn-sm" onclick="submitAdminAddTraining()" style="height:40px; padding:0 18px; display:inline-flex; align-items:center; gap:5px;">
-              <span class="material-icons" style="font-size:16px;">add_circle</span> เพิ่มชั่วโมง
-            </button>
-          </div>
-        </div>
-
         <table class="data-table">
           <thead>
             <tr>
@@ -171,7 +135,7 @@ const PAGE_BODY_HTML = `
               <th>ชื่อกิจกรรมอบรม / Certificate</th>
               <th>ประเภทชั่วโมง</th>
               <th>จำนวนชั่วโมง</th>
-              <th style="text-align:center;">
+              <th style="text-align:center;" id="training-status-col-header">
                 <label style="cursor:pointer; display:inline-flex; align-items:center; gap:6px;">
                   <input type="checkbox" id="training-select-all" style="width:16px; height:16px; cursor:pointer; accent-color:#4338CA;" title="เลือกทั้งหมด" />
                   <span>เลือก / สถานะ</span>
@@ -223,20 +187,21 @@ const PAGE_BODY_HTML = `
     <section class="card">
       <div class="card-header">
         <span class="material-icons header-icon">checklist</span>
-        <h2 class="card-title">แบบสำรวจสถานประกอบการ (Checklist สูงสุด 3 บริษัท) [REQ-05]</h2>
+        <h2 class="card-title">แบบสำรวจสถานประกอบการ (Checklist)</h2>
       </div>
       <div class="card-body">
         <table class="data-table">
           <thead>
             <tr>
-              <th>ลำดับ</th>
+              <th style="width:50px;">ลำดับ</th>
               <th>ชื่อสถานประกอบการใน Checklist</th>
-              <th>สถานะการประเมินจากที่ปรึกษา</th>
-              <th class="text-center">รายละเอียด</th>
+              <th>สถานะการประเมิน Checklist</th>
+              <th>สถานะแบบตอบรับ</th>
+              <th class="text-center" style="width:160px;">รายละเอียด / การดำเนินการ</th>
             </tr>
           </thead>
           <tbody id="admin-companies-tbody">
-            <tr><td colspan="4" class="text-center py-4 text-gray-400">กำลังโหลด...</td></tr>
+            <tr><td colspan="5" class="text-center py-4 text-gray-400">กำลังโหลด...</td></tr>
           </tbody>
         </table>
 

@@ -205,17 +205,15 @@ function categorizeStudent(s: any) {
 
 // [REQ-06] ตรวจสอบว่าสถานประกอบการที่ยื่นฝึกงานจริง ตรงกับ 1 ในบริษัทที่ผ่านการอนุมัติใน Checklist หรือไม่
 function checkPlacementMatchesChecklist(placement: any, companies: any[]): boolean {
-  if (!placement) return false;
+  if (!placement || !placement.companyNameTh || !placement.companyNameTh.trim()) return true;
   const approvedList = (companies || []).filter((c: any) => c.checklistStatus === "APPROVED");
-  if (approvedList.length === 0) return false;
+  if (approvedList.length === 0) return true;
 
   if (placement.companyId && approvedList.some((c: any) => c.id === placement.companyId)) {
     return true;
   }
 
   const targetName = (placement.companyNameTh || "").trim().toLowerCase();
-  if (!targetName) return false;
-
   return approvedList.some((c: any) => {
     const cName = (c.name || "").trim().toLowerCase();
     return cName && (cName === targetName || cName.includes(targetName) || targetName.includes(cName));

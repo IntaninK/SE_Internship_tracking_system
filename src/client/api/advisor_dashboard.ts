@@ -369,17 +369,6 @@ function renderStudentTable(students, total, page, totalPages) {
       }
     }
 
-    // [REQ-06] ตรวจสอบความตรงกันของสถานที่ฝึกงานกับ Checklist 3 บริษัท
-    if (s.isMatchedWithChecklist === false) {
-      alertTags.push(`<span class="inline-flex items-center gap-1 px-2.5 py-0.5 text-[11px] font-bold rounded-md bg-red-50 text-red-700 border border-red-300" title="นิสิตยื่นขอฝึกงานบริษัท '${s.placementCompanyName || '-'}' ซึ่งไม่ตรงกับบริษัทที่ผ่านการอนุมัติใน Checklist">
-        🚨 [REQ-06] บริษัทไม่ตรง Checklist (${s.placementCompanyName || '-'})
-      </span>`);
-    } else if (s.isMatchedWithChecklist === true && s.placementCompanyName) {
-      alertTags.push(`<span class="inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200">
-        ✅ ตรงกับ Checklist (${s.placementCompanyName})
-      </span>`);
-    }
-
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td>

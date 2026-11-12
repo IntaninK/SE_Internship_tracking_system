@@ -405,8 +405,6 @@ function renderStudentTable(students, total, page, totalPages) {
         <td>
           <div class="flex flex-col items-start gap-1 py-0.5">
             <span class="inline-block px-2.5 py-0.5 text-xs font-semibold rounded-full ${statusColor}">${displayStatus}</span>
-            ${s.isMatchedWithChecklist === false ? `<span class="inline-flex items-center gap-1 px-2.5 py-0.5 text-[11px] font-bold rounded-md bg-red-50 text-red-700 border border-red-300">🚨 [REQ-06] บริษัทไม่ตรง Checklist (${s.placementCompanyName || '-'})</span>` : ''}
-            ${s.isMatchedWithChecklist === true && s.placementCompanyName ? `<span class="inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200">✅ ตรงกับ Checklist (${s.placementCompanyName})</span>` : ''}
             ${alertTags.join('')}
           </div>
         </td>
@@ -4466,67 +4464,44 @@ function escapeHtmlText(str) {
     .replace(/'/g, '&#39;');
 }
 
-function renderCompanyResponseReviewCell(d) {
+function renderCompanyResponseReviewCell(d, showOcr = true) {
   const hasFile = Boolean(d.companyResponseFileUrl || d.companyResponseSubmittedByStudent);
   const ocr = d.companyResponseOcr || null;
 
   let ocrBoxHtml = '';
-  if (!hasFile) {
-    ocrBoxHtml = `
-      <div style="font-size:11.5px; color:#B45309; font-weight:600; margin-bottom:6px;">
-        ⏳ รอนิสิตอัปโหลดใบตอบรับจากบริษัท
-      </div>
-    `;
-  } else if (ocr && ocr.status === 'DONE' && ocr.result === 'ACCEPTED') {
-    const confPct = Math.round((Number(ocr.confidence) || 0.85) * 100);
-    const reasonText = (ocr.reasons && ocr.reasons[0]) || 'ตรวจพบรอยติ๊กหรือรายละเอียดในช่องตอบรับ';
-    const warnHtml = Array.isArray(ocr.warnings) && ocr.warnings.length > 0
-      ? `<div style="margin-top:3px; font-size:10.5px; color:#B45309; font-weight:600;">⚠️ ${escapeHtmlText(ocr.warnings.join(' / '))}</div>`
-      : '';
-    ocrBoxHtml = `
-      <div style="background:#ECFDF5; border:1px solid #6EE7B7; border-radius:8px; padding:7px 9px; margin-bottom:6px;">
-        <div style="font-size:11.5px; font-weight:800; color:#065F46;">
-          🤖 OCR ตรวจพบ: คาดว่า "บริษัทตอบรับ" (${confPct}%)
+  if (showOcr) {
+    if (!hasFile) {
+      ocrBoxHtml = `
+        <div style="font-size:11px; color:#B45309; font-weight:600; margin-bottom:5px;">
+          ⏳ รอนิสิตอัปโหลดใบตอบรับจากบริษัท
         </div>
-        <div style="font-size:10.5px; color:#047857; margin-top:2px;">
-          ${escapeHtmlText(reasonText)}
+      `;
+    } else if (ocr && ocr.status === 'DONE' && ocr.result === 'ACCEPTED') {
+      const confPct = Math.round((Number(ocr.confidence) || 0.85) * 100);
+      const reasonText = (ocr.reasons && ocr.reasons[0]) || 'ตรวจพบรอยติ๊กในช่องตอบรับ';
+      ocrBoxHtml = `
+        <div style="display:inline-flex; align-items:center; gap:5px; background:#ECFDF5; border:1px solid #6EE7B7; border-radius:6px; padding:3px 8px; font-size:11px; font-weight:700; color:#065F46; margin-bottom:5px;" title="${escapeHtmlText(reasonText)}">
+          🤖 AI OCR: บริษัทตอบรับ (${confPct}%)
         </div>
-        ${ocr.extracted?.acceptDetailText ? `<div style="font-size:10.5px; color:#064E3B; margin-top:2px;">ข้อความที่อ่านได้: "${escapeHtmlText(ocr.extracted.acceptDetailText)}"</div>` : ''}
-        ${warnHtml}
-      </div>
-    `;
-  } else if (ocr && ocr.status === 'DONE' && ocr.result === 'REJECTED') {
-    const confPct = Math.round((Number(ocr.confidence) || 0.85) * 100);
-    const reasonText = (ocr.reasons && ocr.reasons[0]) || 'ตรวจพบรอยติ๊กหรือเหตุผลในช่องปฏิเสธ';
-    const warnHtml = Array.isArray(ocr.warnings) && ocr.warnings.length > 0
-      ? `<div style="margin-top:3px; font-size:10.5px; color:#B45309; font-weight:600;">⚠️ ${escapeHtmlText(ocr.warnings.join(' / '))}</div>`
-      : '';
-    ocrBoxHtml = `
-      <div style="background:#FEF2F2; border:1px solid #FCA5A5; border-radius:8px; padding:7px 9px; margin-bottom:6px;">
-        <div style="font-size:11.5px; font-weight:800; color:#991B1B;">
-          🤖 OCR ตรวจพบ: คาดว่า "บริษัทปฏิเสธ" (${confPct}%)
+      `;
+    } else if (ocr && ocr.status === 'DONE' && ocr.result === 'REJECTED') {
+      const confPct = Math.round((Number(ocr.confidence) || 0.85) * 100);
+      const reasonText = (ocr.reasons && ocr.reasons[0]) || 'ตรวจพบรอยติ๊กในช่องปฏิเสธ';
+      ocrBoxHtml = `
+        <div style="display:inline-flex; align-items:center; gap:5px; background:#FEF2F2; border:1px solid #FCA5A5; border-radius:6px; padding:3px 8px; font-size:11px; font-weight:700; color:#991B1B; margin-bottom:5px;" title="${escapeHtmlText(reasonText)}">
+          🤖 AI OCR: บริษัทปฏิเสธ (${confPct}%)
         </div>
-        <div style="font-size:10.5px; color:#B91C1C; margin-top:2px;">
-          ${escapeHtmlText(reasonText)}
+      `;
+    } else {
+      const unclearReason =
+        (ocr && Array.isArray(ocr.reasons) && ocr.reasons[0]) ||
+        'ระบบตรวจผลอัตโนมัติไม่ได้ กรุณาเปิดไฟล์ตรวจด้วยตา';
+      ocrBoxHtml = `
+        <div style="display:inline-flex; align-items:center; gap:5px; background:#FFFBEB; border:1px solid #FCD34D; border-radius:6px; padding:3px 8px; font-size:11px; font-weight:700; color:#B45309; margin-bottom:5px;" title="${escapeHtmlText(unclearReason)}">
+          ⚠️ AI OCR: ตรวจอัตโนมัติไม่ได้
         </div>
-        ${ocr.extracted?.rejectReasonText ? `<div style="font-size:10.5px; color:#7F1D1D; margin-top:2px;">เนื่องจาก: "${escapeHtmlText(ocr.extracted.rejectReasonText)}"</div>` : ''}
-        ${warnHtml}
-      </div>
-    `;
-  } else {
-    const unclearReason =
-      (ocr && Array.isArray(ocr.reasons) && ocr.reasons[0]) ||
-      'ไม่พบการติ๊กช่อง ☐ และไม่พบข้อความหลังช่องตอบรับ/ปฏิเสธ หรืออ่านไฟล์ไม่ได้';
-    ocrBoxHtml = `
-      <div style="background:#FFFBEB; border:1.5px solid #F59E0B; border-radius:8px; padding:7px 9px; margin-bottom:6px;">
-        <div style="font-size:11.5px; font-weight:800; color:#B45309; display:flex; align-items:center; gap:4px;">
-          ⚠️ แจ้งเตือน: ระบบตรวจผลอัตโนมัติไม่ได้
-        </div>
-        <div style="font-size:10.5px; color:#92400E; margin-top:2px; line-height:1.35;">
-          ${escapeHtmlText(unclearReason)} — กรุณาเปิดไฟล์ตรวจด้วยตาก่อนกดยืนยัน
-        </div>
-      </div>
-    `;
+      `;
+    }
   }
 
   const fileActionsHtml = hasFile
@@ -4690,14 +4665,15 @@ window.renderDocumentQueueTable = function() {
         </div>
       `;
     } else if (d.companyResponseStatus === 'ADVISOR_APPROVED') {
+      const ocrSummary = d.companyResponseOcr?.status === 'DONE'
+        ? ` | AI OCR: ${d.companyResponseOcr.result === 'ACCEPTED' ? 'ตอบรับ' : 'ปฏิเสธ'} (${Math.round((Number(d.companyResponseOcr.confidence) || 0.85) * 100)}%)`
+        : '';
+      const tooltipText = (d.advisorAcceptanceNote || 'อาจารย์ที่ปรึกษาตรวจสอบและอนุมัติแบบตอบรับแล้ว') + ocrSummary;
       respColHtml = `
-        <div style="background:#ECFDF5; border:1px solid #6EE7B7; border-radius:8px; padding:6px 9px; margin-bottom:5px;">
-          <div style="font-size:11.5px; font-weight:800; color:#065F46;">
-            ✓ ที่ปรึกษาอนุมัติใบตอบรับแล้ว
-          </div>
-          ${d.advisorAcceptanceNote ? `<div style="font-size:10.5px; color:#047857;">ข้อความ: "${escapeHtmlText(d.advisorAcceptanceNote)}"</div>` : ''}
+        <div style="display:inline-flex; align-items:center; gap:5px; background:#ECFDF5; border:1px solid #6EE7B7; border-radius:6px; padding:3px 8px; font-size:11px; font-weight:700; color:#065F46; margin-bottom:5px;" title="${escapeHtmlText(tooltipText)}">
+          ✓ ที่ปรึกษาอนุมัติแล้ว
         </div>
-        ${renderCompanyResponseReviewCell(d)}
+        ${renderCompanyResponseReviewCell(d, false)}
       `;
     } else if (d.companyResponseStatus === 'REJECTED') {
       respColHtml = `

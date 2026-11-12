@@ -13,20 +13,47 @@ document.addEventListener('DOMContentLoaded', () => {
   loadStudentChecklistData();
 });
 
+let isActingAsAdvisor = true;
+let isActingAsCourseAdmin = false;
+
 async function loadStudentChecklistData() {
   const container = document.getElementById('companies-checklist-container');
   const subtitle = document.getElementById('student-info-subtitle');
 
   try {
+    try {
+      const meRes = await fetch('/auth/me');
+      const meData = await meRes.json();
+      if (meData.authenticated) {
+        const activeRole = meData.user.activeRole || meData.user.role;
+        const activeRoleMode = meData.user.activeRoleMode || activeRole;
+        isActingAsAdvisor = Boolean(activeRole === 'ADVISOR' || activeRoleMode === 'ADVISOR');
+        isActingAsCourseAdmin = Boolean(activeRole === 'COURSE_ADMIN' || activeRole === 'ADMIN' || activeRoleMode === 'COURSE_INSTRUCTOR');
+
+        const backBtn = document.getElementById('checklist-review-back-btn') || document.querySelector('a[href*="dashboard"]');
+        const backText = document.getElementById('checklist-review-back-text');
+        if (backBtn) {
+          if (isActingAsCourseAdmin) {
+            backBtn.href = '/admin-dashboard';
+            if (backText) backText.textContent = 'กลับไปหน้า Dashboard ภาพรวม';
+          } else {
+            backBtn.href = '/advisor-dashboard';
+            if (backText) backText.textContent = 'กลับไปหน้า Dashboard ที่ปรึกษา';
+          }
+        }
+      }
+    } catch (_) {}
+
     const res = await fetch(`/api/advisor/students/${studentId}/checklist`);
     const data = await res.json();
 
     if (!data.success) {
+      const targetDashboard = isActingAsCourseAdmin ? '/admin-dashboard' : '/advisor-dashboard';
       container.innerHTML = `
         <div class="bg-white rounded-2xl p-12 text-center shadow-sm border border-gray-200">
           <span class="material-icons text-5xl text-red-500 mb-3">error_outline</span>
           <p class="text-gray-700 text-lg font-medium">${data.message || 'ไม่สามารถโหลดข้อมูลได้'}</p>
-          <a href="/advisor-dashboard" class="inline-block mt-4 px-6 py-2 bg-blue-600 text-white rounded-xl text-sm font-medium no-underline">
+          <a href="${targetDashboard}" class="inline-block mt-4 px-6 py-2 bg-blue-600 text-white rounded-xl text-sm font-medium no-underline">
             กลับหน้า Dashboard
           </a>
         </div>
@@ -35,6 +62,7 @@ async function loadStudentChecklistData() {
     }
 
     const { student, sections, companies, canReview, acceptanceWorkflow, archivedApplications } = data;
+    const effectiveCanReview = Boolean(canReview && isActingAsAdvisor);
 
     // อัปเดตข้อมูลหัวเว็บ
     if (subtitle) {
@@ -43,15 +71,20 @@ async function loadStudentChecklistData() {
 
     container.innerHTML = '';
 
-    // ถ้าไม่มีสิทธิ์ประเมิน (เช่น Admin หรืออาจารย์ท่านอื่นที่ไม่ใช่ที่ปรึกษาของนิสิตคนนี้) ให้แสดง Banner โหมดดูข้อมูลเท่านั้น
-    if (!canReview) {
+    // ถ้าไม่มีสิทธิ์ประเมิน (เช่น เปิดดูในบทบาท Course Admin หรืออาจารย์ท่านอื่นที่ไม่ใช่ที่ปรึกษาของนิสิตคนนี้) ให้แสดง Banner โหมดดูข้อมูลเท่านั้น
+    if (!effectiveCanReview) {
       const banner = document.createElement('div');
       banner.className = 'mb-6 p-4 bg-amber-50 border border-amber-200 rounded-2xl flex items-center gap-3 text-amber-800 shadow-sm';
       banner.innerHTML = `
         <span class="material-icons text-amber-600 text-2xl">visibility</span>
         <div>
           <p class="font-bold text-sm">โหมดดูข้อมูลเท่านั้น (Read-Only)</p>
-          <p class="text-xs text-amber-700">คุณไม่ได้เป็นอาจารย์ที่ปรึกษาของนิสิตคนนี้ จึงไม่สามารถประเมินหรือเปลี่ยนสถานะ Checklist ได้</p>
+          <p class="text-xs text-amber-700">
+            ${isActingAsCourseAdmin
+              ? 'คุณกำลังเปิดดูในบทบาท "อาจารย์ประจำวิชา" — การประเมินผล Checklist และตรวจแบบตอบรับเป็นหน้าที่ของอาจารย์ที่ปรึกษา'
+              : 'คุณไม่ได้เป็นอาจารย์ที่ปรึกษาของนิสิตคนนี้ จึงไม่สามารถประเมินหรือเปลี่ยนสถานะ Checklist ได้'
+            }
+          </p>
         </div>
       `;
       container.appendChild(banner);
@@ -59,7 +92,7 @@ async function loadStudentChecklistData() {
 
     // 1. ถ้ามีใบตอบรับที่นิสิตอัปโหลดส่งมา ให้อาจารย์ที่ปรึกษาตรวจอนุมัติก่อนส่งให้ Super Admin
     if (acceptanceWorkflow && acceptanceWorkflow.companyResponseFileUrl) {
-      const acceptanceCard = renderAcceptanceReviewCard(acceptanceWorkflow, canReview);
+      const acceptanceCard = renderAcceptanceReviewCard(acceptanceWorkflow, effectiveCanReview);
       if (acceptanceCard) container.appendChild(acceptanceCard);
     }
 
@@ -83,7 +116,7 @@ async function loadStudentChecklistData() {
     } else {
       // Render บริษัทรอบปัจจุบัน
       companies.forEach((comp, idx) => {
-        const card = renderCompanyReviewCard(comp, sections, idx, canReview);
+        const card = renderCompanyReviewCard(comp, sections, idx, effectiveCanReview);
         container.appendChild(card);
       });
     }

@@ -10,6 +10,10 @@ if (!studentId) {
 }
 
 let currentUserRole = null;
+let currentActiveRole = null;
+let isActingAsCourseAdmin = false;
+let isActingAsAdvisor = false;
+let isActingAsStaff = false;
 let currentUserFlags = { isAdvisor: false, isCourseAdmin: false, isStaff: false, isSupervisor: false };
 
 async function initStudentDetail() {
@@ -21,11 +25,34 @@ async function initStudentDetail() {
     if (meData.authenticated) {
       currentUserRole = meData.user.role;
       currentUserFlags = { isAdvisor: Boolean(meData.user.isAdvisor || meData.user.role === 'ADVISOR'), isCourseAdmin: Boolean(meData.user.isCourseAdmin || meData.user.role === 'ADMIN'), isStaff: Boolean(meData.user.isStaff || meData.user.role === 'STAFF'), isSupervisor: Boolean(meData.user.isSupervisor) };
-      if (currentUserRole === 'ADVISOR') {
-        const backBtn = document.querySelector('a[href*="dashboard"]');
-        if (backBtn) {
+      
+      const activeRole = meData.user.activeRole || meData.user.role;
+      const activeRoleMode = meData.user.activeRoleMode || activeRole;
+      currentActiveRole = activeRole;
+
+      // ตรวจสอบบทบาทที่กำลังใช้งานอยู่จริง (Active Role Mode) เพื่อไม่ให้สิทธิ์ข้ามกัน
+      isActingAsCourseAdmin = Boolean(
+        activeRole === 'COURSE_ADMIN' ||
+        activeRole === 'ADMIN' ||
+        activeRoleMode === 'COURSE_INSTRUCTOR'
+      );
+      isActingAsAdvisor = Boolean(
+        activeRole === 'ADVISOR' ||
+        activeRoleMode === 'ADVISOR'
+      );
+      isActingAsStaff = Boolean(
+        activeRole === 'STAFF' ||
+        activeRoleMode === 'FACULTY_STAFF'
+      );
+
+      const backBtn = document.querySelector('a[href*="dashboard"]');
+      if (backBtn) {
+        if (isActingAsAdvisor) {
           backBtn.href = '/advisor-dashboard';
           backBtn.innerHTML = '<span class="material-icons" style="font-size:18px;">arrow_back</span> กลับหน้า Dashboard ที่ปรึกษา';
+        } else {
+          backBtn.href = '/admin-dashboard';
+          backBtn.innerHTML = '<span class="material-icons" style="font-size:18px;">arrow_back</span> กลับหน้า Dashboard ภาพรวม';
         }
       }
     }
@@ -40,7 +67,7 @@ async function initStudentDetail() {
     renderProfile(data.student);
     renderTrainings(data.trainings, data.trainingSummary);
     renderCv(data.cv);
-    renderCompanies(data.companies);
+    renderCompanies(data.companies, data.acceptanceWorkflow);
     renderSubmissions(data.companies);
     renderPlacement(data.placement);
     renderAcceptanceFormReview(data.acceptanceWorkflow);
@@ -49,18 +76,14 @@ async function initStudentDetail() {
     const btnGoToChecklist = document.getElementById('btn-goto-checklist-review') as HTMLAnchorElement | null;
     if (btnGoToChecklist) {
       btnGoToChecklist.href = `/advisor-checklist-review?studentId=${studentId}`;
-    }
-
-    const addTrainingBox = document.getElementById('admin-add-training-box');
-    if (addTrainingBox) {
-      addTrainingBox.style.display = currentUserFlags.isCourseAdmin ? 'block' : 'none';
+      btnGoToChecklist.innerHTML = `<span class="material-icons" style="font-size:18px;">${isActingAsAdvisor ? 'fact_check' : 'visibility'}</span> ${isActingAsAdvisor ? 'ตรวจประเมิน Checklist &amp; แบบตอบรับ' : 'ดูแบบประเมิน Checklist (อ่านอย่างเดียว)'}`;
     }
 
     const trainingApproval = document.getElementById('training-approval-area');
     const trainingSave = document.getElementById('training-save-area');
     const cvStatusSelect = document.getElementById('cv-admin-status');
 
-    if (!currentUserFlags.isCourseAdmin) {
+    if (!isActingAsCourseAdmin) {
       if (trainingApproval) trainingApproval.style.display = 'none';
       if (trainingSave) trainingSave.style.display = 'none';
       if (cvStatusSelect && cvStatusSelect.parentElement) {
@@ -123,10 +146,25 @@ function renderTrainings(trainings, summary) {
   const summaryEl = document.getElementById('training-summary-text');
   const approvalArea = document.getElementById('training-approval-area');
   const saveArea = document.getElementById('training-save-area');
+  const colHeader = document.getElementById('training-status-col-header');
   tbody.innerHTML = '';
 
   if (summaryEl) {
     summaryEl.textContent = `Soft: ${summary.approvedSoft}/${summary.totalSoft} ชม. | Hard: ${summary.approvedHard}/${summary.totalHard} ชม.`;
+  }
+
+  // ปรับหัวตาราง: หากไม่ใช่ Course Admin ให้แสดงข้อความสถานะแบบอ่านอย่างเดียว ไม่มี Checkbox
+  if (colHeader) {
+    if (isActingAsCourseAdmin) {
+      colHeader.innerHTML = `
+        <label style="cursor:pointer; display:inline-flex; align-items:center; gap:6px;">
+          <input type="checkbox" id="training-select-all" style="width:16px; height:16px; cursor:pointer; accent-color:#4338CA;" title="เลือกทั้งหมด" />
+          <span>เลือก / สถานะ</span>
+        </label>
+      `;
+    } else {
+      colHeader.innerHTML = `<span>สถานะ</span>`;
+    }
   }
 
   if (!trainings || trainings.length === 0) {
@@ -136,19 +174,38 @@ function renderTrainings(trainings, summary) {
     return;
   }
 
-  // แสดง approval area
-  if (approvalArea) approvalArea.style.display = 'flex';
-  if (saveArea) saveArea.style.display = 'block';
+  const hasReviewableStudentCerts = trainings.some(t => {
+    const isFaculty = Boolean(t.source === 'STAFF_IMPORT' || (t.title && t.title.includes('[Check-in')) || (t.title && t.title.includes('[Check-In')) || t.source === 'ADMIN_IMPORT');
+    return !isFaculty;
+  });
+
+  // แสดง approval area เฉพาะเมื่อเป็น Course Admin และมีรายการที่นิสิตอัปโหลด Cert มาให้ตรวจ
+  if (isActingAsCourseAdmin && hasReviewableStudentCerts) {
+    if (approvalArea) approvalArea.style.display = 'flex';
+    if (saveArea) saveArea.style.display = 'block';
+  } else {
+    if (approvalArea) approvalArea.style.display = 'none';
+    if (saveArea) saveArea.style.display = 'none';
+  }
 
   trainings.forEach((t, idx) => {
     const certUrl = t.certificateFileUrl || '';
+    const isFacultyEvent = Boolean(t.source === 'STAFF_IMPORT' || (t.title && t.title.includes('[Check-in')) || (t.title && t.title.includes('[Check-In')) || t.source === 'ADMIN_IMPORT');
 
     let statusBadge = '<span style="color:#d97706; background:#fef3c7; border:1px solid #fde68a; font-size:13px; font-weight:600; padding:2px 8px; border-radius:6px;">⏳ รอตรวจ</span>';
-    if (t.status === 'APPROVED') {
+    if (isFacultyEvent) {
+      statusBadge = '<span style="color:#16a34a; background:#dcfce7; border:1px solid #86efac; font-size:13px; font-weight:600; padding:2px 8px; border-radius:6px;">✓ ผ่าน (กิจกรรมคณะ)</span>';
+    } else if (t.status === 'APPROVED') {
       statusBadge = '<span style="color:#16a34a; background:#dcfce7; border:1px solid #86efac; font-size:13px; font-weight:600; padding:2px 8px; border-radius:6px;">✓ ผ่าน</span>';
     } else if (t.status === 'REJECTED') {
       statusBadge = '<span style="color:#dc2626; background:#fee2e2; border:1px solid #fca5a5; font-size:13px; font-weight:600; padding:2px 8px; border-radius:6px;">✗ ไม่ผ่าน</span>';
     }
+
+    // กิจกรรมของคณะ/พี่จอมนำเข้า จะไม่มี Checkbox เพื่อไม่ให้เปลี่ยนสถานะกิจกรรมส่วนกลาง
+    // Checkbox จะแสดงเฉพาะรายการที่นิสิตอัปโหลดใบ Cert ยื่นมาเองเท่านั้น
+    const checkboxHtml = (isActingAsCourseAdmin && !isFacultyEvent)
+      ? `<input type="checkbox" class="training-cert-checkbox" data-id="${t.id}" style="width:18px; height:18px; cursor:pointer; accent-color:#2563eb;" />`
+      : '';
 
     const tr = document.createElement('tr');
     tr.innerHTML = `
@@ -158,29 +215,33 @@ function renderTrainings(trainings, summary) {
       <td style="font-size:16px;">${t.hours}</td>
       <td style="text-align:center; vertical-align:middle;">
         <div style="display:inline-flex; align-items:center; justify-content:center; gap:8px;">
-          <input type="checkbox" class="training-cert-checkbox" data-id="${t.id}" style="width:18px; height:18px; cursor:pointer; accent-color:#2563eb;" />
+          ${checkboxHtml}
           ${statusBadge}
         </div>
       </td>
       <td style="text-align:center;">
-        ${certUrl
-          ? `<a href="${certUrl}" target="_blank" style="color:#2563eb; font-size:16px; text-decoration:none; white-space:nowrap;">ดูตัวอย่าง</a>`
-          : '<span style="color:#94a3b8; font-size:16px;">-</span>'
+        ${isFacultyEvent
+          ? '<span style="color:#94a3b8; font-size:16px;">-</span>'
+          : certUrl
+            ? `<a href="${certUrl}" target="_blank" style="color:#2563eb; font-size:16px; text-decoration:none; white-space:nowrap;">ดูตัวอย่าง</a>`
+            : '<span style="color:#94a3b8; font-size:16px;">-</span>'
         }
       </td>
     `;
     tbody.appendChild(tr);
   });
 
-  // ผูกการทำงาน Checkbox เลือกทั้งหมด (Select All)
-  const selectAll = document.getElementById('training-select-all');
-  if (selectAll) {
-    selectAll.checked = false;
-    selectAll.onchange = function() {
-      document.querySelectorAll('.training-cert-checkbox').forEach(cb => {
-        cb.checked = selectAll.checked;
-      });
-    };
+  // ผูกการทำงาน Checkbox เลือกทั้งหมด (Select All) เฉพาะ Course Admin
+  if (isActingAsCourseAdmin) {
+    const selectAll = document.getElementById('training-select-all');
+    if (selectAll) {
+      selectAll.checked = false;
+      selectAll.onchange = function() {
+        document.querySelectorAll('.training-cert-checkbox').forEach(cb => {
+          cb.checked = selectAll.checked;
+        });
+      };
+    }
   }
 }
 
@@ -246,6 +307,23 @@ function renderCv(cv) {
   const displayUrl = getCvDisplayUrl(cv);
   const previewHtml = `<img src="${displayUrl}" alt="CV" style="max-width:450px; max-height:550px; border-radius:8px; border:1px solid #e2e8f0; cursor:pointer;" onclick="window.open('${cv.fileUrl}', '_blank')" />`;
 
+  const editControlsHtml = isActingAsCourseAdmin ? `
+    <div style="display:flex; flex-direction:column; gap:10px; max-width:350px;">
+      <label style="font-size:16px; font-weight:600; color:#334155;">ตั้งสถานะ CV</label>
+      <select class="input-field" id="cv-admin-status" style="font-size:16px; padding:8px 10px;">
+        <option value="PENDING" ${cv.status === 'PENDING' ? 'selected' : ''}>☐ รอผล (รออาจารย์ตรวจ)</option>
+        <option value="APPROVED" ${cv.status === 'APPROVED' ? 'selected' : ''}>✓ CVตรวจแล้ว / ผ่าน</option>
+        <option value="REJECTED" ${cv.status === 'REJECTED' ? 'selected' : ''}>✗ CVไม่ผ่าน / ทำใหม่</option>
+      </select>
+      <input type="text" class="input-field" id="cv-admin-note" value="${cv.note || ''}" placeholder="Comment / หมายเหตุ..." />
+      <button class="btn btn-primary btn-sm" onclick="saveCvStatus()" style="width:fit-content; font-size:18px;">💾 บันทึกสถานะ CV</button>
+    </div>
+  ` : `
+    <div style="padding:10px 14px; background:#F8FAFC; border:1px solid #E2E8F0; border-radius:8px; font-size:13px; color:#64748B;">
+      ℹ️ ส่วนตรวจสอบ CV ดำเนินการโดยอาจารย์ประจำรายวิชา (สิทธิ์อ่านอย่างเดียว)
+    </div>
+  `;
+
   section.innerHTML = `
     <div style="display: flex; justify-content: center; align-items: center; gap:20px; max-width: 700px; margin: 0 auto; padding: 20px;">
       <div>${previewHtml}</div>
@@ -253,16 +331,7 @@ function renderCv(cv) {
         <p style="font-size:16px; margin-bottom:8px;"><strong>ไฟล์:</strong> ${cv.fileName || 'CV'}</p>
         <p style="font-size:16px; margin-bottom:12px;"><strong>สถานะปัจจุบัน:</strong>  ${statusBadge}</p>
         ${cv.note ? `<p style="font-size:16px; color:#64748b; margin-bottom:12px;">หมายเหตุ: ${cv.note}</p>` : ''}
-        <div style="display:flex; flex-direction:column; gap:10px; max-width:350px;">
-          <label style="font-size:16px; font-weight:600; color:#334155;">ตั้งสถานะ CV</label>
-          <select class="input-field" id="cv-admin-status" style="font-size:16px; padding:8px 10px;">
-            <option value="PENDING" ${cv.status === 'PENDING' ? 'selected' : ''}>☐ รอผล (รออาจารย์ตรวจ)</option>
-            <option value="APPROVED" ${cv.status === 'APPROVED' ? 'selected' : ''}>✓ CVตรวจแล้ว / ผ่าน</option>
-            <option value="REJECTED" ${cv.status === 'REJECTED' ? 'selected' : ''}>✗ CVไม่ผ่าน / ทำใหม่</option>
-          </select>
-          <input type="text" class="input-field" id="cv-admin-note" value="${cv.note || ''}" placeholder="Comment / หมายเหตุ..." />
-          <button class="btn btn-primary btn-sm" onclick="saveCvStatus()" style="width:fit-content; font-size:18px;">💾 บันทึกสถานะ CV</button>
-        </div>
+        ${editControlsHtml}
       </div>
     </div>
   `;
@@ -299,7 +368,7 @@ window.saveCvStatus = async function() {
 // เก็บข้อมูล companies ไว้ใช้ใน modal
 let cachedCompanies = [];
 
-function renderCompanies(companies) {
+function renderCompanies(companies, acceptanceWf) {
   const tbody = document.getElementById('admin-companies-tbody');
   const reviewStatusDiv = document.getElementById('checklist-review-status');
   const reviewBadge = document.getElementById('checklist-review-badge');
@@ -307,7 +376,7 @@ function renderCompanies(companies) {
   cachedCompanies = companies || [];
 
   if (!companies || companies.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="4" class="text-center py-4 text-gray-400">ยังไม่มีข้อมูล checklist</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-gray-400">ยังไม่มีข้อมูล checklist</td></tr>';
     if (reviewStatusDiv) reviewStatusDiv.style.display = 'none';
     return;
   }
@@ -323,14 +392,38 @@ function renderCompanies(companies) {
       statusStyle = 'color:#ef4444; font-weight:600;';
     }
 
+    // สถานะแบบตอบรับของบริษัทนี้
+    let acceptanceBadge = '<span style="color:#94a3b8; font-size:14px;">-</span>';
+    if (acceptanceWf && acceptanceWf.companyResponseFileUrl) {
+      const isTargetComp = (acceptanceWf.companyName && c.name && acceptanceWf.companyName.trim().toLowerCase() === c.name.trim().toLowerCase()) || companies.length === 1;
+      if (isTargetComp) {
+        const accStatus = acceptanceWf.companyResponseStatus;
+        if (accStatus === 'WAITING_ADVISOR_APPROVAL') {
+          acceptanceBadge = '<span style="color:#b45309; background:#fef3c7; border:1px solid #fde68a; font-size:12px; font-weight:700; padding:2px 8px; border-radius:6px; display:inline-flex; align-items:center; gap:4px;"><span class="material-icons" style="font-size:14px;">hourglass_top</span> รอที่ปรึกษาตรวจ</span>';
+        } else if (accStatus === 'ADVISOR_APPROVED') {
+          acceptanceBadge = '<span style="color:#047857; background:#dcfce7; border:1px solid #86efac; font-size:12px; font-weight:700; padding:2px 8px; border-radius:6px; display:inline-flex; align-items:center; gap:4px;"><span class="material-icons" style="font-size:14px;">check_circle</span> ที่ปรึกษาอนุมัติแล้ว</span>';
+        } else if (accStatus === 'ACCEPTED') {
+          acceptanceBadge = '<span style="color:#047857; background:#dcfce7; border:1px solid #86efac; font-size:12px; font-weight:700; padding:2px 8px; border-radius:6px; display:inline-flex; align-items:center; gap:4px;"><span class="material-icons" style="font-size:14px;">task_alt</span> ตอบรับเข้าฝึกงาน</span>';
+        } else if (accStatus === 'REJECTED') {
+          acceptanceBadge = '<span style="color:#b91c1c; background:#fee2e2; border:1px solid #fca5a5; font-size:12px; font-weight:700; padding:2px 8px; border-radius:6px; display:inline-flex; align-items:center; gap:4px;"><span class="material-icons" style="font-size:14px;">cancel</span> ไม่ผ่าน/ปฏิเสธ</span>';
+        }
+      }
+    }
+
+    // คอลัมน์การดำเนินการ:
+    // ถ้าเป็นอาจารย์ที่ปรึกษา ให้กดเข้าไปหน้า checklist เพื่อตรวจประเมินได้ทันที
+    // ถ้าเป็นอาจารย์ประจำวิชา / เจ้าหน้าที่ ให้เปิด modal ดูตัวอย่างแบบอ่านอย่างเดียว
+    const actionHtml = isActingAsAdvisor
+      ? `<a href="/advisor-checklist-review?studentId=${studentId}&companyId=${c.id}" style="background:#4338CA; color:white; padding:6px 14px; border-radius:8px; font-size:12.5px; font-weight:700; text-decoration:none; display:inline-flex; align-items:center; gap:4px; box-shadow:0 2px 4px rgba(67,56,202,0.2);"><span class="material-icons" style="font-size:15px;">fact_check</span> ตรวจ Checklist</a>`
+      : `<a href="#" onclick="openChecklistModal(${idx}); return false;" style="color:#2563eb; font-size:14px; font-weight:600; text-decoration:none; display:inline-flex; align-items:center; gap:4px;"><span class="material-icons" style="font-size:16px;">visibility</span> ดูตัวอย่าง</a>`;
+
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td style="font-size:16px;">${idx + 1}</td>
       <td style="font-size:16px;">${c.name}</td>
       <td style="font-size:16px; ${statusStyle}">${statusText}</td>
-      <td style="text-align:center;">
-        <a href="#" onclick="openChecklistModal(${idx}); return false;" style="color:#2563eb; font-size:16px; text-decoration:none;">ดูตัวอย่าง</a>
-      </td>
+      <td style="font-size:14px; text-align:center;">${acceptanceBadge}</td>
+      <td style="text-align:center;">${actionHtml}</td>
     `;
     tbody.appendChild(tr);
   });
@@ -510,7 +603,8 @@ function renderPlacement(placement) {
         📌 ข้อมูลนี้ถูกดึงมาจากแบบประเมิน Checklist ที่นิสิตได้กรอกและยื่นผ่านระบบ
       </div>
       <a href="/advisor-checklist-review?studentId=${studentId}" style="background:#EEF2FF; color:#312E81; border:1px solid #C7D2FE; padding:6px 14px; border-radius:8px; font-size:12px; font-weight:700; text-decoration:none; display:inline-flex; align-items:center; gap:5px;">
-        <span class="material-icons" style="font-size:16px;">fact_check</span> ไปหน้าตรวจประเมิน Checklist
+        <span class="material-icons" style="font-size:16px;">${isActingAsAdvisor ? 'fact_check' : 'visibility'}</span>
+        ${isActingAsAdvisor ? 'ไปหน้าตรวจประเมิน Checklist' : 'ดูแบบประเมิน Checklist (อ่านอย่างเดียว)'}
       </a>
     </div>
     <div class="form-grid">
@@ -594,7 +688,8 @@ function renderAcceptanceFormReview(wf) {
     ${ocrBoxHtml}
 
     <div style="margin-top:14px;">
-      ${isPendingAdvisor ? `
+      ${isPendingAdvisor ? (
+        isActingAsAdvisor ? `
         <div style="padding:16px 20px; background:#FFFBEB; border:1.5px solid #FCD34D; border-radius:14px;">
           <div style="font-size:13.5px; font-weight:800; color:#B45309; display:flex; align-items:center; gap:8px;">
             <span class="material-icons" style="font-size:22px; color:#D97706;">hourglass_top</span>
@@ -614,7 +709,20 @@ function renderAcceptanceFormReview(wf) {
             </button>
           </div>
         </div>
-      ` : isAdvisorApproved ? `
+        ` : `
+        <div style="padding:14px 18px; background:#FFFBEB; border:1px solid #FCD34D; border-radius:12px; display:flex; align-items:center; gap:10px;">
+          <span class="material-icons" style="color:#D97706; font-size:24px;">hourglass_top</span>
+          <div>
+            <div style="font-size:13.5px; font-weight:800; color:#B45309;">
+              ⏳ อยู่ระหว่างรออาจารย์ที่ปรึกษาตรวจประเมินแบบตอบรับ
+            </div>
+            <div style="font-size:12px; color:#92400E; margin-top:2px;">
+              นิสิตได้อัปโหลดเอกสารแบบตอบรับแล้ว การตรวจและอนุมัติแบบตอบรับในขั้นตอนนี้เป็นหน้าที่ของอาจารย์ที่ปรึกษา (สิทธิ์อ่านอย่างเดียว)
+            </div>
+          </div>
+        </div>
+        `
+      ) : isAdvisorApproved ? `
         <div style="padding:14px 18px; background:#ECFDF5; border:1px solid #6EE7B7; border-radius:12px; display:flex; align-items:center; gap:10px;">
           <span class="material-icons" style="color:#059669; font-size:24px;">verified</span>
           <div>
@@ -719,56 +827,3 @@ initStudentDetail();
 window.addEventListener('app:data-updated', () => {
   initStudentDetail();
 });
-
-
-// =========================================================================
-// อาจารย์ประจำวิชา / เจ้าหน้าที่คณะ: เพิ่มชั่วโมงกิจกรรมเตรียมความพร้อม (Hackathon, Project Day, Co-op)
-// =========================================================================
-window.fillPresetTraining = function(title, skillType, hours) {
-  const titleEl = document.getElementById('admin-new-training-title');
-  const typeEl = document.getElementById('admin-new-training-type');
-  const hoursEl = document.getElementById('admin-new-training-hours');
-  if (titleEl) titleEl.value = title;
-  if (typeEl) typeEl.value = skillType;
-  if (hoursEl) hoursEl.value = hours;
-};
-
-window.submitAdminAddTraining = async function() {
-  const titleEl = document.getElementById('admin-new-training-title');
-  const typeEl = document.getElementById('admin-new-training-type');
-  const hoursEl = document.getElementById('admin-new-training-hours');
-
-  const title = titleEl ? titleEl.value.trim() : '';
-  const skillType = typeEl ? typeEl.value : 'HARD';
-  const hours = hoursEl ? Number(hoursEl.value) : 0;
-
-  if (!title) {
-    alert('กรุณาระบุชื่อกิจกรรมอบรม / โครงการของคณะ');
-    if (titleEl) titleEl.focus();
-    return;
-  }
-  if (!hours || hours <= 0) {
-    alert('กรุณาระบุจำนวนชั่วโมงอบรมที่มากกว่า 0');
-    if (hoursEl) hoursEl.focus();
-    return;
-  }
-
-  try {
-    const res = await fetch(`/api/admin/students/${studentId}/trainings`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title, skillType, hours, status: 'APPROVED' }),
-    });
-    const data = await res.json();
-    if (data.success) {
-      alert(`✅ บันทึกชั่วโมงกิจกรรม "${title}" (${hours} ชม.) สำเร็จ`);
-      if (titleEl) titleEl.value = '';
-      initStudentDetail();
-    } else {
-      alert('เกิดข้อผิดพลาด: ' + (data.message || 'ไม่สามารถเพิ่มชั่วโมงได้'));
-    }
-  } catch (err) {
-    console.error('Add training error:', err);
-    alert('เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์');
-  }
-};

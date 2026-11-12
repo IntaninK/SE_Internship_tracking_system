@@ -56,17 +56,15 @@ function getStudentReadinessStatus(s: any) {
 
 // [REQ-06] ตรวจสอบว่าสถานประกอบการที่ยื่นฝึกงานจริง ตรงกับ 1 ในบริษัทที่ผ่านการอนุมัติใน Checklist หรือไม่
 function checkPlacementMatchesChecklist(placement: any, companies: any[]): boolean {
-  if (!placement) return false;
+  if (!placement || !placement.companyNameTh || !placement.companyNameTh.trim()) return true;
   const approvedList = (companies || []).filter((c: any) => c.checklistStatus === "APPROVED");
-  if (approvedList.length === 0) return false;
+  if (approvedList.length === 0) return true;
 
   if (placement.companyId && approvedList.some((c: any) => c.id === placement.companyId)) {
     return true;
   }
 
   const targetName = (placement.companyNameTh || "").trim().toLowerCase();
-  if (!targetName) return false;
-
   return approvedList.some((c: any) => {
     const cName = (c.name || "").trim().toLowerCase();
     return cName && (cName === targetName || cName.includes(targetName) || targetName.includes(cName));
@@ -664,7 +662,11 @@ router.get("/students/:studentId/checklist", async (req: Request, res: Response)
 
     const sections = targetVersion?.sections || [];
 
+    const activeRole = req.session.user?.activeRole || req.session.user?.role;
+    const isActingAsAdvisor = (activeRole === "ADVISOR");
+
     const canReview = Boolean(
+      isActingAsAdvisor &&
       student.advisorId &&
       advisorStaffId &&
       student.advisorId === advisorStaffId
@@ -737,7 +739,15 @@ router.put("/companies/:companyId/checklist-review", async (req: Request, res: R
     }
 
     // สิทธิ์การตรวจประเมิน Checklist:
-    // ต้องเป็นอาจารย์ที่ปรึกษาของนิสิตคนนี้เท่านั้น (advisorId ของนิสิตตรงกับ staff id ของผู้ตรวจ)
+    // ต้องเป็นอาจารย์ที่ปรึกษาของนิสิตคนนี้เท่านั้น (advisorId ของนิสิตตรงกับ staff id ของผู้ตรวจ และอยู่ในบทบาทที่ปรึกษา)
+    const activeRole = req.session.user?.activeRole || req.session.user?.role;
+    if (activeRole !== "ADVISOR") {
+      return res.status(403).json({
+        success: false,
+        message: "เฉพาะอาจารย์ที่ปรึกษาในบทบาทที่ปรึกษาเท่านั้นที่สามารถตรวจประเมิน Checklist ได้",
+      });
+    }
+
     if (
       !company.student.advisorId ||
       !advisorStaffId ||
@@ -1067,17 +1077,18 @@ router.post("/documents/review-acceptance", async (req: Request, res: Response) 
       return res.status(404).json({ success: false, message: "ไม่พบข้อมูลนิสิต" });
     }
 
-    const isCourseAdminOrStaff = Boolean(
-      req.staff?.isCourseAdmin ||
-      req.staff?.isStaff ||
-      req.session.user!.role === "ADMIN" ||
-      req.session.user!.role === "STAFF"
-    );
-
-    if (!isCourseAdminOrStaff && student.advisorId !== advisorStaffId && student.supervisorId !== advisorStaffId) {
+    const activeRole = req.session.user?.activeRole || req.session.user?.role;
+    if (activeRole !== "ADVISOR") {
       return res.status(403).json({
         success: false,
-        message: "คุณไม่มีสิทธิ์ตรวจแบบตอบรับของนิสิตท่านนี้",
+        message: "เฉพาะอาจารย์ที่ปรึกษาในบทบาทที่ปรึกษาเท่านั้นที่สามารถตรวจประเมินแบบตอบรับได้",
+      });
+    }
+
+    if (student.advisorId !== advisorStaffId && student.supervisorId !== advisorStaffId) {
+      return res.status(403).json({
+        success: false,
+        message: "คุณไม่มีสิทธิ์ตรวจแบบตอบรับของนิสิตท่านนี้ (สิทธิ์นี้เป็นของอาจารย์ที่ปรึกษาของนิสิต)",
       });
     }
 

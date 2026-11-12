@@ -24,7 +24,7 @@ const PAGE_BODY_HTML = `
           <div>
             <h2 class="card-title" id="advisor-dashboard-main-title" style="margin:0;">ระบบติดตามดูแลนิสิตฝึกงาน (เฉพาะนิสิตในความรับผิดชอบ)</h2>
             <p id="advisor-dashboard-subtitle" style="margin:2px 0 0 0; font-size:12px; color:#E0E7FF;">
-              แจ้งเตือนสถานะ Checklist 3 บริษัท และการตรวจสอบความตรงกันของสถานที่ฝึกงานจริง
+              แจ้งเตือนสถานะ Checklist และการตรวจสอบความตรงกันของสถานที่ฝึกงานจริง
             </p>
           </div>
         </div>
@@ -82,17 +82,8 @@ const PAGE_BODY_HTML = `
             </div>
           </div>
 
-          <!-- Card 4: [REQ-06] Mismatched Company Warning -->
-          <div style="background:#FEF2F2; border:1px solid #FECACA; border-radius:16px; padding:14px 18px; display:flex; align-items:center; justify-content:space-between;" title="นิสิตยื่นบริษัทฝึกงานไม่ตรงกับใน Checklist 3 บริษัทที่อนุมัติ">
-            <div>
-              <div style="font-size:12px; font-weight:700; color:#991B1B;">⚠️ บริษัทไม่ตรง Checklist [REQ-06]</div>
-              <div style="font-size:26px; font-weight:800; color:#DC2626; margin-top:2px;" id="notif-mismatch-placement">0</div>
-              <div style="font-size:11px; color:#B91C1C;">ต้องตรวจสอบก่อนอนุมัติ</div>
-            </div>
-            <div style="width:44px; height:44px; border-radius:12px; background:#FEE2E2; color:#DC2626; display:flex; align-items:center; justify-content:center;">
-              <span class="material-icons">warning_amber</span>
-            </div>
-          </div>
+          <!-- Card 4: Hidden (Obsolete REQ-06) -->
+          <div style="display:none;" id="notif-mismatch-placement">0</div>
         </div>
       </div>
     </section>
@@ -196,7 +187,7 @@ const PAGE_BODY_HTML = `
               <th style="width: 20%;">ชื่อ-นามสกุล</th>
               <th style="width: 17%;">สาขาวิชา</th>
               <th style="width: 17%;">อาจารย์ที่ปรึกษา</th>
-              <th style="width: 22%;">สถานะ Checklist &amp; การตรวจสอบ [REQ-06]</th>
+              <th style="width: 22%;">สถานะ Checklist &amp; สถานที่ฝึกงาน</th>
               <th style="width: 10%; min-width: 100px;" class="text-center">
                 <label style="display:inline-flex;align-items:center;gap:4px;cursor:pointer;white-space:nowrap;" title="เลือกนิสิตทั้งหมดในหน้านี้">
                   <span style="font-size:12px;">เลือกทั้งหมด</span>
