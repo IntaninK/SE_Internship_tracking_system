@@ -2309,6 +2309,20 @@ function renderMajorUnlockTable() {
     return;
   }
 
+  // เติมค่า Default ในกล่องด้านบนอัตโนมัติหากยังว่างอยู่
+  const batchTermEl = document.getElementById('batch-target-term') as HTMLInputElement | null;
+  const batchOpenEl = document.getElementById('batch-open-date') as HTMLInputElement | null;
+  const batchCloseEl = document.getElementById('batch-close-date') as HTMLInputElement | null;
+  if (batchTermEl && !batchTermEl.value && rules.length > 0) {
+    const commonRule = rules.find(r => r.code !== 'SE' && r.targetTerm) || rules[0];
+    if (commonRule?.targetTerm) batchTermEl.value = commonRule.targetTerm;
+  }
+  if (batchOpenEl && !batchOpenEl.value && rules.length > 0) {
+    const ruleWithDates = rules.find(r => r.openDate && r.closeDate) || rules[0];
+    if (ruleWithDates?.openDate) batchOpenEl.value = ruleWithDates.openDate;
+    if (ruleWithDates?.closeDate) batchCloseEl.value = ruleWithDates.closeDate;
+  }
+
   tbody.innerHTML = rules.map(r => {
     const statusBadge = r.isUnlocked
       ? `<span style="display:inline-flex; align-items:center; gap:5px; background:#DCFCE7; color:#166534; border:1px solid #86EFAC; padding:4px 10px; border-radius:999px; font-size:12px; font-weight:700;">
@@ -2321,8 +2335,13 @@ function renderMajorUnlockTable() {
     return `
       <tr>
         <td>
-          <div style="font-weight:800; color:#1E1B4B; font-size:13.5px;">สาขาวิชา${r.majorName} (${r.code})</div>
-          <div style="font-size:11.5px; color:#64748B; margin-top:2px;">นิสิตในระบบ: <strong>${r.studentCount || 0}</strong> คน</div>
+          <div style="display:flex; align-items:flex-start; gap:8px;">
+            <input type="checkbox" class="major-row-check" data-code="${r.code}" checked onchange="updateBatchSelectedCount()" style="width:16px; height:16px; margin-top:2px; cursor:pointer;" title="เลือกสาขานี้สำหรับบันทึกค่าส่วนกลาง" />
+            <div>
+              <div style="font-weight:800; color:#1E1B4B; font-size:13.5px;">สาขาวิชา${r.majorName} (${r.code})</div>
+              <div style="font-size:11.5px; color:#64748B; margin-top:2px;">นิสิตในระบบ: <strong>${r.studentCount || 0}</strong> คน</div>
+            </div>
+          </div>
         </td>
         <td>
           <div style="font-size:12px; color:#334155;"><strong>เตรียมความพร้อม:</strong> ${r.prepSchedule}</div>
@@ -2337,7 +2356,14 @@ function renderMajorUnlockTable() {
             <span>ถึง</span>
             <input type="date" id="major-close-${r.code}" class="input-field" value="${r.closeDate || ''}" style="font-size:11.5px; padding:4px 6px !important;" />
           </div>
-          <input type="text" id="major-note-${r.code}" class="input-field" value="${r.note || ''}" placeholder="หมายเหตุแจ้งนิสิต..." style="font-size:11.5px; padding:4px 8px !important; margin-top:4px; width:100%;" />
+          <div style="display:flex; align-items:center; justify-content:space-between; margin-top:3px; gap:4px;">
+            <input type="text" id="major-note-${r.code}" class="input-field" value="${r.note || ''}" placeholder="หมายเหตุแจ้งนิสิต..." style="font-size:11.5px; padding:4px 8px !important; flex:1;" />
+            <button type="button" onclick="copyRowDatesToAll('${r.code}')"
+              style="background:#EEF2FF; color:#4338CA; border:1px solid #C7D2FE; padding:3px 8px; border-radius:6px; font-size:10.5px; font-weight:700; cursor:pointer; white-space:nowrap;"
+              title="คัดลอกรอบเทอมและช่วงเวลาของสาขานี้ไปใส่ในทุกสาขา">
+              📋 ใช้กับทุกสาขา
+            </button>
+          </div>
         </td>
         <td>${statusBadge}</td>
         <td class="text-center">
@@ -2355,7 +2381,182 @@ function renderMajorUnlockTable() {
       </tr>
     `;
   }).join('');
+
+  if (window.updateBatchSelectedCount) {
+    window.updateBatchSelectedCount();
+  }
 }
+
+window.toggleSelectAllMajors = function(checked) {
+  const checkboxes = document.querySelectorAll('.major-row-check');
+  checkboxes.forEach((cb: any) => { cb.checked = checked; });
+  if (window.updateBatchSelectedCount) {
+    window.updateBatchSelectedCount();
+  }
+};
+
+window.updateBatchSelectedCount = function() {
+  const checkboxes = document.querySelectorAll('.major-row-check');
+  const total = checkboxes.length;
+  let checkedCount = 0;
+  checkboxes.forEach((cb: any) => { if (cb.checked) checkedCount++; });
+
+  const countEl = document.getElementById('batch-selected-count');
+  if (countEl) countEl.textContent = String(checkedCount);
+
+  const selectAllEl = document.getElementById('major-select-all') as HTMLInputElement | null;
+  if (selectAllEl) {
+    selectAllEl.checked = total > 0 && checkedCount === total;
+    selectAllEl.indeterminate = checkedCount > 0 && checkedCount < total;
+  }
+
+  const btn = document.getElementById('batch-save-btn');
+  if (btn) {
+    if (checkedCount === 0) {
+      btn.style.opacity = '0.5';
+      btn.style.cursor = 'not-allowed';
+    } else {
+      btn.style.opacity = '1';
+      btn.style.cursor = 'pointer';
+    }
+  }
+};
+
+window.saveBatchMajorRules = async function() {
+  const rules = superAdminData.majorUnlockRules || [];
+  if (rules.length === 0) return;
+
+  const batchTermEl = document.getElementById('batch-target-term') as HTMLInputElement | null;
+  const batchOpenEl = document.getElementById('batch-open-date') as HTMLInputElement | null;
+  const batchCloseEl = document.getElementById('batch-close-date') as HTMLInputElement | null;
+  const termVal = batchTermEl?.value.trim() || '';
+  const openVal = batchOpenEl?.value || '';
+  const closeVal = batchCloseEl?.value || '';
+
+  const checkedBoxes = document.querySelectorAll('.major-row-check:checked');
+  const selectedCodes = new Set(Array.from(checkedBoxes).map((cb: any) => cb.getAttribute('data-code')));
+
+  if (selectedCodes.size === 0) {
+    alert('⚠️ กรุณาติ๊กเลือกอย่างน้อย 1 สาขาวิชาที่ต้องการบันทึก');
+    return;
+  }
+
+  // อัปเดตค่าลงในช่อง input ของแต่ละแถวที่ถูกติ๊กเลือก
+  selectedCodes.forEach(code => {
+    if (termVal) {
+      const tEl = document.getElementById(`major-term-${code}`) as HTMLInputElement | null;
+      if (tEl) tEl.value = termVal;
+    }
+    if (openVal) {
+      const oEl = document.getElementById(`major-open-${code}`) as HTMLInputElement | null;
+      if (oEl) oEl.value = openVal;
+    }
+    if (closeVal) {
+      const cEl = document.getElementById(`major-close-${code}`) as HTMLInputElement | null;
+      if (cEl) cEl.value = closeVal;
+    }
+  });
+
+  // รวบรวมข้อมูลทั้งหมด (สาขาที่เลือกจะได้ค่าใหม่ ส่วนสาขาที่ไม่เลือกจะคงค่าเดิมของตัวเอง)
+  const payloadRules = rules.map(r => {
+    const targetTerm = (document.getElementById(`major-term-${r.code}`) as HTMLInputElement | null)?.value || r.targetTerm || '2/2568';
+    const openDate = (document.getElementById(`major-open-${r.code}`) as HTMLInputElement | null)?.value || r.openDate || '';
+    const closeDate = (document.getElementById(`major-close-${r.code}`) as HTMLInputElement | null)?.value || r.closeDate || '';
+    const note = (document.getElementById(`major-note-${r.code}`) as HTMLInputElement | null)?.value || r.note || '';
+    return {
+      code: r.code,
+      isUnlocked: r.isUnlocked,
+      targetTerm,
+      openDate,
+      closeDate,
+      note,
+    };
+  });
+
+  try {
+    const res = await fetch('/api/admin/super-admin/major-unlock', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        bulkAction: 'UPDATE_ALL',
+        rules: payloadRules,
+      }),
+    });
+    const data = await res.json();
+    if (data.success) {
+      alert(`✅ บันทึกและนำกำหนดการไปใช้กับ ${selectedCodes.size} สาขาวิชาที่เลือกเรียบร้อยแล้ว!`);
+      await window.loadSuperAdminOverview();
+    } else {
+      alert('เกิดข้อผิดพลาด: ' + (data.message || 'ไม่สามารถบันทึกได้'));
+    }
+  } catch (err) {
+    console.error(err);
+    alert('เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์');
+  }
+};
+
+window.saveAllMajorRules = window.saveBatchMajorRules;
+
+window.copyRowDatesToAll = function(code) {
+  const tEl = document.getElementById(`major-term-${code}`) as HTMLInputElement | null;
+  const oEl = document.getElementById(`major-open-${code}`) as HTMLInputElement | null;
+  const cEl = document.getElementById(`major-close-${code}`) as HTMLInputElement | null;
+  const termVal = tEl?.value.trim() || '';
+  const openVal = oEl?.value || '';
+  const closeVal = cEl?.value || '';
+
+  const batchTermEl = document.getElementById('batch-target-term') as HTMLInputElement | null;
+  const batchOpenEl = document.getElementById('batch-open-date') as HTMLInputElement | null;
+  const batchCloseEl = document.getElementById('batch-close-date') as HTMLInputElement | null;
+  if (batchTermEl && termVal) batchTermEl.value = termVal;
+  if (batchOpenEl && openVal) batchOpenEl.value = openVal;
+  if (batchCloseEl && closeVal) batchCloseEl.value = closeVal;
+
+  if (window.saveBatchMajorRules) {
+    window.saveBatchMajorRules();
+  }
+};
+
+window.saveAllMajorRules = async function() {
+  const rules = superAdminData.majorUnlockRules || [];
+  if (rules.length === 0) return;
+
+  const payloadRules = rules.map(r => {
+    const targetTerm = (document.getElementById(`major-term-${r.code}`) as HTMLInputElement | null)?.value || r.targetTerm || '2/2568';
+    const openDate = (document.getElementById(`major-open-${r.code}`) as HTMLInputElement | null)?.value || r.openDate || '';
+    const closeDate = (document.getElementById(`major-close-${r.code}`) as HTMLInputElement | null)?.value || r.closeDate || '';
+    const note = (document.getElementById(`major-note-${r.code}`) as HTMLInputElement | null)?.value || r.note || '';
+    return {
+      code: r.code,
+      isUnlocked: r.isUnlocked,
+      targetTerm,
+      openDate,
+      closeDate,
+      note,
+    };
+  });
+
+  try {
+    const res = await fetch('/api/admin/super-admin/major-unlock', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        bulkAction: 'UPDATE_ALL',
+        rules: payloadRules,
+      }),
+    });
+    const data = await res.json();
+    if (data.success) {
+      alert('✅ ' + (data.message || 'บันทึกกำหนดการทั้ง 8 สาขาเรียบร้อยแล้ว'));
+      await window.loadSuperAdminOverview();
+    } else {
+      alert('เกิดข้อผิดพลาด: ' + (data.message || 'ไม่สามารถบันทึกได้'));
+    }
+  } catch (err) {
+    console.error(err);
+    alert('เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์');
+  }
+};
 
 window.toggleMajorUnlock = async function(code, nextUnlocked) {
   await window.saveMajorRuleDetails(code, nextUnlocked);

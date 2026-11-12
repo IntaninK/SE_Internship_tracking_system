@@ -2357,7 +2357,27 @@ router.delete("/super-admin/academic-config/signature", (_req: Request, res: Res
 router.post("/super-admin/major-unlock", async (req: Request, res: Response) => {
   try {
     const state = loadSuperAdminState();
-    const { code, isUnlocked, targetTerm, openDate, closeDate, note, bulkAction } = req.body;
+    const { code, isUnlocked, targetTerm, openDate, closeDate, note, bulkAction, rules: incomingRules } = req.body;
+
+    if (bulkAction === "UPDATE_ALL" && Array.isArray(incomingRules)) {
+      for (const inc of incomingRules) {
+        const rule = state.majorUnlockRules.find((r) => r.code === inc.code);
+        if (rule) {
+          if (typeof inc.isUnlocked === "boolean") rule.isUnlocked = inc.isUnlocked;
+          if (inc.targetTerm !== undefined) rule.targetTerm = String(inc.targetTerm).trim();
+          if (inc.openDate !== undefined) rule.openDate = String(inc.openDate).trim();
+          if (inc.closeDate !== undefined) rule.closeDate = String(inc.closeDate).trim();
+          if (inc.note !== undefined) rule.note = String(inc.note).trim();
+          rule.updatedAt = new Date().toISOString();
+        }
+      }
+      saveSuperAdminState(state);
+      return res.json({
+        success: true,
+        message: "บันทึกกำหนดการและรอบฝึกงานของทั้ง 8 สาขาวิชาเรียบร้อยแล้ว",
+        majorUnlockRules: state.majorUnlockRules,
+      });
+    }
 
     if (bulkAction === "UNLOCK_ALL" || bulkAction === "LOCK_ALL") {
       const unlockFlag = bulkAction === "UNLOCK_ALL";

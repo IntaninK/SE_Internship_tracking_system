@@ -1064,15 +1064,44 @@ const PAGE_BODY_HTML = `
             </div>
           </div>
 
+          <!-- แถบตั้งค่าเริ่มต้นส่วนกลาง (Default Master Window) & บันทึกสาขาที่เลือก -->
+          <div style="background:#F8FAFC; border:1px solid #C7D2FE; border-radius:12px; padding:12px 16px; margin-bottom:14px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; box-shadow:0 1px 3px rgba(0,0,0,0.03);">
+            <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+              <span style="font-size:12.5px; font-weight:700; color:#1E1B4B; display:inline-flex; align-items:center; gap:5px;">
+                <span class="material-icons" style="font-size:18px; color:#4F46E5;">tune</span> กำหนดค่าเริ่มต้นส่วนกลาง (Default):
+              </span>
+              <div style="display:inline-flex; align-items:center; gap:5px;">
+                <label style="font-size:11.5px; font-weight:700; color:#475569;">รอบเทอม:</label>
+                <input type="text" id="batch-target-term" class="input-field" placeholder="เช่น 1/2569" style="width:85px; padding:5px 8px !important; font-size:12px; font-weight:700;" />
+              </div>
+              <div style="display:inline-flex; align-items:center; gap:5px;">
+                <label style="font-size:11.5px; font-weight:700; color:#475569;">ช่วงเวลาเปิดยื่น:</label>
+                <input type="date" id="batch-open-date" class="input-field" style="width:auto; padding:5px 8px !important; font-size:12px;" />
+                <span style="font-size:12px; color:#64748B;">ถึง</span>
+                <input type="date" id="batch-close-date" class="input-field" style="width:auto; padding:5px 8px !important; font-size:12px;" />
+              </div>
+            </div>
+            <div style="display:flex; align-items:center; gap:8px;">
+              <button type="button" onclick="saveBatchMajorRules()" id="batch-save-btn" style="background:#059669; color:white; border:none; padding:8px 18px; border-radius:8px; font-size:12.5px; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:6px; box-shadow:0 2px 4px rgba(5,150,105,0.25);">
+                <span class="material-icons" style="font-size:17px;">save</span> 💾 บันทึกและนำค่าไปใช้กับสาขาที่เลือก (<span id="batch-selected-count">8</span> สาขา)
+              </button>
+            </div>
+          </div>
+
           <div class="table-responsive">
             <table class="data-table">
               <thead>
                 <tr>
-                  <th style="width:22%;">สาขาวิชา (คณะ ICT)</th>
+                  <th style="width:24%;">
+                    <div style="display:flex; align-items:center; gap:8px;">
+                      <input type="checkbox" id="major-select-all" checked onchange="toggleSelectAllMajors(this.checked)" style="width:16px; height:16px; cursor:pointer;" title="เลือก / ไม่เลือก ทั้งหมด" />
+                      <span>สาขาวิชา (คณะ ICT)</span>
+                    </div>
+                  </th>
                   <th style="width:20%;">โครงสร้างรอบเรียน / ออกฝึกงานจริง</th>
-                  <th style="width:12%;">รอบเทอมที่ออกฝึก</th>
+                  <th style="width:11%;">รอบเทอมที่ออกฝึก</th>
                   <th style="width:18%;">ช่วงเวลาเปิดยื่นบริษัท</th>
-                  <th style="width:16%;">สถานะระบบยื่นฝึกงาน</th>
+                  <th style="width:15%;">สถานะระบบยื่นฝึกงาน</th>
                   <th style="width:12%;" class="text-center">จัดการ</th>
                 </tr>
               </thead>
