@@ -36,12 +36,14 @@ async function loadProfile() {
         document.getElementById('prof-year').value = s.year || '3';
         document.getElementById('prof-gpa').value = s.gpa || '';
         document.getElementById('prof-major').value = s.major || 'วิศวกรรมซอฟต์แวร์';
+        document.getElementById('prof-curriculum').value = s.curriculum || '';
+        document.getElementById('prof-faculty').value = s.faculty || 'คณะเทคโนโลยีสารสนเทศและการสื่อสาร';
         document.getElementById('prof-phone').value = s.phone || '';
         document.getElementById('prof-lineId').value = s.lineId || '';
         document.getElementById('prof-facebook').value = s.facebook || '';
 
         // [REQ-04] ล็อคข้อมูลทางวิชาการที่ดึงจากระบบทะเบียน REG ห้ามนิสิตแก้ไข
-        ['prof-studentCode', 'prof-nameTh', 'prof-year', 'prof-gpa', 'prof-major', 'prof-email'].forEach(id => {
+        ['prof-studentCode', 'prof-nameTh', 'prof-year', 'prof-gpa', 'prof-major', 'prof-curriculum', 'prof-faculty', 'prof-email'].forEach(id => {
           const el = document.getElementById(id);
           if (el && el.value) {
             el.readOnly = true;
