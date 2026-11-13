@@ -124,8 +124,26 @@ async function loadAdvisorOptions(selectedAdvisorId) {
 
 // บันทึกข้อมูลส่วนตัว
 const saveProfileBtn = document.getElementById('save-profile-btn');
+const profilePhoneInput = document.getElementById('prof-phone');
+const internshipEmailInput = document.getElementById('prof-lineId');
+
+if (profilePhoneInput) {
+  profilePhoneInput.addEventListener('input', () => {
+    profilePhoneInput.value = profilePhoneInput.value.replace(/[^0-9]/g, '');
+  });
+}
+
 if (saveProfileBtn) {
   saveProfileBtn.addEventListener('click', async () => {
+    if (profilePhoneInput && !profilePhoneInput.checkValidity()) {
+      profilePhoneInput.reportValidity();
+      return;
+    }
+    if (internshipEmailInput && !internshipEmailInput.checkValidity()) {
+      internshipEmailInput.reportValidity();
+      return;
+    }
+
     const advisorSelect = document.getElementById('prof-advisor');
     const payload = {
       nameTh: document.getElementById('prof-nameTh').value,

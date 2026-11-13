@@ -80,7 +80,7 @@ const STUDENT_PROFILE_CONTENT_HTML = `
         </div>
         <div class="student-profile-field">
           <label for="prof-phone">เบอร์โทรศัพท์ติดต่อ <span class="student-profile-required">*</span></label>
-          <input class="input-field" id="prof-phone" type="tel" value="" />
+          <input class="input-field" id="prof-phone" type="tel" inputmode="numeric" pattern="[0-9]{9,10}" maxlength="10" title="กรุณากรอกเบอร์โทรศัพท์เป็นตัวเลข 9-10 หลัก" required value="" />
         </div>
         <div class="student-profile-field">
           <label for="prof-internship-start">วันที่เริ่มฝึกงาน <span class="student-profile-reg-badge">🔒 REG</span></label>
@@ -99,8 +99,8 @@ const STUDENT_PROFILE_CONTENT_HTML = `
       <h3 class="student-profile-card-title"><span class="material-icons">link</span> ข้อมูลการติดต่อและโซเชียลมีเดีย</h3>
       <div class="student-profile-fields student-profile-contact-fields">
         <div class="student-profile-field">
-          <label for="prof-lineId">Internship Email <span class="student-profile-required">*</span></label>
-          <input class="input-field" id="prof-lineId" type="text" value="" placeholder="name@company.com" />
+          <label for="prof-lineId">Internship Email (gmail.com) <span class="student-profile-required">*</span></label>
+          <input class="input-field" id="prof-lineId" type="email" pattern="[^@\\s]+@gmail\\.com" title="กรุณากรอกอีเมลที่ลงท้ายด้วย @gmail.com" required value="" placeholder="name@gmail.com" />
         </div>
         <div class="student-profile-field">
           <label for="prof-facebook">Github</label>

@@ -443,6 +443,10 @@ select.input-field {
   gap: 12px 16px;
 }
 
+.student-profile-contact-fields {
+  grid-template-columns: 1fr;
+}
+
 .student-profile-field {
   display: flex;
   min-width: 0;
