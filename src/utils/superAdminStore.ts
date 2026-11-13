@@ -131,6 +131,7 @@ export interface ArchivedCompanyAttempt {
 export interface InternshipRoundHistory {
   round: number; // เช่น 1
   term: string; // เช่น "2/2568"
+  internshipWindowId?: number | null; // รอบออกฝึก (InternshipWindow) ของรอบนี้
   academicYear?: string;
   semester?: string;
   companyName: string;

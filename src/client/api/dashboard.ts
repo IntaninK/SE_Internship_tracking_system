@@ -338,6 +338,7 @@ updateStageWithDetails(currentStepIdx, data.cv, data.trainings, data.companies, 
       if (transitionCard) {
         if (roundInfo.currentRound === 1 && (roundInfo.canCompleteRound1 || roundInfo.isRound1Completed)) {
           transitionCard.style.display = 'block';
+          renderRound2WindowOptions(roundInfo.round2Windows || []);
         } else {
           transitionCard.style.display = 'none';
         }
@@ -424,9 +425,48 @@ window.toggleRound1Accordion = function() {
   if (toggleText) toggleText.textContent = isHidden ? 'พับเก็บ' : 'คลี่ดูรายละเอียด';
 };
 
+// รอบออกฝึกของรอบที่ 2 มาจากการตั้งค่ารุ่น/รอบของพี่จอม
+// เปิดรอบเดียว = แสดงข้อความ (เลือกให้อัตโนมัติ) / หลายรอบ = dropdown / ไม่มีรอบเปิด = แจ้งรอ
+let round2WindowsCache = [];
+function renderRound2WindowOptions(windows) {
+  round2WindowsCache = windows;
+  const select = document.getElementById('round2-term-select');
+  const hint = document.getElementById('round2-term-hint');
+  if (!select) return;
+  const closeText = (w) => w.closeDate
+    ? ` • ยื่นได้ถึง ${new Date(w.closeDate + 'T00:00:00').toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' })}`
+    : '';
+
+  if (windows.length === 0) {
+    select.innerHTML = '<option value="">ยังไม่มีรอบออกฝึกถัดไปที่เปิดรับ</option>';
+    select.disabled = true;
+    if (hint) hint.textContent = '* รอเจ้าหน้าที่คณะเปิดรอบออกฝึกถัดไปของสาขาคุณ';
+    return;
+  }
+  select.disabled = windows.length === 1;
+  select.innerHTML = (windows.length > 1 ? '<option value="">-- เลือกรอบออกฝึก --</option>' : '') +
+    windows.map(w => `<option value="${w.id}">${w.label}${closeText(w)}</option>`).join('');
+  if (hint) {
+    hint.textContent = windows.length === 1
+      ? '* ระบบเลือกรอบที่เปิดรับอยู่ให้อัตโนมัติ'
+      : '* เปิดรับหลายรอบพร้อมกัน เลือกรอบที่คุณจะออกฝึก (เช่น Summer หรือภาคปกติ)';
+  }
+}
+
 window.submitRoundChoice = async function(action) {
   const termSelect = document.getElementById('round2-term-select');
-  const term = termSelect ? termSelect.value : 'Summer 3/2569';
+  const windowId = termSelect ? termSelect.value : '';
+  if (round2WindowsCache.length === 0) {
+    alert('ยังไม่มีรอบออกฝึกถัดไปที่เปิดรับสำหรับสาขาของคุณ กรุณารอเจ้าหน้าที่คณะเปิดรอบ');
+    return;
+  }
+  if (!windowId) {
+    alert('กรุณาเลือกรอบออกฝึกสำหรับรอบที่ 2');
+    if (termSelect) termSelect.focus();
+    return;
+  }
+  const chosen = round2WindowsCache.find(w => String(w.id) === String(windowId));
+  const term = chosen ? chosen.label : windowId;
   
   const actionLabel = action === 'SAME_COMPANY' 
     ? 'ยืนยันฝึกงานที่เดิมต่อสำหรับรอบที่ 2' 
@@ -440,7 +480,7 @@ window.submitRoundChoice = async function(action) {
     const res = await fetch('/api/student/round/complete-round-1', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action, term }),
+      body: JSON.stringify({ action, internshipWindowId: windowId }),
     });
     const data = await res.json();
     if (data.success) {

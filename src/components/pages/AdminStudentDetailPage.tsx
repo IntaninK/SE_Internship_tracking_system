@@ -108,6 +108,15 @@ const PAGE_BODY_HTML = `
       </div>
     </section>
 
+    <!-- รุ่น / รอบออกฝึก / สถานะตกค้าง (RETEST) -->
+    <section class="card" id="internship-cohort-section" style="display:none;">
+      <div class="card-header">
+        <span class="material-icons header-icon">event_note</span>
+        <h2 class="card-title" style="margin:0;">รุ่น &amp; รอบออกฝึก</h2>
+      </div>
+      <div class="card-body" id="internship-cohort-body"></div>
+    </section>
+
     <!-- ประวัติการฝึกงานรอบที่ 1 (กรณีฝึกงานรอบที่ 2 - SCRUM-73) -->
     <section class="card" id="admin-round-history-section" style="display:none;">
       <div class="card-header" style="background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%);">

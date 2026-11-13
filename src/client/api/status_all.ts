@@ -177,6 +177,36 @@ if (saveProfileBtn) {
   });
 }
 
+// ล็อก CV / ชั่วโมงอบรมระหว่างกำลังฝึกงาน (ออกหนังสือส่งตัว -> จบรอบ)
+let isInternshipLocked = false;
+function applyInternshipLock(lock) {
+  isInternshipLocked = Boolean(lock && lock.locked);
+  const cvInputEl = document.getElementById('cv-upload-input') as HTMLInputElement | null;
+  if (cvInputEl) cvInputEl.disabled = isInternshipLocked;
+
+  let banner = document.getElementById('internship-lock-banner');
+  if (!isInternshipLocked) {
+    if (banner) banner.remove();
+    return;
+  }
+  if (!banner) {
+    banner = document.createElement('div');
+    banner.id = 'internship-lock-banner';
+    banner.className = 'mb-5 bg-indigo-50 border-l-4 border-indigo-500 p-4 rounded-r-xl shadow-sm';
+    const main = document.querySelector('.main-content') || document.body;
+    const firstSection = main.querySelector('section') || main.firstChild;
+    main.insertBefore(banner, firstSection);
+  }
+  banner.innerHTML = `
+    <div class="flex items-start gap-3">
+      <span class="material-icons text-indigo-500 text-2xl">lock_clock</span>
+      <div>
+        <h4 class="text-sm font-bold text-indigo-800">อยู่ระหว่างฝึกงาน — CV และชั่วโมงอบรมเป็นแบบอ่านอย่างเดียว</h4>
+        <p class="text-xs text-indigo-700 mt-0.5">${lock.message || ''}</p>
+      </div>
+    </div>`;
+}
+
 // 2. โหลดชั่วโมงการอบรม
 async function loadTrainings() {
   try {
@@ -187,6 +217,7 @@ async function loadTrainings() {
 
     if (data.success && data.trainings) {
       currentTrainingsData = data.trainings;
+      applyInternshipLock(data.internshipLock);
 
       if (data.trainings.length > 0) {
         data.trainings.forEach((t, idx) => {
@@ -215,7 +246,9 @@ async function loadTrainings() {
                 : '<span style="color:#94a3b8; font-size:16px;">-</span>'
               }
             </td>
-            <td><button type="button" class="btn btn-tonal btn-xs" onclick="deleteTraining(${t.id})">ลบ</button></td>
+            <td>${isInternshipLocked
+              ? '<span class="material-icons" style="font-size:16px; color:#94a3b8;" title="ล็อกระหว่างฝึกงาน">lock</span>'
+              : `<button type="button" class="btn btn-tonal btn-xs" onclick="deleteTraining(${t.id})">ลบ</button>`}</td>
           `;
           tbody.appendChild(tr);
         });
@@ -237,6 +270,8 @@ window.deleteTraining = async function(id) {
       const data = await res.json();
       if (data.success) {
         loadTrainings();
+      } else {
+        alert('ไม่สามารถลบได้: ' + (data.message || 'เกิดข้อผิดพลาด'));
       }
     } catch (err) {
       console.error(err);
@@ -249,6 +284,7 @@ async function loadCv() {
   try {
     const res = await fetch('/api/student/cv');
     const data = await res.json();
+    if (data.success) applyInternshipLock(data.internshipLock);
     if (data.success && data.cv) {
       currentCvData = data.cv;
       if (data.cv.fileUrl) {

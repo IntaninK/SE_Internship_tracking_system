@@ -4,6 +4,13 @@ import path from "path";
 import prisma from "../db";
 import requireLogin from "../auth/requireLogin";
 import { uploadToCloudinary } from "../utils/cloudinary";
+import {
+  getInternshipLock,
+  getStudentWindowEligibility,
+  resolveSubmissionWindow,
+  termSortKey,
+  windowDisplayLabel,
+} from "../utils/internshipWindows";
 import { analyzeAcceptanceForm } from "../utils/acceptanceOcr";
 import {
   loadSuperAdminState,
@@ -60,6 +67,71 @@ async function getStudentByUserId(userId: number) {
       placement: true,
     },
   });
+}
+
+type StudentWithRelations = NonNullable<Awaited<ReturnType<typeof getStudentByUserId>>>;
+
+function getRoundStateFor(student: StudentWithRelations) {
+  const defaultTerm = `${student.semester || "2"}/${student.academicYear || "2568"}`;
+  return getStudentRoundState(student.id, defaultTerm);
+}
+
+/** ล็อก CV / ชั่วโมงอบรมระหว่างกำลังฝึกงาน (ออกหนังสือส่งตัวแล้ว -> จบรอบ) */
+async function getStudentInternshipLock(student: StudentWithRelations) {
+  const state = loadSuperAdminState();
+  // ใช้เงื่อนไขเดียวกับคิวออกหนังสือ: ไม่มี workflow -> ถือว่าส่งตัวแล้วเมื่อสถานที่ฝึกได้รับอนุมัติ
+  const wf = state.docWorkflowMap?.[String(student.id)];
+  const dispatched = wf ? Boolean(wf.dispatchLetterIssued) : student.placement?.status === "APPROVED";
+  return getInternshipLock(student, dispatched, getRoundStateFor(student).currentTerm);
+}
+
+/** เทอม (เช่น "2/2568") ที่นิสิตเคยใช้ไปแล้วในรอบก่อนหน้า */
+function usedWindowKeys(roundState: ReturnType<typeof getStudentRoundState>, includeCurrent: boolean) {
+  const ids = new Set<number>();
+  const terms = new Set<string>();
+  for (const h of roundState.historyRounds || []) {
+    if (h.internshipWindowId) ids.add(h.internshipWindowId);
+    const t = String(h.term || "").match(/[123]\/\d{4}/)?.[0];
+    if (t) terms.add(t);
+  }
+  if (includeCurrent) {
+    const t = String(roundState.currentTerm || "").match(/[123]\/\d{4}/)?.[0];
+    if (t) terms.add(t);
+  }
+  return { ids, terms };
+}
+
+/** ตัดรอบออกฝึกที่นิสิตใช้ไปแล้วในรอบก่อน ๆ ออก (กันเลือกรอบเดิมซ้ำตอนยื่นรอบที่ 2) */
+function excludeUsedWindows<T extends { id: number; term: string }>(
+  windows: T[],
+  roundState: ReturnType<typeof getStudentRoundState>
+): T[] {
+  if (!roundState.historyRounds || roundState.historyRounds.length === 0) return windows;
+  const used = usedWindowKeys(roundState, false);
+  return windows.filter((w) => !used.ids.has(w.id) && !used.terms.has(w.term));
+}
+
+/** รอบออกฝึกที่เลือกได้สำหรับ "รอบที่ 2" = รอบที่เปิดอยู่และอยู่หลังรอบปัจจุบัน */
+async function getRound2Options(student: StudentWithRelations) {
+  const roundState = getRoundStateFor(student);
+  const eligibility = await getStudentWindowEligibility(student);
+  const used = usedWindowKeys(roundState, true);
+  const current = student.internshipWindowId
+    ? eligibility.windows.find((w) => w.id === student.internshipWindowId)
+    : null;
+  const currentTerm = current?.term || String(roundState.currentTerm || "").match(/[123]\/\d{4}/)?.[0] || "";
+  const minKey = currentTerm ? termSortKey(currentTerm) : 0;
+  return eligibility.openWindows.filter(
+    (w) =>
+      w.id !== student.internshipWindowId &&
+      !used.ids.has(w.id) &&
+      !used.terms.has(w.term) &&
+      termSortKey(w.term) > minKey
+  );
+}
+
+function lockedResponse(res: Response, message: string) {
+  return res.status(403).json({ success: false, lockedDuringInternship: true, message });
 }
 
 // ==========================================
@@ -224,11 +296,13 @@ router.get("/trainings", async (req: Request, res: Response) => {
       .filter((t) => t.skillType === "HARD")
       .reduce((sum, t) => sum + t.hours, 0);
 
+    const internshipLock = await getStudentInternshipLock(student);
     res.json({
       success: true,
       trainings,
       totalSoft,
       totalHard,
+      internshipLock: { locked: internshipLock.locked, message: internshipLock.message },
     });
   } catch (err) {
     console.error("GET /api/student/trainings error:", err);
@@ -245,6 +319,9 @@ router.post("/trainings", upload.single("certificate"), async (req: Request, res
         message: "กรุณากรอกข้อมูลส่วนตัวนิสิตในขั้นตอนแรกก่อน",
       });
     }
+
+    const internshipLock = await getStudentInternshipLock(student);
+    if (internshipLock.locked) return lockedResponse(res, internshipLock.message);
 
     const { title, skillType, hours } = req.body;
     if (!hours || isNaN(hours)) {
@@ -292,6 +369,9 @@ router.put("/trainings/:id", async (req: Request, res: Response) => {
     if (!student) {
       return res.status(404).json({ success: false, message: "ไม่พบข้อมูลนิสิต" });
     }
+
+    const internshipLock = await getStudentInternshipLock(student);
+    if (internshipLock.locked) return lockedResponse(res, internshipLock.message);
     const trainingId = parseInt(req.params.id as string, 10);
     const { title, skillType, hours } = req.body;
 
@@ -332,6 +412,9 @@ router.delete("/trainings/:id", async (req: Request, res: Response) => {
     if (!student) {
       return res.status(404).json({ success: false, message: "ไม่พบข้อมูลนิสิต" });
     }
+
+    const internshipLock = await getStudentInternshipLock(student);
+    if (internshipLock.locked) return lockedResponse(res, internshipLock.message);
     const trainingId = parseInt(req.params.id as string, 10);
 
     const training = await prisma.trainingRecord.findFirst({
@@ -363,10 +446,15 @@ router.delete("/trainings/:id", async (req: Request, res: Response) => {
 router.get("/cv", async (req: Request, res: Response) => {
   try {
     const student = await getStudentByUserId(req.session.user!.id);
-    if (!student || !student.cv) {
+    if (!student) {
       return res.json({ success: true, cv: null });
     }
-    res.json({ success: true, cv: student.cv });
+    const internshipLock = await getStudentInternshipLock(student);
+    res.json({
+      success: true,
+      cv: student.cv || null,
+      internshipLock: { locked: internshipLock.locked, message: internshipLock.message },
+    });
   } catch (err) {
     console.error("GET /api/student/cv error:", err);
     res.status(500).json({ success: false, message: "ดึงข้อมูล CV ไม่สำเร็จ" });
@@ -382,6 +470,9 @@ router.post("/cv", upload.single("cv"), async (req: Request, res: Response) => {
         message: "กรุณากรอกข้อมูลส่วนตัวนิสิตก่อนอัปโหลด CV",
       });
     }
+
+    const internshipLock = await getStudentInternshipLock(student);
+    if (internshipLock.locked) return lockedResponse(res, internshipLock.message);
 
     if (!req.file) {
       return res.status(400).json({ success: false, message: "กรุณาเลือกไฟล์ CV" });
@@ -650,15 +741,28 @@ router.get("/companies", async (req: Request, res: Response) => {
     const archivedCompanies = state.archivedApplications.filter(
       (a) => a.studentId === student.id || a.studentCode === student.studentCode
     );
-    const majorRule =
-      state.majorUnlockRules.find((r) => (student.major || "").includes(r.majorName)) || null;
+    const eligibilityRaw = await getStudentWindowEligibility(student);
+    const eligibility = {
+      ...eligibilityRaw,
+      openWindows: excludeUsedWindows(eligibilityRaw.openWindows, getRoundStateFor(student)),
+    };
 
     res.json({
       success: true,
       companies,
       masterCompanies,
       archivedCompanies,
-      majorRule,
+      // รอบที่เปิดรับยื่นอยู่ตอนนี้ (1 รอบ = ผูกอัตโนมัติ / หลายรอบ = แสดง dropdown ให้เลือก)
+      openInternshipWindows: eligibility.openWindows.map((w) => ({
+        id: w.id,
+        term: w.term,
+        label: windowDisplayLabel(w),
+        cohortCode: w.cohort.code,
+        closeDate: w.closeDate ? w.closeDate.toISOString().slice(0, 10) : "",
+      })),
+      assignedWindowId: student.internshipWindowId || null,
+      isStraggler: eligibility.isStraggler,
+      canSubmitChecklist: eligibility.openWindows.length > 0,
       placement: student.placement || null,
     });
   } catch (err) {
@@ -679,14 +783,29 @@ router.post("/companies", async (req: Request, res: Response) => {
     }
 
     const state = loadSuperAdminState();
-    const majorRule = state.majorUnlockRules.find((r) =>
-      (student.major || "").includes(r.majorName)
-    );
-    if (majorRule && !majorRule.isUnlocked) {
+    // ตรวจรอบออกฝึก (รุ่น + สาขา): ต้องมีรอบที่ปลดล็อกและอยู่ในช่วงเปิดยื่น (หรือเปิดต่อพิเศษ)
+    const eligibilityRaw = await getStudentWindowEligibility(student);
+    const eligibility = {
+      ...eligibilityRaw,
+      openWindows: excludeUsedWindows(eligibilityRaw.openWindows, getRoundStateFor(student)),
+    };
+    if (eligibility.openWindows.length === 0) {
+      const next = eligibility.windows.find((w) => w.status === "NOT_YET_OPEN");
       return res.status(400).json({
         success: false,
-        message: `สาขาวิชา${majorRule.majorName} ยังไม่เปิดรอบยื่นขอฝึกงาน (${majorRule.note || "รอปลดล็อกจากเจ้าหน้าที่คณะ"})`,
+        message: next
+          ? `รอบออกฝึก ${next.term} ของสาขาคุณยังไม่ถึงวันเปิดยื่น (เปิด ${next.openDate?.toISOString().slice(0, 10)})`
+          : "สาขาของคุณยังไม่เปิดรอบยื่นขอฝึกงาน (รอปลดล็อกจากเจ้าหน้าที่คณะ)",
       });
+    }
+    // ผูกรอบออกฝึก: เปิดรอบเดียว = อัตโนมัติ / หลายรอบ = นิสิตต้องเลือก
+    const resolvedWindow = resolveSubmissionWindow(
+      eligibility.openWindows,
+      req.body.internshipWindowId,
+      student.internshipWindowId
+    );
+    if (!resolvedWindow.window) {
+      return res.status(400).json({ success: false, message: resolvedWindow.error, needWindowSelection: true });
     }
 
     // 🔒 ตรวจสอบว่าชั่วโมงการอบรมครบ และ CV ผ่านการอนุมัติแล้วหรือยัง
@@ -889,10 +1008,16 @@ router.post("/companies", async (req: Request, res: Response) => {
       include: { answers: true, submission: true },
     });
 
+    await prisma.student.update({
+      where: { id: student.id },
+      data: { internshipWindowId: resolvedWindow.window.id },
+    });
+
     res.json({
       success: true,
-      message: "บันทึกข้อมูลบริษัทและ Checklist เรียบร้อยแล้ว",
+      message: `บันทึกข้อมูลบริษัทและ Checklist เรียบร้อยแล้ว (รอบออกฝึก ${windowDisplayLabel(resolvedWindow.window)})`,
       company: createdCompany,
+      internshipWindowId: resolvedWindow.window.id,
     });
   } catch (err: any) {
     console.error("POST /api/student/companies error:", err);
@@ -1005,6 +1130,17 @@ router.put("/companies/:id", async (req: Request, res: Response) => {
           });
         }
       }
+    }
+
+    // อัปเดตรอบออกฝึก (ถ้ามีรอบเปิดอยู่) — ไม่บังคับตอนแก้ไข เพื่อไม่ให้แก้ Checklist เดิมไม่ได้เมื่อรอบปิดไปแล้ว
+    const editEligibility = await getStudentWindowEligibility(student);
+    const editWindow = resolveSubmissionWindow(
+      editEligibility.openWindows,
+      req.body.internshipWindowId,
+      student.internshipWindowId
+    ).window;
+    if (editWindow && editWindow.id !== student.internshipWindowId) {
+      await prisma.student.update({ where: { id: student.id }, data: { internshipWindowId: editWindow.id } });
     }
 
     const updatedCompany = await prisma.company.findUnique({
@@ -1368,7 +1504,17 @@ router.get("/dashboard-summary", async (req: Request, res: Response) => {
         isSameCompanyAsRound1: Boolean(roundState.isSameCompanyAsRound1),
         round1CompletedAt: roundState.round1CompletedAt || null,
         historyRounds: roundState.historyRounds || [],
+        // รอบออกฝึกที่เลือกได้สำหรับรอบที่ 2 (จากการตั้งค่ารุ่น/รอบของพี่จอม)
+        round2Windows: canCompleteRound1 && roundState.currentRound === 1
+          ? (await getRound2Options(student)).map((w) => ({
+              id: w.id,
+              label: windowDisplayLabel(w),
+              cohortCode: w.cohort.code,
+              closeDate: w.closeDate ? w.closeDate.toISOString().slice(0, 10) : "",
+            }))
+          : [],
       },
+      internshipLock: await getStudentInternshipLock(student).then((l) => ({ locked: l.locked, message: l.message })),
     });
   } catch (err) {
     console.error("GET /api/student/dashboard-summary error:", err);
@@ -1384,9 +1530,9 @@ router.post("/round/complete-round-1", async (req: Request, res: Response) => {
     const student = await getStudentByUserId(req.session.user!.id);
     if (!student) return res.status(404).json({ success: false, message: "ไม่พบข้อมูลนิสิต" });
 
-    const { action, term } = req.body;
-    if (!action || !term) {
-      return res.status(400).json({ success: false, message: "กรุณาระบุทางเลือกและเทอมสำหรับรอบที่ 2" });
+    const { action } = req.body;
+    if (action !== "SAME_COMPANY" && action !== "NEW_COMPANY") {
+      return res.status(400).json({ success: false, message: "กรุณาเลือกว่าจะฝึกที่เดิมหรือเปลี่ยนสถานที่ใหม่" });
     }
 
     const state = loadSuperAdminState();
@@ -1396,11 +1542,45 @@ router.post("/round/complete-round-1", async (req: Request, res: Response) => {
     const docWf = state.docWorkflowMap?.[String(student.id)];
     const approvedComp = student.companies.find((c) => c.checklistStatus === "APPROVED");
 
+    // ต้องจบขั้นตอนรอบที่ 1 ก่อน (ได้หนังสือส่งตัว / สถานที่ฝึกได้รับอนุมัติ)
+    const canCompleteRound1 =
+      Boolean(student.placement && student.placement.status === "APPROVED") ||
+      Boolean(docWf?.dispatchLetterIssued) ||
+      roundState.isRound1Completed;
+    if (!canCompleteRound1) {
+      return res.status(400).json({ success: false, message: "ยังไม่สามารถเริ่มรอบที่ 2 ได้ (ต้องได้หนังสือส่งตัวรอบที่ 1 ก่อน)" });
+    }
+    if (roundState.currentRound >= 2) {
+      return res.status(400).json({ success: false, message: "คุณเริ่มรอบที่ 2 ไปแล้ว" });
+    }
+
+    // รอบออกฝึกของรอบที่ 2 มาจากการตั้งค่ารุ่น/รอบของพี่จอม (เปิดรอบเดียว = เลือกให้อัตโนมัติ)
+    const round2Options = await getRound2Options(student);
+    const chosenWindow = resolveSubmissionWindow(round2Options, req.body.internshipWindowId).window;
+    if (!chosenWindow) {
+      return res.status(400).json({
+        success: false,
+        message: round2Options.length
+          ? "กรุณาเลือกรอบออกฝึกสำหรับรอบที่ 2"
+          : "ยังไม่มีรอบออกฝึกถัดไปที่เปิดรับสำหรับสาขาของคุณ (รอเจ้าหน้าที่คณะเปิดรอบ)",
+      });
+    }
+    const term = chosenWindow.termType === "SUMMER" ? `${chosenWindow.term} (Summer)` : chosenWindow.term;
+
+    // เก็บคำตอบ Checklist ของรอบที่ 1 ไว้ในประวัติ (กรณีเปลี่ยนที่ใหม่ Checklist เดิมจะถูกล้าง)
+    const round1Answers = approvedComp
+      ? await prisma.companyChecklistAnswer.findMany({
+          where: { companyId: approvedComp.id },
+          include: { checklistItem: true },
+        })
+      : [];
+
     // 1. บันทึกข้อมูลของรอบที่ 1 เข้า historyRounds (ถ้ายังไม่เคยบันทึก)
     if (roundState.historyRounds.length === 0) {
       roundState.historyRounds.push({
         round: 1,
         term: roundState.currentTerm || defaultTerm,
+        internshipWindowId: student.internshipWindowId || null,
         academicYear: student.academicYear || "2568",
         semester: student.semester || "2",
         companyName: student.placement?.companyNameTh || approvedComp?.name || docWf?.companyName || "สถานประกอบการรอบที่ 1",
@@ -1411,6 +1591,12 @@ router.post("/round/complete-round-1", async (req: Request, res: Response) => {
         phone: student.placement?.companyPhone1 || "-",
         email: student.placement?.companyEmail || "-",
         checklistStatus: approvedComp?.checklistStatus || "APPROVED",
+        checklistAnswers: round1Answers.map((a) => ({
+          itemId: a.checklistItemId,
+          description: a.checklistItem?.description || "",
+          checked: a.checked,
+          detail: a.detail || "",
+        })),
         requestLetterDocNo: docWf?.requestLetterDocNo,
         requestLetterDate: docWf?.requestLetterDate,
         requestLetterIssued: docWf?.requestLetterIssued,
@@ -1429,20 +1615,35 @@ router.post("/round/complete-round-1", async (req: Request, res: Response) => {
     roundState.isRound1Completed = true;
     roundState.round1CompletedAt = new Date().toISOString();
 
-    const isSummer = term.includes("Summer") || term.includes("3/");
-    const newSemester = isSummer ? "SUMMER" : "1";
-    const matchYear = term.match(/25\d{2}/);
-    const newYear = matchYear ? matchYear[0] : (student.academicYear || "2569");
+    const isSummer = chosenWindow.termType === "SUMMER" || chosenWindow.term.startsWith("3/");
+    const termSemester = chosenWindow.term.split("/")[0];
+    const newSemester = isSummer ? "SUMMER" : termSemester || "1";
+    const newYear = chosenWindow.term.split("/")[1] || student.academicYear || "2569";
 
     if (action === "SAME_COMPANY") {
+      // ฝึกที่เดิม: Checklist / ข้อมูลบริษัทเดิมใช้ต่อได้ -> เริ่มที่ "รอพี่จอมออกหนังสือขอความอนุเคราะห์" ของรอบใหม่
       roundState.isSameCompanyAsRound1 = true;
       await prisma.student.update({
         where: { id: student.id },
         data: {
           semester: newSemester,
           academicYear: newYear,
+          internshipWindowId: chosenWindow.id,
         },
       });
+
+      if (!state.docWorkflowMap) state.docWorkflowMap = {};
+      state.docWorkflowMap[String(student.id)] = {
+        studentId: student.id,
+        studentCode: student.studentCode,
+        companyName: docWf?.companyName || approvedComp?.name || student.placement?.companyNameTh || "ยังไม่ยื่นบริษัท",
+        interviewDate: "",
+        requestLetterIssued: false,
+        companyResponseStatus: "NOT_SENT",
+        dispatchLetterIssued: false,
+        isLocked: false,
+      };
+      saveSuperAdminState(state);
     } else {
       // NEW_COMPANY (เปลี่ยนสถานที่ฝึกใหม่)
       roundState.isSameCompanyAsRound1 = false;
@@ -1478,6 +1679,7 @@ router.post("/round/complete-round-1", async (req: Request, res: Response) => {
         semester: newSemester,
         academicYear: newYear,
         stage: "PENDING_DOCUMENTS",
+        internshipWindowId: chosenWindow.id,
       };
       if (!isSummer) {
         updateData.advisorId = null;
@@ -1508,7 +1710,7 @@ router.post("/round/complete-round-1", async (req: Request, res: Response) => {
       success: true,
       message:
         action === "SAME_COMPANY"
-          ? `ยืนยันฝึกงานที่เดิมต่อสำหรับรอบที่ 2 (${term}) เรียบร้อยแล้ว`
+          ? `ยืนยันฝึกงานที่เดิมต่อสำหรับรอบที่ 2 (${term}) เรียบร้อยแล้ว — รอเจ้าหน้าที่คณะออกหนังสือขอความอนุเคราะห์`
           : `เริ่มต้นรอบที่ 2 สำหรับสถานที่ฝึกงานใหม่ (${term}) เรียบร้อยแล้ว กรุณากรอก Checklist บริษัทใหม่`,
       roundState,
     });

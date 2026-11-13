@@ -22,6 +22,37 @@ router.get("/login", async (_req: Request, res: Response) => {
   }
 });
 
+// Endpoint สำหรับดูรายชื่อและข้อมูลอาจารย์ทั้งหมดในฐานข้อมูล
+router.get("/advisors-preview", async (_req: Request, res: Response) => {
+  try {
+    const staffList = await prisma.staff.findMany({
+      include: {
+        user: { select: { email: true, role: true } },
+      },
+      orderBy: { id: "asc" },
+    });
+    return res.json({
+      success: true,
+      message: "รายชื่ออาจารย์และบุคลากรในฐานข้อมูล",
+      total: staffList.length,
+      advisors: staffList.map((s) => ({
+        id: s.id,
+        name: s.name,
+        email: s.user?.email,
+        department: s.department,
+        roles: {
+          isAdvisor: s.isAdvisor,
+          isSupervisor: s.isSupervisor,
+          isCourseAdmin: s.isCourseAdmin,
+          isStaff: s.isStaff,
+        },
+      })),
+    });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 // 2) Microsoft ส่ง user กลับมาที่นี่พร้อม ?code=... เอา code ไปแลก token
 router.get("/redirect", async (req: Request, res: Response) => {
   const code = req.query.code as string | undefined;
@@ -46,10 +77,21 @@ router.get("/redirect", async (req: Request, res: Response) => {
     const email = account.username; // MSAL ใส่ email/UPN ไว้ตรงนี้
     const displayName = account.name || email;
 
-    if (ALLOWED_EMAIL_DOMAIN && !email.toLowerCase().endsWith(ALLOWED_EMAIL_DOMAIN)) {
-      return res
-        .status(403)
-        .send(`อนุญาตเฉพาะอีเมลโดเมน ${ALLOWED_EMAIL_DOMAIN} เท่านั้น`);
+    console.log("\n==========================================");
+    console.log("🎉 [MICROSOFT LOGIN SUCCESS] ได้รับข้อมูลจาก Microsoft:");
+    console.log("👉 ชื่อ (displayName):", displayName);
+    console.log("👉 อีเมล (email):", email);
+    console.log("==========================================\n");
+
+
+
+    if (Boolean(ALLOWED_EMAIL_DOMAIN)) {
+      const allowedDomain = String(ALLOWED_EMAIL_DOMAIN);
+      if (!email.toLowerCase().endsWith(allowedDomain)) {
+        return res
+          .status(403)
+          .send(`อนุญาตเฉพาะอีเมลโดเมน ${allowedDomain} เท่านั้น`);
+      }
     }
 
     // upsert User: ถ้ามีอีเมลนี้อยู่แล้วก็ login เข้าบัญชีเดิม ไม่มีก็สร้างใหม่

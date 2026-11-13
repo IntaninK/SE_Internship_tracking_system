@@ -11,51 +11,65 @@ const pdfName = document.getElementById('cert-pdf-name');
 let selectedFile = null;
 let isDroppedStudent = false;
 
+// โหมดอ่านอย่างเดียว: ใช้ทั้งกรณี "ดรอปการฝึกงาน" และ "กำลังฝึกงาน" (ล็อกชั่วโมงอบรมระหว่างฝึก)
+function setCertificateFormReadOnly(title, message, tone) {
+  isDroppedStudent = true; // ใช้ flag เดิมเพื่อกันการกดบันทึก
+  if (fileInput) fileInput.disabled = true;
+  ['cert-hours', 'cert-skill-type', 'cert-title'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) { el.disabled = true; el.style.backgroundColor = '#f1f5f9'; el.style.cursor = 'not-allowed'; }
+  });
+
+  const addBtn = document.getElementById('add-cert-btn');
+  if (addBtn) addBtn.style.display = 'none';
+
+  const returnBtn = document.getElementById('submit-and-return-btn');
+  if (returnBtn) returnBtn.textContent = 'กลับหน้าหลัก (โหมดดูข้อมูล)';
+
+  const dropZoneEl = document.getElementById('dropZone');
+  if (dropZoneEl) {
+    dropZoneEl.style.cursor = 'default';
+    dropZoneEl.style.pointerEvents = 'none';
+  }
+
+  if (document.getElementById('cert-readonly-banner')) return;
+  const color = tone === 'info' ? 'indigo' : 'red';
+  const banner = document.createElement('div');
+  banner.id = 'cert-readonly-banner';
+  banner.className = `mb-4 bg-${color}-50 border-l-4 border-${color}-500 p-4 rounded-r-xl shadow-sm`;
+  banner.innerHTML = `
+    <div class="flex items-center gap-3">
+      <span class="material-icons text-${color}-500 text-2xl">lock</span>
+      <div>
+        <h4 class="text-sm font-bold text-${color}-800">${title}</h4>
+        <p class="text-xs text-${color}-700 mt-0.5">${message}</p>
+      </div>
+    </div>
+  `;
+  const main = document.querySelector('.main-content') || document.body;
+  const firstSection = main.querySelector('section') || main.firstChild;
+  main.insertBefore(banner, firstSection);
+}
+
 // ตรวจสอบสถานะดรอปของนิสิต
 fetch('/api/student/profile')
   .then(res => res.json())
   .then(data => {
     if (data.success && data.student && data.student.isDropped) {
-      isDroppedStudent = true;
-      if (fileInput) fileInput.disabled = true;
-      const hoursInput = document.getElementById('cert-hours');
-      if (hoursInput) { hoursInput.disabled = true; hoursInput.style.backgroundColor = '#f1f5f9'; hoursInput.style.cursor = 'not-allowed'; }
-      const skillInput = document.getElementById('cert-skill-type');
-      if (skillInput) { skillInput.disabled = true; skillInput.style.backgroundColor = '#f1f5f9'; skillInput.style.cursor = 'not-allowed'; }
-      const titleInput = document.getElementById('cert-title');
-      if (titleInput) { titleInput.disabled = true; titleInput.style.backgroundColor = '#f1f5f9'; titleInput.style.cursor = 'not-allowed'; }
-
-      const addBtn = document.getElementById('add-cert-btn');
-      if (addBtn) addBtn.style.display = 'none';
-
-      const returnBtn = document.getElementById('submit-and-return-btn');
-      if (returnBtn) {
-        returnBtn.textContent = 'กลับหน้าหลัก (โหมดดูข้อมูล)';
-      }
-
-      const dropZoneEl = document.getElementById('dropZone');
-      if (dropZoneEl) {
-        dropZoneEl.style.cursor = 'default';
-        dropZoneEl.style.pointerEvents = 'none';
-      }
-
-      const dropBanner = document.createElement('div');
-      dropBanner.className = 'mb-4 bg-red-50 border-l-4 border-red-500 p-4 rounded-r-xl shadow-sm';
-      dropBanner.innerHTML = `
-        <div class="flex items-center gap-3">
-          <span class="material-icons text-red-500 text-2xl">lock</span>
-          <div>
-            <h4 class="text-sm font-bold text-red-800">บัญชีอยู่ในสถานะดรอปการฝึกงาน</h4>
-            <p class="text-xs text-red-700 mt-0.5">คุณไม่สามารถเพิ่มหรืออัปโหลดชั่วโมงการอบรมใหม่ได้</p>
-          </div>
-        </div>
-      `;
-      const main = document.querySelector('.main-content') || document.body;
-      const firstSection = main.querySelector('section') || main.firstChild;
-      main.insertBefore(dropBanner, firstSection);
+      setCertificateFormReadOnly('บัญชีอยู่ในสถานะดรอปการฝึกงาน', 'คุณไม่สามารถเพิ่มหรืออัปโหลดชั่วโมงการอบรมใหม่ได้', 'danger');
     }
   })
   .catch(err => console.error('Check student status error:', err));
+
+// ล็อกชั่วโมงอบรมระหว่างกำลังฝึกงาน
+fetch('/api/student/trainings')
+  .then(res => res.json())
+  .then(data => {
+    if (data.success && data.internshipLock && data.internshipLock.locked) {
+      setCertificateFormReadOnly('อยู่ระหว่างฝึกงาน (อ่านอย่างเดียว)', data.internshipLock.message, 'info');
+    }
+  })
+  .catch(err => console.error('Check internship lock error:', err));
 
 fileInput.addEventListener('change', (e) => {
     if (isDroppedStudent) return;

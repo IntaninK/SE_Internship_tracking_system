@@ -126,6 +126,7 @@ async function loadData() {
     }
 
     currentPlacementData = compData.placement || null;
+    renderInternshipWindowBox(compData);
 
     // เติมข้อมูล Auto-suggest รายชื่อบริษัทจากฐานข้อมูลกลาง (Master Data)
     masterCompaniesList = compData.masterCompanies || [];
@@ -711,6 +712,8 @@ document.getElementById('save-all-btn').addEventListener('click', async () => {
       companyPhone1,
       companyPhone2,
       companyEmail,
+      // รอบออกฝึก: ส่งเฉพาะกรณีมีให้เลือกหลายรอบ (รอบเดียว server ผูกให้อัตโนมัติ)
+      internshipWindowId: (document.getElementById('internship-window-select') as HTMLSelectElement | null)?.value || undefined,
     };
 
     let res;
@@ -731,10 +734,14 @@ document.getElementById('save-all-btn').addEventListener('click', async () => {
     const data = await res.json();
     if (!data.success) {
       alert('⚠️ ' + (data.message || 'ไม่สามารถบันทึกได้'));
+      if (data.needWindowSelection) {
+        const sel = document.getElementById('internship-window-select') as HTMLSelectElement | null;
+        if (sel) { sel.scrollIntoView({ behavior: 'smooth', block: 'center' }); sel.focus(); }
+      }
       return;
     }
 
-    alert('✅ บันทึกข้อมูล Checklist สถานประกอบการเรียบร้อยแล้ว');
+    alert('✅ ' + (data.message || 'บันทึกข้อมูล Checklist สถานประกอบการเรียบร้อยแล้ว'));
     window.location.href = '/status-all';
   } catch (err) {
     console.error('Error saving companies:', err);
@@ -744,6 +751,65 @@ document.getElementById('save-all-btn').addEventListener('click', async () => {
     saveBtn.innerHTML = '<span class="material-icons text-2xl">check_circle</span> <span>ยืนยันและส่งให้อาจารย์ที่ปรึกษาตรวจสอบ</span>';
   }
 });
+
+// =====================================================================
+// รอบออกฝึก: เปิดรอบเดียว = แสดงข้อความ (ผูกอัตโนมัติ) / หลายรอบ = dropdown ให้เลือก
+// =====================================================================
+function renderInternshipWindowBox(compData) {
+  const saveBtn = document.getElementById('save-all-btn');
+  const anchor = saveBtn ? saveBtn.parentElement : null;
+  if (!anchor || !anchor.parentElement) return;
+
+  let box = document.getElementById('internship-window-box');
+  if (!box) {
+    box = document.createElement('div');
+    box.id = 'internship-window-box';
+    box.style.cssText = 'max-width:720px; margin:24px auto 0;';
+    anchor.parentElement.insertBefore(box, anchor);
+  }
+
+  const windows = Array.isArray(compData.openInternshipWindows) ? compData.openInternshipWindows : [];
+  if (windows.length === 0) {
+    box.innerHTML = '';
+    box.style.display = 'none';
+    return;
+  }
+  box.style.display = '';
+
+  const closeText = (w) => w.closeDate ? ` • ยื่นได้ถึง ${new Date(w.closeDate + 'T00:00:00').toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' })}` : '';
+  const cohortText = (w) => compData.isStraggler ? ` (รอบของรุ่น ${escapeHtml(w.cohortCode)})` : '';
+
+  if (windows.length === 1) {
+    const w = windows[0];
+    box.innerHTML = `
+      <div style="display:flex; align-items:center; gap:10px; padding:12px 16px; background:#EEF2FF; border:1px solid #C7D2FE; border-radius:14px;">
+        <span class="material-icons" style="color:#4338CA;">event_available</span>
+        <div style="font-size:13.5px; color:#1E1B4B;">
+          รอบออกฝึกของคุณ: <strong>${escapeHtml(w.label)}</strong>${cohortText(w)}
+          <div style="font-size:12px; color:#4338CA; margin-top:2px;">ระบบเลือกให้อัตโนมัติ${closeText(w)}</div>
+        </div>
+      </div>`;
+    return;
+  }
+
+  const assigned = windows.some(w => w.id === compData.assignedWindowId) ? compData.assignedWindowId : '';
+  box.innerHTML = `
+    <div style="padding:14px 16px; background:#FFFBEB; border:1px solid #FCD34D; border-radius:14px;">
+      <label for="internship-window-select" style="display:flex; align-items:center; gap:8px; font-size:13.5px; font-weight:800; color:#92400E; margin-bottom:6px;">
+        <span class="material-icons" style="font-size:20px;">event</span>
+        เลือกรอบออกฝึกงาน <span style="color:#DC2626;">*</span>
+      </label>
+      <div style="font-size:12px; color:#92400E; margin-bottom:8px;">
+        ${compData.isStraggler
+          ? 'คุณมีสิทธิ์เลือกรอบออกฝึกที่เปิดอยู่ของรุ่นถัดไปได้'
+          : 'ขณะนี้เปิดรับหลายรอบพร้อมกัน (เช่น Summer และภาคปกติ) — เลือกรอบที่คุณจะออกฝึก'}
+      </div>
+      <select id="internship-window-select" class="input-field" style="width:100%; padding:8px 10px; font-size:13px; border:1px solid #FCD34D; border-radius:10px; background:white;">
+        <option value="">-- เลือกรอบออกฝึก --</option>
+        ${windows.map(w => `<option value="${w.id}" ${w.id === assigned ? 'selected' : ''}>${escapeHtml(w.label)}${cohortText(w)}${closeText(w)}</option>`).join('')}
+      </select>
+    </div>`;
+}
 
 loadData();
 

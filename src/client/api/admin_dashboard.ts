@@ -155,6 +155,8 @@ async function loadDashboardSummary() {
     if (selectedMajor && selectedMajor !== 'ALL') summaryParams.set('major', selectedMajor);
     if (selectedYear) summaryParams.set('yearPrefix', selectedYear);
     if (selectedSemester) summaryParams.set('semester', selectedSemester);
+    const windowTermVal = (document.getElementById('window-term-filter') as HTMLSelectElement | null)?.value || '';
+    if (windowTermVal) summaryParams.set('windowTerm', windowTermVal);
 
     const summaryQuery = summaryParams.toString();
     const summaryUrl = summaryQuery ? `/api/admin/dashboard-summary?${summaryQuery}` : '/api/admin/dashboard-summary';
@@ -305,6 +307,8 @@ async function loadStudents() {
     const semesterFilter = document.getElementById('semester-filter') as HTMLSelectElement | null;
     const selectedSemester = semesterFilter ? semesterFilter.value : '';
     if (selectedSemester) url += `&semester=${encodeURIComponent(selectedSemester)}`;
+    const windowTermSel = (document.getElementById('window-term-filter') as HTMLSelectElement | null)?.value || '';
+    if (windowTermSel) url += `&windowTerm=${encodeURIComponent(windowTermSel)}`;
 
     // Dropdown filters ใหม่
     const statusFilter = document.getElementById('status-filter');
@@ -1080,6 +1084,8 @@ window.confirmExport = async function() {
       if (searchVal) params.set('search', searchVal);
       if (selectedYear) params.set('yearPrefix', selectedYear);
       if (selectedSemester) params.set('semester', selectedSemester);
+      const exportWindowTerm = (document.getElementById('window-term-filter') as HTMLSelectElement | null)?.value || '';
+      if (exportWindowTerm) params.set('windowTerm', exportWindowTerm);
       if (statusFilter && (statusFilter as HTMLSelectElement).value) params.set('statusFilter', (statusFilter as HTMLSelectElement).value);
       if (advisorFilter && (advisorFilter as HTMLSelectElement).value) params.set('advisorFilter', (advisorFilter as HTMLSelectElement).value);
       if (skillFilter && (skillFilter as HTMLSelectElement).value) params.set('skillFilter', (skillFilter as HTMLSelectElement).value);
@@ -1215,6 +1221,31 @@ const yearFilterEl = document.getElementById('year-filter');
 if (yearFilterEl) {
   yearFilterEl.addEventListener('change', () => {
     (window as any).onYearFilterChange();
+    loadDashboardSummary();
+  });
+}
+
+// ตัวกรอง "รอบออกฝึก" ในหน้าภาพรวม: ตัวเลือกมาจากรอบออกฝึกของทุกรุ่น (ตาราง InternshipWindow)
+const windowTermFilterEl = document.getElementById('window-term-filter') as HTMLSelectElement | null;
+if (windowTermFilterEl) {
+  fetch('/api/admin/super-admin/cohorts')
+    .then(r => r.json())
+    .then(data => {
+      if (!data.success) return;
+      const terms = new Set<string>();
+      (data.cohorts || []).forEach(c => (c.majors || []).forEach(m => (m.windows || []).forEach(w => terms.add(w.term))));
+      const sorted = Array.from(terms).sort((a, b) => windowTermKey(b) - windowTermKey(a));
+      windowTermFilterEl.innerHTML = '<option value="">ทุกรอบออกฝึก</option>' +
+        sorted.map(t => `<option value="${t}">${windowTermLabel(t)}</option>`).join('') +
+        '<option value="NONE">ยังไม่ผูกรอบ</option>';
+    })
+    .catch(err => console.error('load window terms error:', err));
+
+  windowTermFilterEl.addEventListener('change', () => {
+    clearSearchBox();
+    currentPage = 1;
+    updateFilterUI();
+    loadStudents();
     loadDashboardSummary();
   });
 }
@@ -2093,7 +2124,6 @@ let superAdminData = {
     deanPosition: 'คณบดีคณะเทคโนโลยีสารสนเทศและการสื่อสาร',
     signatureDataUrl: '',
   },
-  majorUnlockRules: [],
   trainingEvents: [],
   companyMasterData: [],
   pendingMasterCompaniesCount: 0,
@@ -2145,6 +2175,8 @@ window.switchAdminWorkspace = function(wsKey: AdminWorkspace) {
     }
   });
   if (wsKey === 'companies') renderPendingCompaniesTable();
+  // โหลดข้อมูลรุ่นแยกจาก overview (ถ้า overview ล้ม หน้านี้ยังทำงาน/แสดง error ได้)
+  if (wsKey === 'unlock' && window.loadCohorts) window.loadCohorts();
   if (wsKey === 'checklist') {
     if (typeof (window as any).hasUnsavedChecklistChanges === 'function' && (window as any).hasUnsavedChecklistChanges()) {
       return;
@@ -2164,8 +2196,8 @@ window.loadSuperAdminOverview = async function() {
     superAdminData = data;
 
     // Update top tab badges
-    const unlockedCount = (data.majorUnlockRules || []).filter(r => r.isUnlocked).length;
-    const totalMajors = (data.majorUnlockRules || []).length || 8;
+    const unlockedCount = data.internshipOverview?.openMajors ?? 0;
+    const totalMajors = data.internshipOverview?.totalMajors ?? 8;
     const badgeUnlocked = document.getElementById('badge-unlocked-majors');
     if (badgeUnlocked) badgeUnlocked.textContent = `${unlockedCount}/${totalMajors} เปิด`;
 
@@ -2207,7 +2239,7 @@ window.loadSuperAdminOverview = async function() {
       evtDateEl.value = new Date().toISOString().slice(0, 10);
     }
 
-    renderMajorUnlockTable();
+    window.loadCohorts();
     if (typeof window.initEventSessions === "function") window.initEventSessions();
     renderEventsDropdownAndCheckins();
     renderPendingCompaniesTable();
@@ -2317,282 +2349,420 @@ window.saveAcademicConfig = async function() {
   }
 };
 
-function renderMajorUnlockTable() {
-  const tbody = document.getElementById('major-unlock-tbody');
-  if (!tbody) return;
-  const rules = superAdminData.majorUnlockRules || [];
-  if (rules.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="6" class="text-center py-6 text-gray-400">ไม่พบข้อมูลสาขาวิชา</td></tr>';
+// =========================================================================
+// WORKSPACE 2: รุ่น (Cohort) → สาขา → รอบออกฝึก (Internship Window)
+// ข้อมูลจาก PostgreSQL ผ่าน /api/admin/super-admin/cohorts
+// =========================================================================
+let cohortsData: any[] = [];
+let selectedCohortId: number | null = null;
+const expandedCohortMajors = new Set<string>();
+const selectedBatchMajors = new Set<string>();
+
+const WINDOW_STATUS_STYLE: Record<string, { bg: string; color: string; border: string; icon: string }> = {
+  LOCKED: { bg: '#FEE2E2', color: '#991B1B', border: '#FCA5A5', icon: 'lock' },
+  NOT_YET_OPEN: { bg: '#FEF3C7', color: '#92400E', border: '#FCD34D', icon: 'schedule' },
+  OPEN: { bg: '#DCFCE7', color: '#166534', border: '#86EFAC', icon: 'lock_open' },
+  EXTENDED: { bg: '#E0F2FE', color: '#075985', border: '#7DD3FC', icon: 'more_time' },
+  EXPIRED: { bg: '#F1F5F9', color: '#475569', border: '#CBD5E1', icon: 'event_busy' },
+  COMPLETED: { bg: '#EDE9FE', color: '#5B21B6', border: '#C4B5FD', icon: 'task_alt' },
+};
+
+function windowStatusBadge(w: any) {
+  const st = WINDOW_STATUS_STYLE[w.status] || WINDOW_STATUS_STYLE.LOCKED;
+  return `<span style="display:inline-flex; align-items:center; gap:4px; background:${st.bg}; color:${st.color}; border:1px solid ${st.border}; padding:3px 9px; border-radius:999px; font-size:11.5px; font-weight:700; white-space:nowrap;">
+    <span class="material-icons" style="font-size:14px;">${st.icon}</span>${escapeHtmlText(w.statusLabel)}
+  </span>`;
+}
+
+function getSelectedCohort() {
+  return cohortsData.find(c => c.id === selectedCohortId) || null;
+}
+
+async function cohortApi(url: string, method: string, body?: any) {
+  const res = await fetch(url, {
+    method,
+    headers: { 'Content-Type': 'application/json' },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  const data = await res.json().catch(() => ({ success: false, message: 'เซิร์ฟเวอร์ตอบกลับไม่ถูกต้อง' }));
+  if (!data.success) alert('เกิดข้อผิดพลาด: ' + (data.message || 'ทำรายการไม่สำเร็จ'));
+  return data;
+}
+
+function showCohortLoadError(message: string) {
+  const majorsEl = document.getElementById('cohort-majors');
+  if (!majorsEl) return;
+  majorsEl.innerHTML = `
+    <div style="padding:16px; text-align:center; color:#991B1B; background:#FEF2F2; border:1px solid #FECACA; border-radius:12px; font-size:12.5px;">
+      โหลดข้อมูลรุ่นไม่สำเร็จ: ${escapeHtmlText(message)}
+      <div style="margin-top:8px;">
+        <button type="button" onclick="window.loadCohorts()" style="background:#FFFFFF; border:1px solid #FCA5A5; color:#991B1B; border-radius:8px; padding:5px 12px; font-size:12px; font-weight:700; cursor:pointer;">ลองใหม่</button>
+      </div>
+    </div>`;
+}
+
+window.loadCohorts = async function() {
+  try {
+    const res = await fetch('/api/admin/super-admin/cohorts');
+    const data = await res.json().catch(() => ({ success: false, message: `เซิร์ฟเวอร์ตอบกลับ HTTP ${res.status}` }));
+    if (!data.success) {
+      showCohortLoadError(data.message || `HTTP ${res.status}`);
+      return;
+    }
+    cohortsData = data.cohorts || [];
+    if (!selectedCohortId || !cohortsData.some(c => c.id === selectedCohortId)) {
+      const firstActive = cohortsData.find(c => c.status === 'ACTIVE');
+      selectedCohortId = (firstActive || cohortsData[0] || {}).id || null;
+    }
+    renderCohortWorkspace();
+  } catch (err) {
+    console.error('loadCohorts error:', err);
+    showCohortLoadError('เชื่อมต่อเซิร์ฟเวอร์ไม่ได้');
+  }
+};
+
+window.selectCohort = function(id) {
+  if (!id) return;
+  selectedCohortId = Number(id);
+  selectedBatchMajors.clear();
+  renderCohortWorkspace();
+};
+
+function renderCohortWorkspace() {
+  const tabsEl = document.getElementById('cohort-tabs');
+  const archivedEl = document.getElementById('cohort-archived-select') as HTMLSelectElement | null;
+  const actionsEl = document.getElementById('cohort-header-actions');
+  const majorsEl = document.getElementById('cohort-majors');
+  const batchEl = document.getElementById('cohort-batch-bar');
+  if (!tabsEl || !majorsEl) return;
+
+  const active = cohortsData.filter(c => c.status === 'ACTIVE');
+  const archived = cohortsData.filter(c => c.status === 'ARCHIVED');
+  const cohort = getSelectedCohort();
+  const isArchived = cohort?.status === 'ARCHIVED';
+
+  tabsEl.innerHTML = active.map(c => {
+    const on = c.id === selectedCohortId;
+    return `<button type="button" onclick="window.selectCohort(${c.id})"
+      style="border:1px solid ${on ? '#4338CA' : '#CBD5E1'}; background:${on ? '#4338CA' : '#FFFFFF'}; color:${on ? '#FFFFFF' : '#334155'}; border-radius:10px; padding:7px 14px; font-size:12.5px; font-weight:700; cursor:pointer;">
+      รหัส ${escapeHtmlText(c.code)}${c.classYear ? ` <span style="opacity:.8; font-weight:600;">· ปี ${c.classYear}</span>` : ''}
+    </button>`;
+  }).join('') || '<span style="font-size:12.5px; color:#94A3B8;">ยังไม่มีรุ่นที่ใช้งาน</span>';
+
+  if (archivedEl) {
+    archivedEl.innerHTML = `<option value="">${archived.length ? `ประวัติรุ่นที่ปิดแล้ว (${archived.length})...` : 'ยังไม่มีรุ่นที่ปิด'}</option>` +
+      archived.map(c => `<option value="${c.id}">รหัส ${escapeHtmlText(c.code)} (ปิดแล้ว)</option>`).join('');
+    archivedEl.value = isArchived ? String(cohort.id) : '';
+  }
+
+  if (actionsEl) {
+    actionsEl.innerHTML = !cohort ? '' : isArchived
+      ? `<button type="button" onclick="window.restoreCohort(${cohort.id})" style="background:#FFFFFF; color:#4338CA; border:none; padding:7px 14px; border-radius:10px; font-size:12px; font-weight:700; cursor:pointer;">↩ เปิดใช้งานรุ่นนี้อีกครั้ง</button>`
+      : `
+        <button type="button" onclick="window.bulkCohortWindows('UNLOCK_ALL')" style="background:#10B981; color:white; border:none; padding:7px 12px; border-radius:10px; font-size:12px; font-weight:700; cursor:pointer;">🔓 ปลดล็อกทุกรอบ</button>
+        <button type="button" onclick="window.bulkCohortWindows('LOCK_ALL')" style="background:#EF4444; color:white; border:none; padding:7px 12px; border-radius:10px; font-size:12px; font-weight:700; cursor:pointer;">🔒 ล็อกทุกรอบ</button>
+        <button type="button" onclick="window.archiveCohort(${cohort.id})" style="background:#FFFFFF; color:#1E1B4B; border:none; padding:7px 12px; border-radius:10px; font-size:12px; font-weight:700; cursor:pointer;">📦 ปิดรุ่น / เก็บเข้าประวัติ</button>`;
+  }
+
+  if (batchEl) batchEl.style.display = cohort && !isArchived ? '' : 'none';
+
+  if (!cohort) {
+    majorsEl.innerHTML = '<div style="padding:18px; text-align:center; color:#94A3B8; background:#F8FAFC; border-radius:12px;">ยังไม่มีรุ่นในระบบ — กด "เพิ่มรุ่น" เพื่อเริ่มต้น</div>';
     return;
   }
 
-  // เติมค่า Default ในกล่องด้านบนอัตโนมัติหากยังว่างอยู่
-  const batchTermEl = document.getElementById('batch-target-term') as HTMLInputElement | null;
-  const batchOpenEl = document.getElementById('batch-open-date') as HTMLInputElement | null;
-  const batchCloseEl = document.getElementById('batch-close-date') as HTMLInputElement | null;
-  if (batchTermEl && !batchTermEl.value && rules.length > 0) {
-    const commonRule = rules.find(r => r.code !== 'SE' && r.targetTerm) || rules[0];
-    if (commonRule?.targetTerm) batchTermEl.value = commonRule.targetTerm;
-  }
-  if (batchOpenEl && !batchOpenEl.value && rules.length > 0) {
-    const ruleWithDates = rules.find(r => r.openDate && r.closeDate) || rules[0];
-    if (ruleWithDates?.openDate) batchOpenEl.value = ruleWithDates.openDate;
-    if (ruleWithDates?.closeDate) batchCloseEl.value = ruleWithDates.closeDate;
-  }
+  const archivedBanner = isArchived
+    ? `<div style="padding:10px 14px; background:#F1F5F9; border:1px solid #CBD5E1; border-radius:10px; font-size:12.5px; color:#334155;">
+        📦 รุ่น ${escapeHtmlText(cohort.code)} ถูกปิดเมื่อ ${cohort.archivedAt ? new Date(cohort.archivedAt).toLocaleDateString('th-TH') : '-'}${cohort.archivedBy ? ` โดย ${escapeHtmlText(cohort.archivedBy)}` : ''} — แสดงแบบอ่านอย่างเดียว
+      </div>`
+    : '';
 
-  tbody.innerHTML = rules.map(r => {
-    const statusBadge = r.isUnlocked
-      ? `<span style="display:inline-flex; align-items:center; gap:5px; background:#DCFCE7; color:#166534; border:1px solid #86EFAC; padding:4px 10px; border-radius:999px; font-size:12px; font-weight:700;">
-           <span class="material-icons" style="font-size:14px;">lock_open</span> เปิดยื่นฝึกงาน (Unlocked)
-         </span>`
-      : `<span style="display:inline-flex; align-items:center; gap:5px; background:#FEE2E2; color:#991B1B; border:1px solid #FCA5A5; padding:4px 10px; border-radius:999px; font-size:12px; font-weight:700;">
-           <span class="material-icons" style="font-size:14px;">lock</span> ล็อกชั่วคราว (Locked)
-         </span>`;
+  majorsEl.innerHTML = archivedBanner + cohort.majors.map(m => renderCohortMajorRow(cohort, m, isArchived)).join('');
+  updateCohortSelectedCount();
+}
+
+function renderCohortMajorRow(cohort: any, m: any, readOnly: boolean) {
+  const key = `${cohort.id}:${m.code}`;
+  const isOpen = expandedCohortMajors.has(key);
+  const openCount = m.windows.filter(w => w.status === 'OPEN' || w.status === 'EXTENDED').length;
+  const summary = m.windows.length === 0
+    ? '<span style="font-size:11.5px; color:#B45309; font-weight:700;">ยังไม่มีรอบออกฝึก</span>'
+    : m.windows.map(w => `<span style="font-size:11.5px; color:#334155; background:#F1F5F9; border-radius:6px; padding:2px 7px;">${escapeHtmlText(w.term)}${w.termType === 'SUMMER' ? ' Summer' : ''}</span>`).join(' ');
+
+  return `
+    <div style="border:1px solid ${isOpen ? '#C7D2FE' : '#E2E8F0'}; border-radius:12px; background:#FFFFFF; overflow:hidden;">
+      <div style="display:flex; align-items:center; gap:10px; padding:10px 14px; flex-wrap:wrap; background:${isOpen ? '#F5F7FF' : '#FFFFFF'};">
+        ${readOnly ? '' : `<input type="checkbox" ${selectedBatchMajors.has(m.code) ? 'checked' : ''} onchange="window.toggleBatchMajor('${m.code}', this.checked)" title="เลือกสาขานี้สำหรับเพิ่มรอบด้านบน" style="width:16px; height:16px; cursor:pointer; accent-color:#4338CA;" />`}
+        <div onclick="window.toggleCohortMajor('${key}')" style="display:flex; align-items:center; gap:10px; flex:1; min-width:240px; cursor:pointer;">
+          <span class="material-icons" style="font-size:20px; color:#64748B; transform:rotate(${isOpen ? 90 : 0}deg); transition:transform .15s;">chevron_right</span>
+          <div style="min-width:0;">
+            <div style="font-weight:800; color:#1E1B4B; font-size:13.5px;">สาขา${escapeHtmlText(m.name)} (${m.code})
+              <span style="font-weight:600; font-size:11.5px; color:#64748B;">· นิสิต ${m.studentCount} คน</span>
+            </div>
+            <div style="font-size:11.5px; color:#64748B; margin-top:2px;">เตรียมความพร้อม: ${escapeHtmlText(m.prepSchedule)} • ออกฝึก: ${escapeHtmlText(m.internSchedule)}</div>
+          </div>
+        </div>
+        <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+          ${summary}
+          ${openCount > 0
+            ? `<span style="background:#DCFCE7; color:#166534; border-radius:999px; padding:2px 9px; font-size:11.5px; font-weight:700;">🟢 เปิดยื่น ${openCount} รอบ</span>`
+            : (m.windows.length ? `<span style="background:#F1F5F9; color:#475569; border-radius:999px; padding:2px 9px; font-size:11.5px; font-weight:700;">🔒 ไม่มีรอบที่เปิด</span>` : '')}
+        </div>
+      </div>
+      ${isOpen ? renderCohortMajorWindows(cohort, m, readOnly) : ''}
+    </div>
+  `;
+}
+
+function renderCohortMajorWindows(cohort: any, m: any, readOnly: boolean) {
+  const dis = readOnly ? 'disabled' : '';
+  const rows = m.windows.map(w => {
+    const p = `win-${w.id}`;
+    const actions = readOnly ? '' : `
+      <div style="display:flex; gap:5px; flex-wrap:wrap; justify-content:flex-end;">
+        ${w.status === 'COMPLETED' ? '' : `
+          <button type="button" onclick="window.patchWindow(${w.id}, { isUnlocked: ${!w.isUnlocked} })"
+            style="border:none; color:white; background:${w.isUnlocked ? '#EF4444' : '#10B981'}; padding:5px 10px; border-radius:7px; font-size:11.5px; font-weight:700; cursor:pointer;">
+            ${w.isUnlocked ? '🔒 ล็อก' : '🔓 ปลดล็อก'}
+          </button>`}
+        ${w.status === 'EXPIRED' || w.status === 'EXTENDED' ? `
+          <button type="button" onclick="window.patchWindow(${w.id}, { extendedOpen: ${!w.extendedOpen} })"
+            style="border:1px solid #7DD3FC; background:#F0F9FF; color:#075985; padding:5px 10px; border-radius:7px; font-size:11.5px; font-weight:700; cursor:pointer;">
+            ${w.extendedOpen ? 'ยกเลิกเปิดต่อพิเศษ' : '⏱ เปิดต่อพิเศษ'}
+          </button>` : ''}
+        <button type="button" onclick="window.saveWindowRow(${w.id})"
+          style="border:1px solid #CBD5E1; background:white; color:#334155; padding:5px 10px; border-radius:7px; font-size:11.5px; font-weight:600; cursor:pointer;">💾 บันทึก</button>
+        <button type="button" onclick="window.toggleWindowCompleted(${w.id}, ${!w.isCompleted})"
+          style="border:1px solid #C4B5FD; background:#F5F3FF; color:#5B21B6; padding:5px 10px; border-radius:7px; font-size:11.5px; font-weight:600; cursor:pointer;">
+          ${w.isCompleted ? '↩ ยกเลิกจบรอบ' : '✔ จบรอบ'}
+        </button>
+        <button type="button" onclick="window.deleteWindow(${w.id})" title="ลบรอบนี้"
+          style="border:1px solid #FECACA; background:#FEF2F2; color:#DC2626; padding:5px 8px; border-radius:7px; font-size:11.5px; cursor:pointer;">🗑</button>
+      </div>`;
 
     return `
       <tr>
         <td>
-          <div style="display:flex; align-items:flex-start; gap:8px;">
-            <input type="checkbox" class="major-row-check" data-code="${r.code}" checked onchange="updateBatchSelectedCount()" style="width:16px; height:16px; margin-top:2px; cursor:pointer;" title="เลือกสาขานี้สำหรับบันทึกค่าส่วนกลาง" />
-            <div>
-              <div style="font-weight:800; color:#1E1B4B; font-size:13.5px;">สาขาวิชา${r.majorName} (${r.code})</div>
-              <div style="font-size:11.5px; color:#64748B; margin-top:2px;">นิสิตในระบบ: <strong>${r.studentCount || 0}</strong> คน</div>
-            </div>
+          <input type="text" id="${p}-term" value="${escapeHtmlText(w.term)}" ${dis} class="input-field" style="width:85px; padding:5px 8px !important; font-size:12px; font-weight:700;" />
+          <div style="margin-top:4px; display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
+            <select id="${p}-type" ${dis} class="input-field" style="width:auto; padding:3px 6px; font-size:11px;">
+              <option value="REGULAR" ${w.termType === 'REGULAR' ? 'selected' : ''}>ภาคปกติ</option>
+              <option value="SUMMER" ${w.termType === 'SUMMER' ? 'selected' : ''}>Summer</option>
+            </select>
+            <label style="font-size:11px; color:#475569; display:inline-flex; align-items:center; gap:3px;">
+              <input type="checkbox" id="${p}-optional" ${w.isOptional ? 'checked' : ''} ${dis} /> ไม่บังคับ
+            </label>
           </div>
         </td>
         <td>
-          <div style="font-size:12px; color:#334155;"><strong>เตรียมความพร้อม:</strong> ${r.prepSchedule}</div>
-          <div style="font-size:11.5px; color:#4338CA; font-weight:600; margin-top:2px;"><strong>ออกฝึกงาน:</strong> ${r.internSchedule}</div>
-        </td>
-        <td>
-          <input type="text" id="major-term-${r.code}" class="input-field" value="${r.targetTerm || '2/2568'}" style="font-size:12px; padding:5px 8px !important; width:95px; font-weight:700;" />
-        </td>
-        <td>
-          <div style="display:flex; align-items:center; gap:4px; font-size:11.5px;">
-            <input type="date" id="major-open-${r.code}" class="input-field" value="${r.openDate || ''}" style="font-size:11.5px; padding:4px 6px !important;" />
+          <div style="display:flex; align-items:center; gap:4px; font-size:11.5px; flex-wrap:wrap;">
+            <input type="date" id="${p}-open" value="${w.openDate}" ${dis} class="input-field" style="width:auto; padding:4px 6px !important; font-size:11.5px;" />
             <span>ถึง</span>
-            <input type="date" id="major-close-${r.code}" class="input-field" value="${r.closeDate || ''}" style="font-size:11.5px; padding:4px 6px !important;" />
+            <input type="date" id="${p}-close" value="${w.closeDate}" ${dis} class="input-field" style="width:auto; padding:4px 6px !important; font-size:11.5px;" />
           </div>
-          <div style="margin-top:3px;">
-            <input type="text" id="major-note-${r.code}" class="input-field" value="${r.note || ''}" placeholder="หมายเหตุแจ้งนิสิต..." style="font-size:11.5px; padding:4px 8px !important; width:100%; box-sizing:border-box;" />
-          </div>
+          <input type="text" id="${p}-note" value="${escapeHtmlText(w.note)}" ${dis} placeholder="หมายเหตุแจ้งนิสิต..." class="input-field" style="margin-top:4px; width:100%; box-sizing:border-box; padding:4px 8px !important; font-size:11.5px;" />
         </td>
-        <td>${statusBadge}</td>
-        <td class="text-center">
-          <div style="display:flex; flex-direction:column; gap:5px; align-items:center;">
-            <button type="button" onclick="toggleMajorUnlock('${r.code}', ${!r.isUnlocked})"
-              style="width:100%; border:none; padding:6px 10px; border-radius:8px; font-size:11.5px; font-weight:700; cursor:pointer; color:white; background:${r.isUnlocked ? '#EF4444' : '#10B981'};">
-              ${r.isUnlocked ? '🔒 กดล็อกสาขา' : '🔓 กดปลดล็อกสาขา'}
-            </button>
-            <button type="button" onclick="saveMajorRuleDetails('${r.code}', ${r.isUnlocked})"
-              style="width:100%; border:1px solid #CBD5E1; background:white; color:#334155; padding:4px 8px; border-radius:8px; font-size:11px; font-weight:600; cursor:pointer;">
-              บันทึกรอบ/วันที่
-            </button>
-          </div>
+        <td>
+          <input type="date" id="${p}-end" value="${w.internEndDate}" ${dis} class="input-field" style="width:auto; padding:4px 6px !important; font-size:11.5px;" />
+          <div style="font-size:10.5px; color:#94A3B8; margin-top:3px;">เลือกรอบนี้แล้ว ${w.studentCount} คน</div>
         </td>
-      </tr>
-    `;
+        <td>${windowStatusBadge(w)}</td>
+        <td>${actions}</td>
+      </tr>`;
   }).join('');
 
-  if (window.updateBatchSelectedCount) {
-    window.updateBatchSelectedCount();
-  }
+  const addRow = readOnly ? '' : `
+    <tr style="background:#FAFBFF;">
+      <td colspan="5">
+        <button type="button" onclick="window.addWindowForMajor(${cohort.id}, '${m.code}')"
+          style="background:none; border:1px dashed #A5B4FC; color:#4338CA; border-radius:8px; padding:6px 12px; font-size:12px; font-weight:700; cursor:pointer;">
+          + เพิ่มรอบออกฝึกให้สาขานี้
+        </button>
+      </td>
+    </tr>`;
+
+  return `
+    <div class="table-responsive" style="border-top:1px solid #E2E8F0;">
+      <table class="data-table" style="margin:0;">
+        <thead>
+          <tr>
+            <th style="width:18%;">รอบเทอม / ประเภท</th>
+            <th style="width:30%;">ช่วงเปิดยื่นบริษัท</th>
+            <th style="width:16%;">สิ้นสุดการฝึก</th>
+            <th style="width:14%;">สถานะ</th>
+            <th style="width:22%; text-align:right;">จัดการ</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows || '<tr><td colspan="5" style="text-align:center; color:#94A3B8; font-size:12px; padding:12px;">ยังไม่มีรอบออกฝึก</td></tr>'}
+          ${addRow}
+        </tbody>
+      </table>
+    </div>`;
 }
 
-window.toggleSelectAllMajors = function(checked) {
-  const checkboxes = document.querySelectorAll('.major-row-check');
-  checkboxes.forEach((cb: any) => { cb.checked = checked; });
-  if (window.updateBatchSelectedCount) {
-    window.updateBatchSelectedCount();
+window.toggleCohortMajor = function(key: string) {
+  if (expandedCohortMajors.has(key)) expandedCohortMajors.delete(key);
+  else expandedCohortMajors.add(key);
+  renderCohortWorkspace();
+};
+
+window.toggleBatchMajor = function(code: string, checked: boolean) {
+  if (checked) selectedBatchMajors.add(code);
+  else selectedBatchMajors.delete(code);
+  updateCohortSelectedCount();
+};
+
+function updateCohortSelectedCount() {
+  const el = document.getElementById('cohort-selected-count');
+  if (el) el.textContent = String(selectedBatchMajors.size);
+}
+
+function readWindowRow(id: number) {
+  const v = (s: string) => (document.getElementById(`win-${id}-${s}`) as HTMLInputElement | null);
+  return {
+    term: v('term')?.value.trim(),
+    termType: (v('type') as any)?.value,
+    isOptional: Boolean(v('optional')?.checked),
+    openDate: v('open')?.value || '',
+    closeDate: v('close')?.value || '',
+    internEndDate: v('end')?.value || '',
+    note: v('note')?.value || '',
+  };
+}
+
+window.patchWindow = async function(id: number, body: any) {
+  const data = await cohortApi(`/api/admin/super-admin/windows/${id}`, 'PATCH', body);
+  if (data.success) {
+    await window.loadCohorts();
+    if (window.loadSuperAdminOverview) window.loadSuperAdminOverview();
   }
 };
 
-window.updateBatchSelectedCount = function() {
-  const checkboxes = document.querySelectorAll('.major-row-check');
-  const total = checkboxes.length;
-  let checkedCount = 0;
-  checkboxes.forEach((cb: any) => { if (cb.checked) checkedCount++; });
+window.saveWindowRow = async function(id: number) {
+  await window.patchWindow(id, readWindowRow(id));
+};
 
-  const countEl = document.getElementById('batch-selected-count');
-  if (countEl) countEl.textContent = String(checkedCount);
+window.toggleWindowCompleted = async function(id: number, completed: boolean) {
+  const msg = completed
+    ? 'ยืนยัน "จบรอบ" นี้หรือไม่?\n\n* ใช้กรณีฝึกเสร็จก่อนกำหนด/ฉุกเฉิน — รอบนี้จะปิดรับยื่นและถือว่าจบการฝึกแล้ว'
+    : 'ยกเลิกสถานะ "จบรอบ" หรือไม่?';
+  if (!confirm(msg)) return;
+  await window.patchWindow(id, { isCompleted: completed });
+};
 
-  const selectAllEl = document.getElementById('major-select-all') as HTMLInputElement | null;
-  if (selectAllEl) {
-    selectAllEl.checked = total > 0 && checkedCount === total;
-    selectAllEl.indeterminate = checkedCount > 0 && checkedCount < total;
-  }
+window.deleteWindow = async function(id: number) {
+  if (!confirm('ยืนยันลบรอบออกฝึกนี้หรือไม่?')) return;
+  const data = await cohortApi(`/api/admin/super-admin/windows/${id}`, 'DELETE');
+  if (data.success) await window.loadCohorts();
+};
 
-  const btn = document.getElementById('batch-save-btn');
-  if (btn) {
-    if (checkedCount === 0) {
-      btn.style.opacity = '0.5';
-      btn.style.cursor = 'not-allowed';
-    } else {
-      btn.style.opacity = '1';
-      btn.style.cursor = 'pointer';
-    }
+window.addWindowForMajor = async function(cohortId: number, majorCode: string) {
+  const term = prompt(`เพิ่มรอบออกฝึกให้สาขา ${majorCode}\nระบุรอบเทอม (เทอม/ปี พ.ศ.) เช่น 1/2570 หรือ 3/2569 (Summer):`);
+  if (!term) return;
+  const t = term.trim();
+  const data = await cohortApi('/api/admin/super-admin/windows', 'POST', {
+    cohortId,
+    majorCodes: [majorCode],
+    term: t,
+    termType: t.startsWith('3/') ? 'SUMMER' : 'REGULAR',
+    isOptional: t.startsWith('3/'),
+  });
+  if (data.success) {
+    expandedCohortMajors.add(`${cohortId}:${majorCode}`);
+    await window.loadCohorts();
   }
 };
 
-window.saveBatchMajorRules = async function() {
-  const rules = superAdminData.majorUnlockRules || [];
-  if (rules.length === 0) return;
-
-  const batchTermEl = document.getElementById('batch-target-term') as HTMLInputElement | null;
-  const batchOpenEl = document.getElementById('batch-open-date') as HTMLInputElement | null;
-  const batchCloseEl = document.getElementById('batch-close-date') as HTMLInputElement | null;
-  const termVal = batchTermEl?.value.trim() || '';
-  const openVal = batchOpenEl?.value || '';
-  const closeVal = batchCloseEl?.value || '';
-
-  const checkedBoxes = document.querySelectorAll('.major-row-check:checked');
-  const selectedCodes = new Set(Array.from(checkedBoxes).map((cb: any) => cb.getAttribute('data-code')));
-
-  if (selectedCodes.size === 0) {
-    alert('⚠️ กรุณาติ๊กเลือกอย่างน้อย 1 สาขาวิชาที่ต้องการบันทึก');
+window.saveBatchWindows = async function() {
+  const cohort = getSelectedCohort();
+  if (!cohort) return;
+  if (selectedBatchMajors.size === 0) {
+    alert('กรุณาติ๊กเลือกสาขาที่ต้องการก่อน (ช่องสี่เหลี่ยมหน้าชื่อสาขา)');
     return;
   }
-
-  // อัปเดตค่าลงในช่อง input ของแต่ละแถวที่ถูกติ๊กเลือก
-  selectedCodes.forEach(code => {
-    if (termVal) {
-      const tEl = document.getElementById(`major-term-${code}`) as HTMLInputElement | null;
-      if (tEl) tEl.value = termVal;
-    }
-    if (openVal) {
-      const oEl = document.getElementById(`major-open-${code}`) as HTMLInputElement | null;
-      if (oEl) oEl.value = openVal;
-    }
-    if (closeVal) {
-      const cEl = document.getElementById(`major-close-${code}`) as HTMLInputElement | null;
-      if (cEl) cEl.value = closeVal;
-    }
+  const val = (id: string) => (document.getElementById(id) as HTMLInputElement | null)?.value || '';
+  const term = val('cb-term').trim();
+  if (!term) {
+    alert('กรุณาระบุรอบเทอม เช่น 1/2570');
+    return;
+  }
+  const majors = Array.from(selectedBatchMajors);
+  if (!confirm(`บันทึกรอบ ${term} ให้สาขา ${majors.join(', ')} ของรุ่น ${cohort.code}?\n\n* ถ้าสาขาใดมีรอบ ${term} อยู่แล้ว จะอัปเดตวันที่/ประเภทตามที่กรอก`)) return;
+  const data = await cohortApi('/api/admin/super-admin/windows', 'POST', {
+    cohortId: cohort.id,
+    majorCodes: majors,
+    term,
+    termType: val('cb-type') || 'REGULAR',
+    isOptional: Boolean((document.getElementById('cb-optional') as HTMLInputElement | null)?.checked),
+    openDate: val('cb-open'),
+    closeDate: val('cb-close'),
+    internEndDate: val('cb-end'),
   });
-
-  // รวบรวมข้อมูลทั้งหมด (สาขาที่เลือกจะได้ค่าใหม่ ส่วนสาขาที่ไม่เลือกจะคงค่าเดิมของตัวเอง)
-  const payloadRules = rules.map(r => {
-    const targetTerm = (document.getElementById(`major-term-${r.code}`) as HTMLInputElement | null)?.value || r.targetTerm || '2/2568';
-    const openDate = (document.getElementById(`major-open-${r.code}`) as HTMLInputElement | null)?.value || r.openDate || '';
-    const closeDate = (document.getElementById(`major-close-${r.code}`) as HTMLInputElement | null)?.value || r.closeDate || '';
-    const note = (document.getElementById(`major-note-${r.code}`) as HTMLInputElement | null)?.value || r.note || '';
-    return {
-      code: r.code,
-      isUnlocked: r.isUnlocked,
-      targetTerm,
-      openDate,
-      closeDate,
-      note,
-    };
-  });
-
-  try {
-    const res = await fetch('/api/admin/super-admin/major-unlock', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        bulkAction: 'UPDATE_ALL',
-        rules: payloadRules,
-      }),
-    });
-    const data = await res.json();
-    if (data.success) {
-      alert(`✅ บันทึกและนำกำหนดการไปใช้กับ ${selectedCodes.size} สาขาวิชาที่เลือกเรียบร้อยแล้ว!`);
-      await window.loadSuperAdminOverview();
-    } else {
-      alert('เกิดข้อผิดพลาด: ' + (data.message || 'ไม่สามารถบันทึกได้'));
-    }
-  } catch (err) {
-    console.error(err);
-    alert('เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์');
+  if (data.success) {
+    alert('✅ ' + data.message);
+    majors.forEach(code => expandedCohortMajors.add(`${cohort.id}:${code}`));
+    await window.loadCohorts();
   }
 };
 
-window.saveAllMajorRules = window.saveBatchMajorRules;
-
-window.saveAllMajorRules = async function() {
-  const rules = superAdminData.majorUnlockRules || [];
-  if (rules.length === 0) return;
-
-  const payloadRules = rules.map(r => {
-    const targetTerm = (document.getElementById(`major-term-${r.code}`) as HTMLInputElement | null)?.value || r.targetTerm || '2/2568';
-    const openDate = (document.getElementById(`major-open-${r.code}`) as HTMLInputElement | null)?.value || r.openDate || '';
-    const closeDate = (document.getElementById(`major-close-${r.code}`) as HTMLInputElement | null)?.value || r.closeDate || '';
-    const note = (document.getElementById(`major-note-${r.code}`) as HTMLInputElement | null)?.value || r.note || '';
-    return {
-      code: r.code,
-      isUnlocked: r.isUnlocked,
-      targetTerm,
-      openDate,
-      closeDate,
-      note,
-    };
-  });
-
-  try {
-    const res = await fetch('/api/admin/super-admin/major-unlock', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        bulkAction: 'UPDATE_ALL',
-        rules: payloadRules,
-      }),
-    });
-    const data = await res.json();
-    if (data.success) {
-      alert('✅ ' + (data.message || 'บันทึกกำหนดการทั้ง 8 สาขาเรียบร้อยแล้ว'));
-      await window.loadSuperAdminOverview();
-    } else {
-      alert('เกิดข้อผิดพลาด: ' + (data.message || 'ไม่สามารถบันทึกได้'));
-    }
-  } catch (err) {
-    console.error(err);
-    alert('เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์');
+window.bulkCohortWindows = async function(action: 'UNLOCK_ALL' | 'LOCK_ALL') {
+  const cohort = getSelectedCohort();
+  if (!cohort) return;
+  const label = action === 'UNLOCK_ALL' ? 'ปลดล็อก' : 'ล็อก';
+  if (!confirm(`ยืนยัน${label}ทุกรอบออกฝึกของรุ่น ${cohort.code} หรือไม่?`)) return;
+  const data = await cohortApi(`/api/admin/super-admin/cohorts/${cohort.id}/bulk`, 'POST', { action });
+  if (data.success) {
+    await window.loadCohorts();
+    if (window.loadSuperAdminOverview) window.loadSuperAdminOverview();
   }
 };
 
-window.toggleMajorUnlock = async function(code, nextUnlocked) {
-  await window.saveMajorRuleDetails(code, nextUnlocked);
-};
-
-window.saveMajorRuleDetails = async function(code, isUnlocked) {
-  const targetTerm = document.getElementById(`major-term-${code}`)?.value || '2/2568';
-  const openDate = document.getElementById(`major-open-${code}`)?.value || '';
-  const closeDate = document.getElementById(`major-close-${code}`)?.value || '';
-  const note = document.getElementById(`major-note-${code}`)?.value || '';
-
-  try {
-    const res = await fetch('/api/admin/super-admin/major-unlock', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ code, isUnlocked, targetTerm, openDate, closeDate, note }),
-    });
-    const data = await res.json();
-    if (data.success) {
-      await window.loadSuperAdminOverview();
-    } else {
-      alert('เกิดข้อผิดพลาด: ' + (data.message || 'ไม่สามารถอัปเดตได้'));
-    }
-  } catch (err) {
-    console.error(err);
-    alert('เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์');
+window.createCohort = async function() {
+  const code = prompt('ระบุรหัสรุ่นใหม่ (2 หลักแรกของรหัสนิสิต) เช่น 68:');
+  if (!code) return;
+  const latest = cohortsData.filter(c => c.status === 'ACTIVE').sort((a, b) => Number(b.code) - Number(a.code))[0];
+  let copyFromCohortId = null;
+  if (latest && latest.code !== code.trim()) {
+    copyFromCohortId = confirm(
+      `คัดลอกโครงสร้างรอบออกฝึกจากรุ่น ${latest.code} หรือไม่?\n\n` +
+      `* ระบบจะเลื่อนปีของรอบเทอมและวันที่ให้อัตโนมัติ (เช่น 1/2569 → 1/2570) และตั้งเป็น "ล็อก" ทั้งหมด\n` +
+      `* กด Cancel = สร้างรุ่นเปล่า`
+    ) ? latest.id : null;
+  }
+  const data = await cohortApi('/api/admin/super-admin/cohorts', 'POST', { code: code.trim(), copyFromCohortId });
+  if (data.success) {
+    alert('✅ ' + data.message);
+    selectedCohortId = data.cohortId;
+    await window.loadCohorts();
   }
 };
 
-window.bulkToggleMajors = async function(bulkAction) {
-  try {
-    const res = await fetch('/api/admin/super-admin/major-unlock', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ bulkAction }),
-    });
-    const data = await res.json();
-    if (data.success) {
-      alert('✅ ' + data.message);
-      await window.loadSuperAdminOverview();
-    }
-  } catch (err) {
-    console.error(err);
+window.archiveCohort = async function(id: number) {
+  const cohort = cohortsData.find(c => c.id === id);
+  if (!cohort) return;
+  const preview = await cohortApi(`/api/admin/super-admin/cohorts/${id}/archive`, 'POST', { dryRun: true });
+  if (!preview.success) return;
+  let msg = `ยืนยันปิดรุ่น ${cohort.code} และเก็บเข้าประวัติหรือไม่?\n\nนิสิตในรุ่น: ${preview.totalStudents} คน`;
+  if (preview.pendingCount > 0) {
+    const names = preview.pendingStudents.slice(0, 10).map(s => `• ${s.studentCode} ${s.nameTh}`).join('\n');
+    msg += `\n\n⚠️ ยังไม่ได้หนังสือส่งตัว ${preview.pendingCount} คน — จะถูกตั้งเป็น "ตกค้าง (RETEST)" อัตโนมัติ\n` +
+      `(ยื่นรอบออกฝึกของรุ่นถัดไปได้)\n${names}${preview.pendingCount > 10 ? '\n...' : ''}`;
   }
+  if (!confirm(msg)) return;
+  const data = await cohortApi(`/api/admin/super-admin/cohorts/${id}/archive`, 'POST', {});
+  if (data.success) {
+    alert('✅ ' + data.message);
+    selectedCohortId = null;
+    await window.loadCohorts();
+    if (window.loadSuperAdminOverview) window.loadSuperAdminOverview();
+  }
+};
+
+window.restoreCohort = async function(id: number) {
+  if (!confirm('เปิดใช้งานรุ่นนี้อีกครั้งหรือไม่?\n\n* สถานะ "ตกค้าง (RETEST)" ของนิสิตที่ตั้งไว้ตอนปิดรุ่นจะไม่ถูกย้อนกลับอัตโนมัติ')) return;
+  const data = await cohortApi(`/api/admin/super-admin/cohorts/${id}/restore`, 'POST', {});
+  if (data.success) await window.loadCohorts();
 };
 
 // =========================================================================
@@ -4756,9 +4926,6 @@ function docGroupId(key: string): string {
   return encodeURIComponent(key).replace(/[!'()*]/g, c => '%' + c.charCodeAt(0).toString(16).toUpperCase());
 }
 
-function docStudentYear(d: any): string {
-  return String(d.studentCode || '').slice(0, 2);
-}
 
 function docStageOf(d: any): 'NONE' | 'CHECKLIST' | 'READY_FOR_REQ' | 'WAITING_RESPONSE' | 'ACCEPTED' | 'DISPATCHED' {
   if (NO_COMPANY_NAMES.includes(d.companyName)) return 'NONE';
@@ -4767,6 +4934,42 @@ function docStageOf(d: any): 'NONE' | 'CHECKLIST' | 'READY_FOR_REQ' | 'WAITING_R
   if (d.requestLetterIssued) return 'WAITING_RESPONSE';
   if (d.checklistStatus !== 'APPROVED') return 'CHECKLIST';
   return 'READY_FOR_REQ';
+}
+
+// ===== ตัวกรอง "รุ่น" / "รอบออกฝึก" ที่ใช้ร่วมกัน (คิวออกหนังสือ, Co-op, ภาพรวม) =====
+function windowTermKey(term: string): number {
+  const m = String(term).match(/^(\d)\/(\d{4})/);
+  return m ? parseInt(m[2], 10) * 10 + parseInt(m[1], 10) : 0;
+}
+
+function windowTermLabel(t: string): string {
+  return `รอบ ${t}${t.startsWith('3/') ? ' (Summer)' : ''}`;
+}
+
+function fillCohortSelect(el: HTMLSelectElement | null, items: any[]) {
+  if (!el) return;
+  const cur = el.value || 'ALL';
+  const codes = Array.from(new Set(items.map(d => String(d.cohortCode || d.studentCode || '').slice(0, 2)).filter(c => /^\d{2}$/.test(c)))).sort().reverse();
+  el.innerHTML = '<option value="ALL">ทุกรุ่น</option>' + codes.map(c => `<option value="${c}">รุ่น ${c}</option>`).join('');
+  el.value = codes.includes(cur) ? cur : 'ALL';
+}
+
+function fillWindowSelect(el: HTMLSelectElement | null, items: any[]) {
+  if (!el) return;
+  const cur = el.value || 'ALL';
+  const terms = Array.from(new Set(items.map(d => d.windowTerm).filter(Boolean))).sort((a, b) => windowTermKey(b) - windowTermKey(a));
+  const hasNone = items.some(d => !d.windowTerm);
+  el.innerHTML = '<option value="ALL">ทุกรอบออกฝึก</option>' +
+    terms.map(t => `<option value="${t}">${windowTermLabel(t)}</option>`).join('') +
+    (hasNone ? '<option value="NONE">ยังไม่ผูกรอบ</option>' : '');
+  el.value = Array.from(el.options).some(o => o.value === cur) ? cur : 'ALL';
+}
+
+function matchesCohortWindow(d: any, cohortVal: string, windowVal: string): boolean {
+  if (cohortVal !== 'ALL' && String(d.cohortCode || d.studentCode || '').slice(0, 2) !== cohortVal) return false;
+  if (windowVal === 'NONE') return !d.windowTerm;
+  if (windowVal !== 'ALL' && d.windowTerm !== windowVal) return false;
+  return true;
 }
 
 function populateDocQueueFilterOptions(all: any[]) {
@@ -4779,13 +4982,8 @@ function populateDocQueueFilterOptions(all: any[]) {
     }
     majorEl.value = Array.from(majorEl.options).some(o => o.value === cur) ? cur : 'ALL';
   }
-  if (yearEl) {
-    const cur = yearEl.value || 'ALL';
-    const years = Array.from(new Set(all.map(docStudentYear).filter(y => /^\d{2}$/.test(y)))).sort().reverse();
-    yearEl.innerHTML = '<option value="ALL">ทุกชั้นปี</option>' +
-      years.map(y => `<option value="${y}">รหัส ${y}</option>`).join('');
-    yearEl.value = years.includes(cur) ? cur : 'ALL';
-  }
+  fillCohortSelect(yearEl, all);
+  fillWindowSelect(document.getElementById('doc-queue-window') as HTMLSelectElement | null, all);
 }
 
 window.toggleDocGroup = function(key: string) {
@@ -4811,6 +5009,7 @@ window.renderDocumentQueueTable = function() {
   const filterVal = (document.getElementById('doc-queue-filter') as HTMLSelectElement | null)?.value || 'ALL';
   const majorVal = (document.getElementById('doc-queue-major') as HTMLSelectElement | null)?.value || 'ALL';
   const yearVal = (document.getElementById('doc-queue-year') as HTMLSelectElement | null)?.value || 'ALL';
+  const windowVal = (document.getElementById('doc-queue-window') as HTMLSelectElement | null)?.value || 'ALL';
   const keyword = ((document.getElementById('doc-queue-keyword') as HTMLInputElement | null)?.value || '').trim().toLowerCase();
   const hideNone = (document.getElementById('doc-queue-hide-none') as HTMLInputElement | null)?.checked ?? true;
 
@@ -4819,7 +5018,7 @@ window.renderDocumentQueueTable = function() {
     if (hideNone && stage === 'NONE') return false;
     if (filterVal !== 'ALL' && stage !== filterVal) return false;
     if (majorVal !== 'ALL' && normalizeMajorName(d.major) !== majorVal) return false;
-    if (yearVal !== 'ALL' && docStudentYear(d) !== yearVal) return false;
+    if (!matchesCohortWindow(d, yearVal, windowVal)) return false;
     if (keyword) {
       const hay = `${d.companyName} ${d.studentCode} ${d.nameTh} ${d.position}`.toLowerCase();
       if (!hay.includes(keyword)) return false;
@@ -5568,6 +5767,10 @@ window.clearCoopFilters = function() {
   if (searchInput) searchInput.value = '';
   if (majorSelect) majorSelect.value = 'ALL';
   if (statusSelect) statusSelect.value = 'DISPATCHED';
+  ['coop-cohort-filter', 'coop-window-filter'].forEach(id => {
+    const el = document.getElementById(id) as HTMLSelectElement | null;
+    if (el) el.value = 'ALL';
+  });
 
   renderCoop01PreviewTable();
 };
@@ -5626,6 +5829,12 @@ function renderCoop01PreviewTable() {
   const searchVal = (document.getElementById('coop-search-input') as HTMLInputElement | null)?.value?.trim().toLowerCase() || '';
   const majorVal = (document.getElementById('coop-major-filter') as HTMLSelectElement | null)?.value || 'ALL';
   const statusVal = (document.getElementById('coop-status-filter') as HTMLSelectElement | null)?.value || 'DISPATCHED';
+  const coopCohortEl = document.getElementById('coop-cohort-filter') as HTMLSelectElement | null;
+  const coopWindowEl = document.getElementById('coop-window-filter') as HTMLSelectElement | null;
+  fillCohortSelect(coopCohortEl, rawList);
+  fillWindowSelect(coopWindowEl, rawList);
+  const coopCohortVal = coopCohortEl?.value || 'ALL';
+  const coopWindowVal = coopWindowEl?.value || 'ALL';
 
   let list = rawList;
 
@@ -5639,6 +5848,8 @@ function renderCoop01PreviewTable() {
   }
 
   // กรองตามสาขาวิชา
+  list = list.filter(s => matchesCohortWindow(s, coopCohortVal, coopWindowVal));
+
   if (majorVal !== 'ALL') {
     list = list.filter(s => normalizeMajorName(s.major) === majorVal);
   }

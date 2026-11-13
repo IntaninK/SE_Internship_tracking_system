@@ -830,6 +830,10 @@ ${majorOptionsHtml("              ")}
               <option value="SUMMER">ภาคฤดูร้อน</option>
             </select>
 
+            <select id="window-term-filter" class="input-field" title="รอบออกฝึกที่นิสิตผูกไว้" style="width:auto; min-width:135px; font-size:13px; padding:7px 12px; cursor:pointer;">
+              <option value="">ทุกรอบออกฝึก</option>
+            </select>
+
             <!-- Custom Status Filter Dropdown (กางลงด้านล่างเสมอ ขนาด/ฟอนต์ตรงตามมาตรฐานภาพที่ 2) -->
             <div id="status-dropdown-container" style="position:relative; display:inline-block; width:195px; min-width:195px;">
               <input type="hidden" id="status-filter" value="" data-label="ทุกสถานะ" />
@@ -1036,74 +1040,69 @@ ${majorOptionsHtml("              ")}
           <div style="display:flex; align-items:center; gap:10px;">
             <span class="material-icons header-icon">lock_open</span>
             <div>
-              <h2 class="card-title" style="margin:0;">ปลดล็อก (Unlock) ระบบยื่นขอฝึกงานแยกตามหลักสูตร / 8 สาขาวิชา</h2>
-              <p style="margin:2px 0 0 0; font-size:12px; color:#E0E7FF;">
-                แก้ปัญหารอบการออกฝึกงานไม่พร้อมกัน (เช่น SE ออกฝึกงานเทอมถัดไปทันที ส่วน CS / CPE เรียนเตรียมความพร้อมปี 3 และออกฝึกงานจริงตอนปี 4)
-              </p>
+              <h2 class="card-title" style="margin:0;">รอบออกฝึก &amp; ปลดล็อก แยกตามรุ่นและสาขา</h2>
+              <p style="margin:2px 0 0 0; font-size:12px; color:#E0E7FF;">เลือกรุ่น → กดที่สาขาเพื่อดู/แก้รอบออกฝึก (ปกติ / Summer) และปลดล็อกการยื่นบริษัท</p>
             </div>
           </div>
-          <div style="display:flex; gap:8px;">
-            <button type="button" onclick="bulkToggleMajors('UNLOCK_ALL')" style="background:#10B981; color:white; border:none; padding:7px 14px; border-radius:10px; font-size:12px; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:4px;">
-              <span class="material-icons" style="font-size:15px;">lock_open</span> ปลดล็อกทั้ง 8 สาขา
-            </button>
-            <button type="button" onclick="bulkToggleMajors('LOCK_ALL')" style="background:red; color:white; border:1px solid rgba(255,255,255,0.3); padding:7px 14px; border-radius:10px; font-size:12px; font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:4px;">
-              <span class="material-icons" style="font-size:15px;">lock</span> ล็อกทั้งหมดชั่วคราว
-            </button>
-          </div>
+          <div id="cohort-header-actions" style="display:flex; gap:8px; flex-wrap:wrap;"></div>
         </div>
         <div class="card-body">
-          <div style="margin-bottom:14px; padding:12px 16px; background:#EEF2FF; border:1px solid #C7D2FE; border-radius:12px; display:flex; align-items:center; gap:10px;">
-            <span class="material-icons" style="color:#4338CA; font-size:20px;">info</span>
-            <div style="font-size:12.5px; color:#1E1B4B;">
-              <strong>หลักการทำงานของระบบ Unlock รายสาขา:</strong> สาขาที่สถานะเป็น <strong>🔒 ล็อก (Locked)</strong> นิสิตจะยังสามารถเข้าสะสมชั่วโมงอบรมและอัปโหลด CV ในวิชาเตรียมความพร้อมได้ตามปกติ แต่ระบบจะยังไม่เปิดให้กดยื่น Checklist ขอหนังสือไปสถานประกอบการจนกว่า Super Admin (พี่จอม) จะกด <strong>🔓 ปลดล็อก (Unlock)</strong> ตามรอบปีการศึกษาที่พร้อมออกฝึกงานจริง
+          <!-- แท็บรุ่น -->
+          <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:12px;">
+            <div id="cohort-tabs" style="display:flex; gap:6px; flex-wrap:wrap;"></div>
+            <button type="button" onclick="window.createCohort()" style="background:#EEF2FF; border:1px dashed #818CF8; color:#4338CA; border-radius:10px; padding:7px 12px; font-size:12.5px; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:4px;">
+              <span class="material-icons" style="font-size:16px;">add</span> เพิ่มรุ่น
+            </button>
+            <select id="cohort-archived-select" onchange="window.selectCohort(this.value)" class="input-field" style="width:auto; margin:0 0 0 auto; font-size:12px; padding:6px 10px;">
+              <option value="">ประวัติรุ่นที่ปิดแล้ว...</option>
+            </select>
+          </div>
+
+          <div style="margin-bottom:12px; padding:10px 14px; background:#EEF2FF; border:1px solid #C7D2FE; border-radius:12px; font-size:12px; color:#1E1B4B; display:flex; gap:8px; align-items:flex-start;">
+            <span class="material-icons" style="color:#4338CA; font-size:18px;">info</span>
+            <div>
+              ระหว่างที่ล็อก นิสิตยังสะสมชั่วโมงอบรมและอัปโหลด CV ได้ แต่ยื่น Checklist ไม่ได้
+              • <strong>พ้นวันปิดยื่น ระบบล็อกให้อัตโนมัติ</strong> (กด "เปิดต่อพิเศษ" เพื่อขยายเวลาได้)
+              • พ้นวันสิ้นสุดการฝึก หรือกด "จบรอบ" = รอบนั้นจบแล้ว
             </div>
           </div>
 
-          <!-- แถบตั้งค่าเริ่มต้นส่วนกลาง (Default Master Window) & บันทึกสาขาที่เลือก -->
-          <div style="background:#F8FAFC; border:1px solid #C7D2FE; border-radius:12px; padding:12px 16px; margin-bottom:14px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; box-shadow:0 1px 3px rgba(0,0,0,0.03);">
-            <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
-              <span style="font-size:12.5px; font-weight:700; color:#1E1B4B; display:inline-flex; align-items:center; gap:5px;">
-                <span class="material-icons" style="font-size:18px; color:#4F46E5;">tune</span> กำหนดค่าเริ่มต้นส่วนกลาง (Default):
-              </span>
-              <div style="display:inline-flex; align-items:center; gap:5px;">
-                <label style="font-size:11.5px; font-weight:700; color:#475569;">รอบเทอม:</label>
-                <input type="text" id="batch-target-term" class="input-field" placeholder="เช่น 1/2569" style="width:85px; padding:5px 8px !important; font-size:12px; font-weight:700;" />
-              </div>
-              <div style="display:inline-flex; align-items:center; gap:5px;">
-                <label style="font-size:11.5px; font-weight:700; color:#475569;">ช่วงเวลาเปิดยื่น:</label>
-                <input type="date" id="batch-open-date" class="input-field" style="width:auto; padding:5px 8px !important; font-size:12px;" />
-                <span style="font-size:12px; color:#64748B;">ถึง</span>
-                <input type="date" id="batch-close-date" class="input-field" style="width:auto; padding:5px 8px !important; font-size:12px;" />
-              </div>
+          <!-- เพิ่ม/อัปเดตรอบให้สาขาที่เลือก -->
+          <div id="cohort-batch-bar" style="background:#F8FAFC; border:1px solid #E2E8F0; border-radius:12px; padding:12px 14px; margin-bottom:12px;">
+            <div style="font-size:12.5px; font-weight:800; color:#1E1B4B; margin-bottom:8px; display:flex; align-items:center; gap:6px;">
+              <span class="material-icons" style="font-size:18px; color:#4F46E5;">playlist_add</span>
+              เพิ่ม/อัปเดตรอบออกฝึกให้สาขาที่ติ๊กเลือก (<span id="cohort-selected-count">0</span> สาขา)
             </div>
-            <div style="display:flex; align-items:center; gap:8px;">
-              <button type="button" onclick="saveBatchMajorRules()" id="batch-save-btn" style="background:#059669; color:white; border:none; padding:8px 18px; border-radius:8px; font-size:12.5px; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:6px; box-shadow:0 2px 4px rgba(5,150,105,0.25);">
-                <span class="material-icons" style="font-size:17px;">save</span> 💾 บันทึกและนำค่าไปใช้กับสาขาที่เลือก (<span id="batch-selected-count">8</span> สาขา)
+            <div style="display:flex; align-items:flex-end; gap:10px; flex-wrap:wrap;">
+              <label style="font-size:11.5px; font-weight:700; color:#475569;">รอบเทอม
+                <input type="text" id="cb-term" class="input-field" placeholder="เช่น 1/2570" style="display:block; width:95px; margin:3px 0 0; padding:6px 8px !important; font-size:12px; font-weight:700;" />
+              </label>
+              <label style="font-size:11.5px; font-weight:700; color:#475569;">ประเภท
+                <select id="cb-type" class="input-field" style="display:block; width:auto; margin:3px 0 0; padding:6px 8px; font-size:12px;">
+                  <option value="REGULAR">ภาคปกติ</option>
+                  <option value="SUMMER">Summer</option>
+                </select>
+              </label>
+              <label style="font-size:11.5px; font-weight:700; color:#475569;">เปิดยื่น
+                <input type="date" id="cb-open" class="input-field" style="display:block; width:auto; margin:3px 0 0; padding:5px 8px !important; font-size:12px;" />
+              </label>
+              <label style="font-size:11.5px; font-weight:700; color:#475569;">ปิดยื่น
+                <input type="date" id="cb-close" class="input-field" style="display:block; width:auto; margin:3px 0 0; padding:5px 8px !important; font-size:12px;" />
+              </label>
+              <label style="font-size:11.5px; font-weight:700; color:#475569;">สิ้นสุดการฝึก
+                <input type="date" id="cb-end" class="input-field" style="display:block; width:auto; margin:3px 0 0; padding:5px 8px !important; font-size:12px;" />
+              </label>
+              <label style="font-size:12px; color:#475569; display:inline-flex; align-items:center; gap:5px; padding-bottom:8px; cursor:pointer;">
+                <input type="checkbox" id="cb-optional" style="width:15px; height:15px; accent-color:#4338CA;" /> ไม่บังคับ
+              </label>
+              <button type="button" onclick="window.saveBatchWindows()" style="background:#059669; color:white; border:none; padding:9px 16px; border-radius:8px; font-size:12.5px; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:6px; margin-left:auto;">
+                <span class="material-icons" style="font-size:17px;">save</span> บันทึกให้สาขาที่เลือก
               </button>
             </div>
           </div>
 
-          <div class="table-responsive">
-            <table class="data-table">
-              <thead>
-                <tr>
-                  <th style="width:24%;">
-                    <div style="display:flex; align-items:center; gap:8px;">
-                      <input type="checkbox" id="major-select-all" checked onchange="toggleSelectAllMajors(this.checked)" style="width:16px; height:16px; cursor:pointer;" title="เลือก / ไม่เลือก ทั้งหมด" />
-                      <span>สาขาวิชา (คณะ ICT)</span>
-                    </div>
-                  </th>
-                  <th style="width:20%;">โครงสร้างรอบเรียน / ออกฝึกงานจริง</th>
-                  <th style="width:11%;">รอบเทอมที่ออกฝึก</th>
-                  <th style="width:18%;">ช่วงเวลาเปิดยื่นบริษัท</th>
-                  <th style="width:15%;">สถานะระบบยื่นฝึกงาน</th>
-                  <th style="width:12%;" class="text-center">จัดการ</th>
-                </tr>
-              </thead>
-              <tbody id="major-unlock-tbody">
-                <tr><td colspan="6" class="text-center py-6 text-gray-400">กำลังโหลดข้อมูลสาขาวิชา...</td></tr>
-              </tbody>
-            </table>
+          <div id="cohort-majors" style="display:flex; flex-direction:column; gap:8px;">
+            <div style="padding:18px; text-align:center; color:#94A3B8;">กำลังโหลดข้อมูลรุ่น...</div>
           </div>
         </div>
       </section>
@@ -1625,8 +1624,11 @@ ${majorOptionsHtml("                    ")}
             <select id="doc-queue-major" class="input-field" onchange="renderDocumentQueueTable()" style="width:auto; min-width:150px; margin:0; font-size:12.5px;">
               <option value="ALL">ทุกสาขา</option>
             </select>
-            <select id="doc-queue-year" class="input-field" onchange="renderDocumentQueueTable()" style="width:auto; min-width:120px; margin:0; font-size:12.5px;">
-              <option value="ALL">ทุกชั้นปี</option>
+            <select id="doc-queue-year" class="input-field" onchange="renderDocumentQueueTable()" style="width:auto; min-width:110px; margin:0; font-size:12.5px;">
+              <option value="ALL">ทุกรุ่น</option>
+            </select>
+            <select id="doc-queue-window" class="input-field" onchange="renderDocumentQueueTable()" style="width:auto; min-width:130px; margin:0; font-size:12.5px;">
+              <option value="ALL">ทุกรอบออกฝึก</option>
             </select>
             <select id="doc-queue-filter" class="input-field" onchange="renderDocumentQueueTable()" style="width:auto; min-width:190px; margin:0; font-size:12.5px;">
               <option value="ALL">ทุกสถานะ</option>
@@ -1717,6 +1719,14 @@ ${majorOptionsHtml("                    ")}
             <select id="coop-major-filter" class="input-field" onchange="window.filterCoopTable ? window.filterCoopTable() : null" style="width:auto; min-width:170px; font-size:12.5px; height:36px; padding:4px 10px; border-radius:8px; cursor:pointer; background:#FFFFFF;">
               <option value="ALL">ทุกสาขาวิชา (คณะ ICT)</option>
 ${majorOptionsHtml("              ")}
+            </select>
+
+            <select id="coop-cohort-filter" class="input-field" onchange="window.filterCoopTable ? window.filterCoopTable() : null" style="width:auto; min-width:110px; font-size:12.5px; height:36px; padding:4px 10px; border-radius:8px; cursor:pointer; background:#FFFFFF;">
+              <option value="ALL">ทุกรุ่น</option>
+            </select>
+
+            <select id="coop-window-filter" class="input-field" onchange="window.filterCoopTable ? window.filterCoopTable() : null" style="width:auto; min-width:130px; font-size:12.5px; height:36px; padding:4px 10px; border-radius:8px; cursor:pointer; background:#FFFFFF;">
+              <option value="ALL">ทุกรอบออกฝึก</option>
             </select>
 
             <select id="coop-status-filter" class="input-field" onchange="window.filterCoopTable ? window.filterCoopTable() : null" style="width:auto; min-width:220px; font-size:12.5px; height:36px; padding:4px 10px; border-radius:8px; cursor:pointer; background:#FFFFFF; font-weight:600; color:#1E40AF;">

@@ -72,6 +72,7 @@ async function initStudentDetail() {
     renderPlacement(data.placement);
     renderAcceptanceFormReview(data.acceptanceWorkflow);
     renderDocumentSummary(data);
+    loadCohortInfo(studentId);
 
     // Multi-round history (SCRUM-73)
     const roundSection = document.getElementById('admin-round-history-section');
@@ -145,6 +146,83 @@ async function initStudentDetail() {
 // ==========================================
 // 1. ข้อมูลส่วนตัว (อ่านอย่างเดียว)
 // ==========================================
+// =====================================================================
+// รุ่น / รอบออกฝึก / ตกค้าง (RETEST) — พี่จอม (Staff) หรือ Admin ตั้ง RETEST รายคนได้
+// =====================================================================
+async function loadCohortInfo(studentId) {
+  const section = document.getElementById('internship-cohort-section');
+  const body = document.getElementById('internship-cohort-body');
+  if (!section || !body) return;
+  try {
+    const res = await fetch(`/api/admin/super-admin/students/${studentId}/cohort-info`);
+    const info = await res.json();
+    if (!info.success) return;
+    section.style.display = 'block';
+
+    const canEdit = Boolean(isActingAsStaff || isActingAsCourseAdmin);
+    const isRetest = info.internshipType === 'RETEST';
+    const item = (label, value) => `
+      <div style="background:#F8FAFC; border:1px solid #E2E8F0; border-radius:10px; padding:10px 12px;">
+        <div style="font-size:11px; font-weight:700; color:#64748B;">${label}</div>
+        <div style="font-size:13.5px; font-weight:700; color:#1E1B4B; margin-top:2px;">${value}</div>
+      </div>`;
+
+    const cohortText = info.cohortCode
+      ? `รหัส ${info.cohortCode}${info.classYear ? ` · ปี ${info.classYear}` : ''}${info.cohortStatus === 'ARCHIVED' ? ' (ปิดรุ่นแล้ว)' : (info.cohortStatus ? '' : ' (ยังไม่มีในระบบ)')}`
+      : '-';
+    const w = info.window;
+    const windowText = w
+      ? `${w.term}${w.termType === 'SUMMER' ? ' (Summer)' : ''}${w.cohortCode !== info.cohortCode ? ` · รอบของรุ่น ${w.cohortCode}` : ''}
+         <span style="font-size:11.5px; font-weight:600; color:#4338CA;"> — ${w.statusLabel}</span>`
+      : '<span style="color:#94A3B8; font-weight:600;">ยังไม่ได้ผูกรอบ (ผูกอัตโนมัติตอนยื่น Checklist)</span>';
+    const typeText = isRetest
+      ? '<span style="color:#B45309;">⚠ ตกค้าง (RETEST)</span>'
+      : (info.isStraggler ? '<span style="color:#B45309;">ตกค้าง (รุ่นถูกปิด/ไม่มีในระบบ)</span>' : 'ปกติ (NEW)');
+
+    body.innerHTML = `
+      <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:10px;">
+        ${item('รุ่น', cohortText)}
+        ${item('รอบออกฝึก', windowText)}
+        ${item('ประเภทการฝึก', typeText)}
+      </div>
+      ${canEdit ? `
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; margin-top:12px; padding:10px 12px; background:${isRetest ? '#FFFBEB' : '#F8FAFC'}; border:1px solid ${isRetest ? '#FCD34D' : '#E2E8F0'}; border-radius:10px;">
+          <div style="font-size:12px; color:#475569;">
+            ${isRetest
+              ? 'นิสิตคนนี้ยื่นรอบออกฝึกที่เปิดอยู่ของรุ่นถัดไปได้ (ยังอยู่ในรุ่นเดิม)'
+              : 'ตั้งเป็น "ตกค้าง" เพื่อให้นิสิตเลือกยื่นรอบออกฝึกของรุ่นถัดไปได้ (เช่น ฝึกรอบแรกไม่ผ่าน)'}
+          </div>
+          <button type="button" onclick="window.setStudentInternshipType(${studentId}, '${isRetest ? 'NEW' : 'RETEST'}')"
+            style="border:none; border-radius:8px; padding:7px 14px; font-size:12.5px; font-weight:700; cursor:pointer; color:white; background:${isRetest ? '#475569' : '#D97706'};">
+            ${isRetest ? '↩ ยกเลิกสถานะตกค้าง' : '⚠ ตั้งเป็นตกค้าง (RETEST)'}
+          </button>
+        </div>` : ''}
+    `;
+  } catch (err) {
+    console.error('loadCohortInfo error:', err);
+  }
+}
+
+window.setStudentInternshipType = async function(studentId, internshipType) {
+  const msg = internshipType === 'RETEST'
+    ? 'ยืนยันตั้งนิสิตคนนี้เป็น "ตกค้าง (RETEST)" หรือไม่?\n\n* นิสิตจะเลือกยื่นรอบออกฝึกที่เปิดอยู่ของรุ่นถัดไปได้'
+    : 'ยืนยันยกเลิกสถานะ "ตกค้าง" ของนิสิตคนนี้หรือไม่?';
+  if (!confirm(msg)) return;
+  try {
+    const res = await fetch(`/api/admin/super-admin/students/${studentId}/internship-type`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ internshipType }),
+    });
+    const data = await res.json();
+    alert((data.success ? '✅ ' : 'เกิดข้อผิดพลาด: ') + (data.message || ''));
+    if (data.success) loadCohortInfo(studentId);
+  } catch (err) {
+    console.error(err);
+    alert('เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์');
+  }
+};
+
 function renderProfile(s) {
   function setText(id, text) {
     const el = document.getElementById(id);

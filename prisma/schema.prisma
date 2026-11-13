@@ -82,8 +82,71 @@ model Student {
   companies       Company[]
   placement       InternshipPlacement?
 
+  // รอบออกฝึกที่นิสิตเลือก (เช่น 2/2568, 3/2569 Summer, 1/2570)
+  internshipWindowId Int?
+  internshipWindow   InternshipWindow? @relation(fields: [internshipWindowId], references: [id], onDelete: SetNull)
+
   createdAt       DateTime        @default(now())
   updatedAt       DateTime        @updatedAt
+}
+
+// =====================================================================
+// 2.1 รุ่น (Cohort) และรอบออกฝึก (Internship Window) รายสาขา
+//     รุ่น = รหัสนิสิต 2 ตัวแรก (เช่น "67") / แต่ละสาขาในรุ่นมีได้หลายรอบออกฝึก (ปกติ + Summer)
+// =====================================================================
+
+enum CohortStatus {
+  ACTIVE   // กำลังใช้งาน
+  ARCHIVED // ปิดรุ่น / เก็บเข้าประวัติ (อ่านอย่างเดียว)
+}
+
+enum InternshipTermType {
+  REGULAR // ภาคเรียนปกติ
+  SUMMER  // ภาคฤดูร้อน
+}
+
+model InternshipCohort {
+  id         Int                @id @default(autoincrement())
+  code       String             @unique // รหัสรุ่น เช่น "67"
+  status     CohortStatus       @default(ACTIVE)
+  note       String?
+  archivedAt DateTime?
+  archivedBy String?
+
+  windows    InternshipWindow[]
+
+  createdAt  DateTime           @default(now())
+  updatedAt  DateTime           @updatedAt
+}
+
+model InternshipWindow {
+  id            Int                @id @default(autoincrement())
+  cohortId      Int
+  cohort        InternshipCohort   @relation(fields: [cohortId], references: [id], onDelete: Cascade)
+
+  majorCode     String             // รหัสสาขา เช่น "SE" (ดู src/utils/majors.ts)
+  term          String             // รอบเทอมที่ออกฝึก เช่น "2/2568", "3/2569"
+  termType      InternshipTermType @default(REGULAR)
+  isOptional    Boolean            @default(false) // รอบไม่บังคับ (เช่น Summer)
+
+  openDate      DateTime?          @db.Date // ช่วงเปิดยื่นบริษัท
+  closeDate     DateTime?          @db.Date
+  internEndDate DateTime?          @db.Date // วันสิ้นสุดการฝึก (ใช้ปลดล็อก CV/ชั่วโมงอบรมอัตโนมัติ)
+
+  isUnlocked    Boolean            @default(false) // พี่จอมกดปลดล็อก
+  extendedOpen  Boolean            @default(false) // เปิดต่อพิเศษหลังพ้นวันปิด (Override Auto-lock)
+  isCompleted   Boolean            @default(false) // พี่จอมกด "จบรอบ" เอง
+  completedAt   DateTime?
+  note          String?
+  sortOrder     Int                @default(0)
+
+  students      Student[]
+
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+
+  @@unique([cohortId, majorCode, term])
+  @@index([majorCode])
 }
 
 // อาจารย์ที่ปรึกษา / อาจารย์รายวิชา / อาจารย์นิเทศก์ / เจ้าหน้าที่ (Staff)

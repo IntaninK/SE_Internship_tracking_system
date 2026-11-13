@@ -13,6 +13,7 @@ import {
   getStudentRoundState,
 } from "../utils/superAdminStore";
 import { analyzeAcceptanceForm, fetchFileBuffer } from "../utils/acceptanceOcr";
+import cohortRouter, { getOpenMajorsSummary } from "./cohortRoutes";
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -51,6 +52,9 @@ const router = express.Router();
 
 // ต้อง login + เป็น admin หรือ staff ทุก route ภายใต้ /api/admin
 router.use(requireAdmin);
+
+// รุ่น & รอบออกฝึก (หน้า "รอบฝึกงาน & ปลดล็อก")
+router.use(cohortRouter);
 
 const STATUS_LABELS: Record<string, Record<string, string>> = {
   readiness: {
@@ -298,6 +302,20 @@ function filterStudentsByScope(students: any[], req: Request): any[] {
   return filtered;
 }
 
+/**
+ * กรองนิสิตตาม "รอบออกฝึก" (เทอมของ InternshipWindow ที่นิสิตผูกไว้ เช่น "2/2568")
+ * term = "NONE" -> นิสิตที่ยังไม่ได้ผูกรอบ
+ */
+async function applyWindowTermFilter<T extends { internshipWindowId: number | null }>(list: T[], term?: unknown): Promise<T[]> {
+  const t = String(term || "").trim();
+  if (!t) return list;
+  if (t === "NONE") return list.filter((s) => !s.internshipWindowId);
+  const ids = new Set(
+    (await prisma.internshipWindow.findMany({ where: { term: t }, select: { id: true } })).map((w) => w.id)
+  );
+  return list.filter((s) => s.internshipWindowId !== null && ids.has(s.internshipWindowId));
+}
+
 // ==========================================
 // 1. Dashboard Summary — สรุปสถิตินิสิตทั้งหมด (กราฟวงกลม 4 อัน + สรุปจำนวน)
 // ==========================================
@@ -322,6 +340,7 @@ router.get("/dashboard-summary", async (req: Request, res: Response) => {
     if (req.query.semester) {
       students = students.filter((s) => (s.semester || "2") === String(req.query.semester));
     }
+    students = await applyWindowTermFilter(students, req.query.windowTerm);
 
     // ตรวจสอบและสร้างข้อมูล Staff ให้อัตโนมัติสำหรับ User ที่มี role ADVISOR / STAFF / ADMIN (ถ้ายังไม่มีในตาราง Staff)
     const staffUsers = await prisma.user.findMany({
@@ -542,7 +561,7 @@ router.get("/students", async (req: Request, res: Response) => {
       orderBy: { studentCode: "desc" },
     });
 
-    const allStudents = filterStudentsByScope(allStudentsRaw, req);
+    const allStudents = await applyWindowTermFilter(filterStudentsByScope(allStudentsRaw, req), req.query.windowTerm);
 
     // Map สถานะแต่ละคนด้วยฟังก์ชัน categorizeStudent เดียวกัน
     let mapped = allStudents.map((s) => {
@@ -1559,7 +1578,7 @@ router.get("/export", async (req: Request, res: Response) => {
       orderBy: { studentCode: "asc" },
     });
 
-    let exportData = students.map((s) => {
+    let exportData = (await applyWindowTermFilter(students, req.query.windowTerm)).map((s) => {
       // 5. ชั่วโมงอบรม Soft Skill & Hard Skill ที่ Approved
       const approvedTrainings = (s.trainingRecords || []).filter((t: any) => t.status === "APPROVED");
       const softHours = approvedTrainings
@@ -2159,17 +2178,11 @@ router.get("/super-admin/overview", async (req: Request, res: Response) => {
       saveSuperAdminState(state);
     }
 
-    // นับจำนวนนิสิตในแต่ละสาขาวิชาสำหรับแสดงในหน้า Unlock สาขา
-    const majorCounts: Record<string, number> = {};
-    for (const rule of state.majorUnlockRules) {
-      majorCounts[rule.code] = allStudents.filter((s) => {
-        const m = `${s.major || ""} ${s.curriculum || ""}`;
-        return m.includes(rule.majorName);
-      }).length;
-    }
-
     // สร้างรายการคิวงานเอกสารราชการ (Document Workflow Queue)
     // นโยบายใหม่: นิสิตยื่นได้ทีละ 1 บริษัท -> ที่ปรึกษาอนุมัติ Checklist -> ออกหนังสือขอความอนุเคราะห์ (+แบบตอบรับ) -> บริษัทส่งใบตอบรับ (รับ/ปฏิเสธ) -> ถ้ารับ พี่จอมอนุมัติและออกหนังสือส่งตัว
+    const windowsById = new Map(
+      (await prisma.internshipWindow.findMany({ select: { id: true, term: true, termType: true } })).map((w) => [w.id, w])
+    );
     const documentQueue = allStudents.map((s) => {
       const cat = categorizeStudent(s);
       const activeCompany =
@@ -2227,6 +2240,9 @@ router.get("/super-admin/overview", async (req: Request, res: Response) => {
         companyId: activeCompany?.id || null,
         companyName: companyName || "ยังไม่ยื่นบริษัท",
         inMasterData,
+        cohortCode: (s.studentCode || "").slice(0, 2),
+        windowTerm: s.internshipWindowId ? windowsById.get(s.internshipWindowId)?.term || "" : "",
+        windowIsSummer: s.internshipWindowId ? windowsById.get(s.internshipWindowId)?.termType === "SUMMER" : false,
         position,
         companyAddress: s.placement?.companyAddress || "-",
         companyProvince: s.placement?.province || "-",
@@ -2297,10 +2313,7 @@ router.get("/super-admin/overview", async (req: Request, res: Response) => {
     res.json({
       success: true,
       academicConfig: state.academicConfig,
-      majorUnlockRules: state.majorUnlockRules.map((r) => ({
-        ...r,
-        studentCount: majorCounts[r.code] || 0,
-      })),
+      internshipOverview: await getOpenMajorsSummary(),
       trainingEvents: state.trainingEvents,
       companyMasterData: state.companyMasterData,
       pendingMasterCompaniesCount: state.companyMasterData.filter(
@@ -2383,72 +2396,6 @@ router.delete("/super-admin/academic-config/signature", (_req: Request, res: Res
 });
 
 // 9.2 ปลดล็อก / ล็อก รอบการยื่นขอฝึกงานตามสาขาวิชา (Major Unlocking)
-router.post("/super-admin/major-unlock", async (req: Request, res: Response) => {
-  try {
-    const state = loadSuperAdminState();
-    const { code, isUnlocked, targetTerm, openDate, closeDate, note, bulkAction, rules: incomingRules } = req.body;
-
-    if (bulkAction === "UPDATE_ALL" && Array.isArray(incomingRules)) {
-      for (const inc of incomingRules) {
-        const rule = state.majorUnlockRules.find((r) => r.code === inc.code);
-        if (rule) {
-          if (typeof inc.isUnlocked === "boolean") rule.isUnlocked = inc.isUnlocked;
-          if (inc.targetTerm !== undefined) rule.targetTerm = String(inc.targetTerm).trim();
-          if (inc.openDate !== undefined) rule.openDate = String(inc.openDate).trim();
-          if (inc.closeDate !== undefined) rule.closeDate = String(inc.closeDate).trim();
-          if (inc.note !== undefined) rule.note = String(inc.note).trim();
-          rule.updatedAt = new Date().toISOString();
-        }
-      }
-      saveSuperAdminState(state);
-      return res.json({
-        success: true,
-        message: "บันทึกกำหนดการและรอบฝึกงานของทั้ง 8 สาขาวิชาเรียบร้อยแล้ว",
-        majorUnlockRules: state.majorUnlockRules,
-      });
-    }
-
-    if (bulkAction === "UNLOCK_ALL" || bulkAction === "LOCK_ALL") {
-      const unlockFlag = bulkAction === "UNLOCK_ALL";
-      state.majorUnlockRules = state.majorUnlockRules.map((r) => ({
-        ...r,
-        isUnlocked: unlockFlag,
-        updatedAt: new Date().toISOString(),
-      }));
-      saveSuperAdminState(state);
-      return res.json({
-        success: true,
-        message: unlockFlag
-          ? "ปลดล็อกระบบยื่นขอฝึกงานครบทั้ง 8 สาขาวิชาแล้ว"
-          : "ล็อกระบบยื่นขอฝึกงานทั้ง 8 สาขาวิชาชั่วคราวแล้ว",
-        majorUnlockRules: state.majorUnlockRules,
-      });
-    }
-
-    const rule = state.majorUnlockRules.find((r) => r.code === code);
-    if (!rule) {
-      return res.status(404).json({ success: false, message: "ไม่พบรหัสสาขาวิชาที่ระบุ" });
-    }
-
-    if (typeof isUnlocked === "boolean") rule.isUnlocked = isUnlocked;
-    if (targetTerm !== undefined) rule.targetTerm = String(targetTerm).trim();
-    if (openDate !== undefined) rule.openDate = String(openDate).trim();
-    if (closeDate !== undefined) rule.closeDate = String(closeDate).trim();
-    if (note !== undefined) rule.note = String(note).trim();
-    rule.updatedAt = new Date().toISOString();
-
-    saveSuperAdminState(state);
-    res.json({
-      success: true,
-      message: `อัปเดตสถานะสาขาวิชา${rule.majorName} (${rule.code}) เป็น "${rule.isUnlocked ? "ปลดล็อกให้ยื่นฝึกงาน" : "ล็อกชั่วคราว"}" เรียบร้อยแล้ว`,
-      rule,
-    });
-  } catch (err) {
-    console.error("POST /api/admin/super-admin/major-unlock error:", err);
-    res.status(500).json({ success: false, message: "อัปเดตสถานะการปลดล็อกสาขาไม่สำเร็จ" });
-  }
-});
-
 // 9.3 สร้างกิจกรรมอบรมภายในคณะ (รองรับหลายช่วงเวลา / หลายวัน และกำหนดชั่วโมงแต่ละช่วงเองได้)
 router.post("/super-admin/events", async (req: Request, res: Response) => {
   try {

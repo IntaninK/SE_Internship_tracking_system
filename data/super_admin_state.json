@@ -366,11 +366,18 @@
     "1": {
       "studentId": 1,
       "studentCode": "67024964",
-      "companyName": "ยังไม่ยื่นบริษัท",
-      "requestLetterIssued": false,
-      "companyResponseStatus": "NOT_SENT",
+      "companyName": "บริษัท กสิกร บิซิเนส-เทคโนโลยี กรุ๊ป (KBTG)",
+      "interviewDate": "2026-02-15",
+      "requestLetterIssued": true,
+      "requestLetterDocNo": "อว 7316/ว 253",
+      "requestLetterDate": "2026-11-11",
+      "companyResponseStatus": "ADVISOR_APPROVED",
+      "companyResponseFileName": "แบบตอบรับนิสิตฝึกงานtest.pdf",
+      "companyResponseFileUrl": "https://res.cloudinary.com/j5ccelrs/image/upload/v1794388940/se_internship/acceptance_forms/1794388937255-____________________test.pdf",
+      "advisorAcceptanceStatus": "APPROVED",
       "dispatchLetterIssued": false,
-      "isLocked": false
+      "isLocked": false,
+      "unlockedByAdmin": true
     },
     "41": {
       "studentId": 41,
@@ -503,35 +510,11 @@
   "studentRoundsMap": {
     "1": {
       "studentId": 1,
-      "currentRound": 2,
-      "currentTerm": "Summer 3/2569",
-      "isRound1Completed": true,
-      "historyRounds": [
-        {
-          "round": 1,
-          "term": "2/2568",
-          "academicYear": "2568",
-          "semester": "2",
-          "companyName": "บริษัท กสิกร บิซิเนส-เทคโนโลยี กรุ๊ป (KBTG)",
-          "position": "Frontend Developer",
-          "companyAddress": "46/1 อาคาร KBTG ถ.สาทรเหนือ แขวงสีลม เขตบางรัก",
-          "province": "กรุงเทพมหานคร",
-          "contactPersonName": "-",
-          "phone": "02-008-0000",
-          "email": "recruitment@kbtg.tech",
-          "checklistStatus": "APPROVED",
-          "requestLetterDocNo": "อว 7316/ว 253",
-          "requestLetterDate": "2026-11-11",
-          "requestLetterIssued": true,
-          "companyResponseStatus": "ADVISOR_APPROVED",
-          "companyResponseFileUrl": "https://res.cloudinary.com/j5ccelrs/image/upload/v1794388940/se_internship/acceptance_forms/1794388937255-____________________test.pdf",
-          "companyResponseFileName": "แบบตอบรับนิสิตฝึกงานtest.pdf",
-          "dispatchLetterIssued": false,
-          "completedAt": "2026-11-13T04:10:52.079Z"
-        }
-      ],
-      "isSameCompanyAsRound1": false,
-      "round1CompletedAt": "2026-11-13T04:10:52.079Z"
+      "currentRound": 1,
+      "currentTerm": "2/2568",
+      "isRound1Completed": false,
+      "historyRounds": [],
+      "isSameCompanyAsRound1": false
     }
   }
 }

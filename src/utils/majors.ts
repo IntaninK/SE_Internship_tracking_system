@@ -9,18 +9,28 @@ export interface IctMajor {
   code: string;
   name: string;       // ชื่อมาตรฐานที่ใช้เก็บใน DB เช่น "วิศวกรรมซอฟต์แวร์"
   keywords: string[]; // คำที่ใช้จับคู่ค่าดิบ เช่น "221 วิศวกรรมซอฟต์แวร์", "สาขาวิชาภูมิสารสนเทศ"
+  prepSchedule: string;   // ช่วงเรียนเตรียมความพร้อม (ตามหลักสูตร)
+  internSchedule: string; // ช่วงออกฝึกงาน (ตามหลักสูตร)
 }
 
-// ลำดับตามที่แสดงใน dropdown ของระบบ
+// ลำดับตามที่แสดงใน dropdown ของระบบ / โครงสร้างรอบเป็นข้อมูลจริงตามหลักสูตรคณะ ICT
 export const ICT_MAJORS: IctMajor[] = [
-  { code: "SE", name: "วิศวกรรมซอฟต์แวร์", keywords: ["วิศวกรรมซอฟต์แวร์", "software engineering"] },
-  { code: "DB", name: "ธุรกิจดิจิทัล", keywords: ["ธุรกิจดิจิทัล", "digital business"] },
-  { code: "CS", name: "วิทยาการคอมพิวเตอร์", keywords: ["วิทยาการคอมพิวเตอร์", "computer science"] },
-  { code: "IT", name: "เทคโนโลยีสารสนเทศ", keywords: ["เทคโนโลยีสารสนเทศ", "information technology"] },
-  { code: "CPE", name: "วิศวกรรมคอมพิวเตอร์", keywords: ["วิศวกรรมคอมพิวเตอร์", "computer engineering"] },
-  { code: "CGM", name: "คอมพิวเตอร์กราฟิกและมัลติมีเดีย", keywords: ["คอมพิวเตอร์กราฟิก", "computer graphic"] },
-  { code: "GIS", name: "ภูมิสารสนเทศศาสตร์", keywords: ["ภูมิสารสนเทศ", "geographic information"] },
-  { code: "DSA", name: "วิทยาการข้อมูลและการประยุกต์", keywords: ["วิทยาการข้อมูล", "data science"] },
+  { code: "SE", name: "วิศวกรรมซอฟต์แวร์", keywords: ["วิศวกรรมซอฟต์แวร์", "software engineering"],
+    prepSchedule: "ปี 3 เทอม 1", internSchedule: "ปี 3 เทอม 2 (ออกฝึกเทอมถัดไปทันที)" },
+  { code: "DB", name: "ธุรกิจดิจิทัล", keywords: ["ธุรกิจดิจิทัล", "digital business"],
+    prepSchedule: "ปี 3 เทอม 2", internSchedule: "ปี 4 เทอม 1" },
+  { code: "CS", name: "วิทยาการคอมพิวเตอร์", keywords: ["วิทยาการคอมพิวเตอร์", "computer science"],
+    prepSchedule: "ปี 3 เทอม 1-2", internSchedule: "ปี 4 เทอม 1 หรือ เทอม 2" },
+  { code: "IT", name: "เทคโนโลยีสารสนเทศ", keywords: ["เทคโนโลยีสารสนเทศ", "information technology"],
+    prepSchedule: "ปี 3 เทอม 2", internSchedule: "ปี 4 เทอม 1" },
+  { code: "CPE", name: "วิศวกรรมคอมพิวเตอร์", keywords: ["วิศวกรรมคอมพิวเตอร์", "computer engineering"],
+    prepSchedule: "ปี 3 เทอม 1-2", internSchedule: "ปี 4 เทอม 1 หรือ เทอม 2" },
+  { code: "CGM", name: "คอมพิวเตอร์กราฟิกและมัลติมีเดีย", keywords: ["คอมพิวเตอร์กราฟิก", "computer graphic"],
+    prepSchedule: "ปี 3 เทอม 2", internSchedule: "ปี 4 เทอม 1" },
+  { code: "GIS", name: "ภูมิสารสนเทศศาสตร์", keywords: ["ภูมิสารสนเทศ", "geographic information"],
+    prepSchedule: "ปี 3 เทอม 2", internSchedule: "ปี 4 เทอม 1" },
+  { code: "DSA", name: "วิทยาการข้อมูลและการประยุกต์", keywords: ["วิทยาการข้อมูล", "data science"],
+    prepSchedule: "ปี 3 เทอม 1-2", internSchedule: "ปี 4 เทอม 1" },
 ];
 
 /** หาสาขาจากค่าดิบ (รองรับเลขนำหน้า เช่น "221 วิศวกรรมซอฟต์แวร์", คำนำหน้า "สาขาวิชา", ชื่ออังกฤษ, หรือรหัสย่อ) */
