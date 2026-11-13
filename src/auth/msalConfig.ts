@@ -26,4 +26,3 @@ export const REDIRECT_URI: string =
 // scope พื้นฐานพอสำหรับได้ชื่อ + อีเมล ไม่ต้องขอสิทธิ์เพิ่มจนกว่าจะต้องเรียก Graph API จริงๆ
 export const SCOPES: string[] = ["openid", "profile", "email", "User.Read"];
 
-module.exports = { msalClient, REDIRECT_URI, SCOPES };

@@ -1,8 +1,15 @@
 node_modules
 dist/
+.next/
+out/
+next-env.d.ts
+*.tsbuildinfo
+public/client-scripts/
+
 # Keep environment variables out of version control
 .env
 
+src/generated/prisma
 /generated/prisma
 test01.js
 server_test.js
@@ -12,4 +19,11 @@ server_test.js
 .claude/
 .windsurf/
 .vscode/
-docs/
+docs/*
+!docs/requirements/
+super_admin_state.json
+data/super_admin_state.json
+__pycache__/
+
+# Local Claude context
+CLAUDE.md

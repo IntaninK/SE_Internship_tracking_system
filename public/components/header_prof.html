@@ -1,0 +1,31 @@
+<header class="header-bar ict-persistent-topbar">
+    <!-- Left: [REQ-01] Persistent User Identity & Current Role -->
+    <div class="ict-topbar-identity" id="ict-user-identity-box">
+        <div class="ict-role-avatar role-advisor" id="ict-topbar-avatar">
+            <span class="material-icons" id="ict-topbar-avatar-icon" style="font-size:22px;">supervisor_account</span>
+        </div>
+        <div class="ict-identity-meta">
+            <div class="ict-identity-topline">
+                <span class="ict-identity-label">บทบาทปัจจุบัน:</span>
+                <span class="ict-role-pill role-advisor" id="ict-topbar-role-pill">กำลังตรวจสอบสิทธิ์...</span>
+                <span id="ict-topbar-dept-badge" style="display:none; font-size:11px; font-weight:600; color:#4338CA; background:#EEF2FF; border:1px solid #C7D2FE; padding:1px 8px; border-radius:999px;"></span>
+            </div>
+            <div class="ict-identity-bottomline">
+                <span class="ict-user-fullname" id="ict-topbar-user-name">ระบบบริหารจัดการการฝึกงาน คณะ ICT ม.พะเยา</span>
+                <span class="ict-user-subinfo" id="ict-topbar-user-sub">(University of Phayao)</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Right: [REQ-01] Multi-Role Switcher + Logout -->
+    <div class="ict-role-switcher-wrap">
+        <div id="ict-role-switcher-container" style="display:none; align-items:center; gap:8px;">
+            <span class="ict-switcher-label">สลับสิทธิ์:</span>
+            <div class="ict-switcher-pills" id="ict-switcher-pills"></div>
+        </div>
+        <a href="/auth/logout" class="ict-logout-btn" title="ออกจากระบบ">
+            <span class="material-icons" style="font-size:16px;">logout</span>
+            <span>ออกจากระบบ</span>
+        </a>
+    </div>
+</header>

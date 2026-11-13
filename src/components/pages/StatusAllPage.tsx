@@ -1,0 +1,240 @@
+"use client";
+
+import React from "react";
+import PageShell from "./PageShell";
+
+const PAGE_TITLE = "จัดการข้อมูลและติดตามสถานะการฝึกงาน - คณะ ICT ม.พะเยา";
+const PAGE_STYLES: string[] = [];
+const PAGE_SCRIPTS: string[] = [
+  "../components/header.js",
+  "../api/status_all_tabs.js",
+  "../api/status_all.js"
+];
+const PAGE_BODY_HTML = "<!-- Header -->\r\n  <div id=\"header-placeholder\"></div>\r\n\r\n  <!-- Main Content -->\r\n  <main class=\"main-content\">\r\n\r\n    <!-- แจ้งเตือนกรณีถูกดรอป / ถอนออกจากรอบฝึกงาน -->\r\n    <div id=\"dropped-student-banner\" style=\"display:none;\" class=\"mb-5 bg-red-50 border-l-4 border-red-500 p-4 rounded-r-xl shadow-sm\">\r\n      <div class=\"flex items-start\">\r\n        <div class=\"flex-shrink-0\">\r\n          <span class=\"material-icons text-red-500 text-3xl\">warning</span>\r\n        </div>\r\n        <div class=\"ml-3 flex-1\">\r\n          <h3 class=\"text-base font-bold text-red-800\">\r\n            สถานะ: คุณถูกดรอป / ถอนออกจากรอบการฝึกงาน\r\n          </h3>\r\n          <div class=\"mt-1 text-sm text-red-700\">\r\n            <p><strong>เหตุผล:</strong> <span id=\"dropped-banner-reason\">-</span></p>\r\n            <p class=\"mt-0.5 text-xs text-gray-500\"><strong>วันที่ทำรายการ:</strong> <span id=\"dropped-banner-date\">-</span></p>\r\n          </div>\r\n          <p class=\"mt-2 text-xs text-red-600\">\r\n            * หากมีข้อสงสัยหรือต้องการยื่นคำร้องเพื่อกลับเข้าสู่กระบวนการฝึกงาน กรุณาติดต่ออาจารย์ประจำรายวิชา (Admin)\r\n          </p>\r\n        </div>\r\n      </div>\r\n    </div>\r\n\r\n    <!-- 1. ข้อมูลส่วนตัวนิสิต -->\r\n    <section class=\"card\">\r\n      <div class=\"card-header\">\r\n        <span class=\"material-icons header-icon\">how_to_reg</span>\r\n        <h2 class=\"card-title\">ข้อมูลส่วนตัวนิสิต (Student Personal Data)</h2>\r\n        <div style=\"margin-left:auto; display:flex; align-items:center; gap:6px; flex-wrap:wrap;\"><span class=\"srs-reg-lock-tag\">🔒 ข้อมูลวิชาการจาก REG ถูกล็อค</span><span class=\"srs-editable-tag\">✏️ แก้ไขข้อมูลติดต่อได้</span></div>\r\n      </div>\r\n      <div class=\"card-body\">\r\n        <div class=\"info-row\">\r\n          <!-- Photo Upload -->\r\n          <div class=\"upload-zone upload-zone--photo\" id=\"photo-dropzone\" style=\"cursor: pointer; position: relative;\">\r\n            <input type=\"file\" id=\"profile-photo-input\" accept=\"image/*\" style=\"display: none;\" />\r\n            <img id=\"profile-photo-preview\" src=\"\" alt=\"Profile Photo\" style=\"display: none; width: 100%; height: 100%; object-fit: cover; border-radius: 12px;\" />\r\n            <div id=\"photo-prompt\" style=\"display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;\">\r\n              <span class=\"material-icons\">cloud_upload</span>\r\n              <p>Drag and drop files here, or click to browse<br>JPG/PNG up to 10MB each</p>\r\n            </div>\r\n          </div>\r\n          <!-- Fields -->\r\n\r\n          <div class=\"flex-1 min-w-[280px] flex flex-col gap-5 max-[900px]:w-full max-[900px]:min-w-0\" style=\"flex: 1 1 320px;\">\r\n\r\n            <div class=\"flex flex-wrap gap-[16px_24px] max-[560px]:flex-col max-[560px]:gap-4\">\r\n                <div class=\"flex flex-col gap-[10px] min-w-[140px] max-[560px]:min-w-0 max-[560px]:w-full\" style=\"flex: 1.33 1 200px;\">\r\n                    <label class=\"text-[20px] font-semibold text-[#323639] leading-[1.35]\">ชื่อ-สกุล (ไทย)</label>\r\n                    <input class=\"input-field text-[18px] font-medium\" id=\"prof-nameTh\"/>\r\n                </div>\r\n                <div class=\"flex flex-col gap-[10px] min-w-[140px] max-[560px]:min-w-0 max-[560px]:w-full\" style=\"flex: 1 1 140px;\">\r\n                    <label class=\"text-[20px] font-semibold text-[#323639] leading-[1.35]\">รหัสนิสิต</label>\r\n                    <input class=\"input-field text-[18px] font-medium\" id=\"prof-studentCode\"/>\r\n                </div>\r\n            </div>\r\n\r\n            <div class=\"flex flex-wrap gap-[16px_24px] max-[560px]:flex-col max-[560px]:gap-4\">\r\n                <div class=\"flex flex-col gap-[10px] min-w-[140px] max-[560px]:min-w-0 max-[560px]:w-full\" style=\"flex: 1.33 1 200px;\">\r\n                    <label class=\"text-[20px] font-semibold text-[#323639] leading-[1.35]\">Name & Surname (English)</label>\r\n                    <input class=\"input-field text-[18px] font-medium\" id=\"prof-nameEn\"/>\r\n                </div>\r\n                <div class=\"flex flex-col gap-[10px] min-w-[140px] max-[560px]:min-w-0 max-[560px]:w-full\" style=\"flex: 1 1 140px;\">\r\n                    <label class=\"text-[20px] font-semibold text-[#323639] leading-[1.35]\">ชั้นปีที่</label>\r\n                    <input class=\"input-field text-[18px] font-medium\" id=\"prof-year\" readonly />\r\n                </div>\r\n            </div>\r\n\r\n            <div class=\"flex flex-wrap gap-[16px_24px] max-[560px]:flex-col max-[560px]:gap-4\">\r\n              <div class=\"flex flex-col gap-[10px] min-w-[140px] max-[560px]:min-w-0 max-[560px]:w-full\" style=\"flex: 1.33 1 200px;\">\r\n                  <label class=\"text-[20px] font-semibold text-[#323639] leading-[1.35]\">อาจารย์ที่ปรึกษา</label>\r\n                  <select class=\"input-field text-[18px] font-medium\" id=\"prof-advisor\">\r\n                    <option value=\"\">-- เลือกอาจารย์ที่ปรึกษา --</option>\r\n                  </select>\r\n              </div>\r\n              <div class=\"flex flex-col gap-[10px] min-w-[140px] max-[360px]:min-w-0 max-[560px]:w-full\" style=\"flex: 1.33 1 200px;\">\r\n                  <label class=\"text-[20px] font-semibold text-[#323639] leading-[1.35]\">สาขาวิชา</label>\r\n                  <input class=\"input-field text-[18px] font-medium\" id=\"prof-major\"/>\r\n              </div>\r\n              <div class=\"flex flex-col gap-[10px] min-w-[140px] max-[360px]:min-w-0 max-[560px]:w-full\" style=\"flex: 1 1 140px;\">\r\n                  <label class=\"text-[20px] font-semibold text-[#323639] leading-[1.35]\">เกรดเฉลี่ย</label>\r\n                  <input class=\"input-field text-[18px] font-medium\" id=\"prof-gpa\"/>                            \r\n              </div>\r\n            </div>\r\n        \r\n\r\n          <div class=\"flex flex-col gap-[10px]\">\r\n              <div class=\"flex flex-wrap gap-[16px_24px] max-[560px]:flex-col max-[560px]:gap-4\">\r\n                  <div class=\"flex flex-col gap-[10px] min-w-[140px] max-[560px]:min-w-0 max-[560px]:w-full\" style=\"flex: 1 1 160px;\">\r\n                      <label class=\"text-[20px] font-semibold text-[#323639] leading-[1.35]\">E-mail</label>\r\n                      <input class=\"input-field text-[18px] font-medium\" id=\"prof-email\"  value=\"\"/>\r\n                  </div>\r\n                  <div class=\"flex flex-col gap-[10px] min-w-[140px] max-[560px]:min-w-0 max-[560px]:w-full\" style=\"flex: 1 1 160px;\">\r\n                      <label class=\"text-[20px] font-semibold  text-[#323639] leading-[1.35]\">เบอร์โทร</label>\r\n                      <input class=\"input-field text-[18px] font-medium\" id=\"prof-phone\"  value=\"\"/>\r\n                  </div>\r\n              </div>\r\n\r\n              <div class=\"flex flex-wrap gap-[16px_24px] max-[560px]:flex-col max-[560px]:gap-4\">\r\n                  <div class=\"flex flex-col gap-[10px] min-w-[140px] max-[560px]:min-w-0 max-[560px]:w-full\" style=\"flex: 1 1 160px;\">\r\n                      <label class=\"text-[20px] font-semibold text-[#323639] leading-[1.35]\">Line ID</label>\r\n                      <input class=\"input-field text-[18px] font-medium\" id=\"prof-lineId\"  value=\"\"/>\r\n                  </div>\r\n                  <div class=\"flex flex-col gap-[10px] min-w-[140px] max-[560px]:min-w-0 max-[560px]:w-full\" style=\"flex: 1 1 160px;\">\r\n                      <label class=\"text-[20px] font-semibold text-[#323639] leading-[1.35]\">Facebook</label>\r\n                      <input class=\"input-field text-[18px] font-medium\" id=\"prof-facebook\"  value=\"\"/>\r\n                  </div>\r\n              </div>\r\n            </div>\r\n          </div>\r\n        </div>\r\n        <div class=\"table-footer\" style=\"margin-top: 24px; display: flex; justify-content: center;\">\r\n          <button type=\"button\" class=\"btn btn-primary btn-md\" id=\"save-profile-btn\">\r\n            <span class=\"material-icons\">save</span>\r\n            บันทึกข้อมูลส่วนตัว\r\n          </button>\r\n        </div>\r\n      </div>\r\n    </section>\r\n\r\n    <!-- 2. ชั่วโมงการอบรม -->\r\n    <section class=\"card\">\r\n      <div class=\"card-header\">\r\n        <span class=\"material-icons header-icon\">assignment</span>\r\n        <h2 class=\"card-title\">ชั่วโมงการอบรม</h2>\r\n        <a href=\"/pages/Certificate.html\" class=\"btn btn-md\" style=\"margin-left: auto; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; background: #16a34a; color: #ffffff; border: none; font-weight: 600;\">\r\n          <span class=\"material-icons\">add_circle</span>\r\n          เพิ่มข้อมูล\r\n        </a>\r\n      </div>\r\n      <div class=\"card-body\">\r\n        <table class=\"data-table\">\r\n          <thead>\r\n            <tr>\r\n              <th>ลำดับ</th>\r\n              <th>ชื่อกิจกรรมอบรม/Certificate</th>\r\n              <th>ประเภทชั่วโมง</th>\r\n              <th>จำนวนชั่วโมง</th>\r\n              <th>อนุมัติใบCert.</th>\r\n              <th>หมายเหตุ</th>\r\n              <th></th>\r\n              <th></th>\r\n            </tr>\r\n          </thead>\r\n          <tbody id=\"trainings-table-body\">\r\n            <tr>\r\n              <td colspan=\"8\" style=\"text-align: center; color: #888; padding: 20px;\">กำลังโหลดข้อมูล...</td>\r\n            </tr>\r\n          </tbody>\r\n        </table>\r\n      </div>\r\n    </section>\r\n\r\n    <!-- 3. กรอกใบ CV -->\r\n    <section class=\"card\">\r\n      <div class=\"card-header\">\r\n        <span class=\"material-icons header-icon\">how_to_reg</span>\r\n        <h2 class=\"card-title\">กรอกใบ CV</h2>\r\n        <button type=\"button\" id=\"cv-change-btn\" class=\"btn btn-sm\" onclick=\"document.getElementById('cv-upload-input').click(); event.stopPropagation();\" style=\"display: none; margin-left: auto; background: #16a34a; color: #ffffff; border: none; border-radius: 20px; padding: 8px 24px; font-weight: 600;\">เปลี่ยนไฟล์ CV</button>\r\n      </div>\r\n      <div class=\"card-body\">\r\n        <div class=\"upload-zone upload-zone--file\" id=\"cv-upload-zone\" style=\"position: relative; cursor: pointer; padding: 20px;\">\r\n          <input type=\"file\" id=\"cv-upload-input\" accept=\"image/*,.pdf\" style=\"display: none;\">\r\n          \r\n          <!-- Default Upload State -->\r\n          <div id=\"cv-upload-content\" style=\"display: flex; flex-direction: column; align-items: center; justify-content: center;\">\r\n            <span class=\"material-icons\">cloud_upload</span>\r\n            <p>Drag and drop files here, or click to browse<br>PDF หรือ Image ไม่เกิน 10MB each</p>\r\n            <button type=\"button\" class=\"btn btn-tonal btn-sm\" onclick=\"document.getElementById('cv-upload-input').click(); event.stopPropagation();\">Browse Files</button>\r\n          </div>\r\n\r\n          <!-- Preview State -->\r\n          <div id=\"cv-preview-container\" style=\"display: none; flex-direction: column; align-items: center; gap: 15px;\">\r\n            <p id=\"cv-status-badge\" style=\"font-weight: 500; font-size: 14px; margin-bottom: 5px;\"></p>\r\n            <img id=\"cv-preview-img\" src=\"\" alt=\"CV Preview\" style=\"display: none; max-width: 100%; max-height: 400px; border: 1px solid #ddd; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); cursor: zoom-in;\" onclick=\"openCvModal(); event.stopPropagation();\">\r\n            <div id=\"cv-preview-pdf\" style=\"display: none; flex-direction: column; align-items: center; cursor: zoom-in; padding: 20px; border: 1px solid #ddd; border-radius: 8px; background-color: #f9f9f9; width: 100%; max-width: 300px;\" onclick=\"openCvModal(); event.stopPropagation();\">\r\n              <span class=\"material-icons\" style=\"font-size: 64px; color: #d32f2f;\">picture_as_pdf</span>\r\n              <p id=\"cv-pdf-name\" style=\"margin-top: 10px; text-align: center; word-break: break-all; font-weight: 500;\"></p>\r\n              <p style=\"font-size: 12px; color: #666; margin-top: 5px;\">คลิกเพื่อดู PDF</p>\r\n            </div>\r\n          </div>\r\n        </div>\r\n      </div>\r\n    </section>\r\n\r\n    <!-- Card แสดงเงื่อนไขการปลดล็อก Checklist และสถานะการยื่น (ส่วนที่ 4 และ 5) -->\r\n    <section class=\"card\" id=\"checklist-locked-card\" style=\"display: none; border: 2px dashed #93c5fd; background-color: #f8fafc;\">\r\n      <div class=\"card-header\" style=\"background: #f1f5f9; border-bottom: 1px solid #e2e8f0;\">\r\n        <span class=\"material-icons header-icon\" style=\"color: #2563eb;\">lock</span>\r\n        <h2 class=\"card-title\" style=\"color: #334155;\">เงื่อนไขการปลดล็อก \"Checklist และสถานะการยื่น\"</h2>\r\n      </div>\r\n      <div class=\"card-body\" style=\"padding: 20px;\">\r\n        <p style=\"color: #475569; font-size: 15px; margin-bottom: 16px; font-weight: 500;\">\r\n          กรุณาทำตามขั้นตอนด้านบนให้ครบถ้วนทั้ง 2 ข้อ เพื่อปลดล็อกการทำ Checklist บริษัทและติดตามสถานะการยื่น:\r\n        </p>\r\n        <div style=\"display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px;\">\r\n          <div id=\"step-req-training\" style=\"display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-radius: 10px; background: white; border: 1px solid #e2e8f0;\">\r\n            <span class=\"material-icons\" id=\"step-req-training-icon\" style=\"color: #94a3b8; font-size: 24px;\">hourglass_empty</span>\r\n            <div>\r\n              <p style=\"font-weight: 600; font-size: 14px; margin: 0;\" id=\"step-req-training-title\">1. ชั่วโมงการอบรม</p>\r\n              <p style=\"font-size: 12px; color: #64748b; margin: 2px 0 0 0;\" id=\"step-req-training-desc\">Soft 0/12 ชม. | Hard 0/18 ชม.</p>\r\n            </div>\r\n          </div>\r\n          <div id=\"step-req-cv\" style=\"display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-radius: 10px; background: white; border: 1px solid #e2e8f0;\">\r\n            <span class=\"material-icons\" id=\"step-req-cv-icon\" style=\"color: #94a3b8; font-size: 24px;\">hourglass_empty</span>\r\n            <div>\r\n              <p style=\"font-weight: 600; font-size: 14px; margin: 0;\" id=\"step-req-cv-title\">2. กรอกใบ CV</p>\r\n              <p style=\"font-size: 12px; color: #64748b; margin: 2px 0 0 0;\" id=\"step-req-cv-desc\">รออาจารย์ตรวจผ่าน</p>\r\n            </div>\r\n          </div>\r\n        </div>\r\n      </div>\r\n    </section>\r\n\r\n    <!-- 4. Checklist -->\r\n    <section class=\"card\" id=\"checklist-section\">\r\n      <div class=\"card-header\">\r\n        <span class=\"material-icons header-icon\">how_to_reg</span>\r\n        <h2 class=\"card-title\">Checklist</h2>\r\n        <a href=\"/pages/checklist.html\" class=\"btn btn-md\" style=\"margin-left: auto; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; background: #16a34a; color: #ffffff; border: none; font-weight: 600;\">\r\n          <span class=\"material-icons\">add_circle</span>\r\n          เพิ่มข้อมูล\r\n        </a>\r\n      </div>\r\n      <div class=\"card-body\">\r\n        <table class=\"data-table\">\r\n          <thead>\r\n            <tr>\r\n              <th>ลำดับ</th>\r\n              <th>Checklist / ชื่อบริษัท</th>\r\n              <th>สถานะ</th>\r\n              <th>หมายเหตุ</th>\r\n              <th></th>\r\n            </tr>\r\n          </thead>\r\n          <tbody id=\"companies-table-body\">\r\n            <tr>\r\n              <td colspan=\"5\" style=\"text-align: center; color: #888; padding: 20px;\">ยังไม่มีข้อมูลบริษัท</td>\r\n            </tr>\r\n          </tbody>\r\n        </table>\r\n      </div>\r\n    </section>\r\n\r\n    <!-- 5. สถานะการยื่น -->\r\n    <section class=\"card\" id=\"submission-section\">\r\n      <div class=\"card-header\">\r\n        <span class=\"material-icons header-icon\">how_to_reg</span>\r\n        <h2 class=\"card-title\">สถานะการยื่น</h2>\r\n      </div>\r\n      <div class=\"card-body\">\r\n        <table class=\"data-table\">\r\n          <thead>\r\n            <tr>\r\n              <th>ลำดับ</th>\r\n              <th>Checklist / ชื่อบริษัท</th>\r\n              <th>สถานะ</th>\r\n              <th>หมายเหตุ</th>\r\n            </tr>\r\n          </thead>\r\n          <tbody id=\"submissions-table-body\">\r\n            <tr>\r\n              <td colspan=\"4\" style=\"text-align: center; color: #666; padding: 20px;\">\r\n                ยังไม่มีบริษัทที่ผ่านการอนุมัติ Checklist (จะแสดงรายชื่อเมื่ออาจารย์ตรวจให้ผ่าน)\r\n              </td>\r\n            </tr>\r\n          </tbody>\r\n        </table>\r\n      </div>\r\n    </section>\r\n\r\n    <!-- Card แสดงความคืบหน้า / เงื่อนไขการปลดล็อกส่วนที่ 6 -->\r\n    <section class=\"card\" id=\"placement-locked-card\" style=\"display: none; border: 2px dashed #93c5fd; background-color: #f8fafc;\">\r\n      <div class=\"card-header\" style=\"background: #f1f5f9; border-bottom: 1px solid #e2e8f0;\">\r\n        <span class=\"material-icons header-icon\" style=\"color: #2563eb;\">lock</span>\r\n        <h2 class=\"card-title\" style=\"color: #334155;\">เงื่อนไขการปลดล็อก \"ข้อมูลบริษัท ที่เข้าฝึกงาน\"</h2>\r\n      </div>\r\n      <div class=\"card-body\" style=\"padding: 20px;\">\r\n        <p style=\"color: #475569; font-size: 15px; margin-bottom: 16px; font-weight: 500;\">\r\n          กรุณาทำตามขั้นตอนด้านบนให้ครบถ้วนทั้ง 4 ข้อ เพื่อปลดล็อกแท็บกรอกข้อมูลบริษัทที่เข้าฝึกงานจริง:\r\n        </p>\r\n        <div style=\"display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px;\">\r\n          <div id=\"req-cv\" style=\"display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-radius: 10px; background: white; border: 1px solid #e2e8f0;\">\r\n            <span class=\"material-icons\" id=\"req-cv-icon\" style=\"color: #94a3b8; font-size: 24px;\">hourglass_empty</span>\r\n            <div>\r\n              <p style=\"font-weight: 600; font-size: 14px; margin: 0;\" id=\"req-cv-title\">1. กรอกใบ CV</p>\r\n              <p style=\"font-size: 12px; color: #64748b; margin: 2px 0 0 0;\" id=\"req-cv-desc\">รออาจารย์ตรวจผ่าน</p>\r\n            </div>\r\n          </div>\r\n          <div id=\"req-training\" style=\"display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-radius: 10px; background: white; border: 1px solid #e2e8f0;\">\r\n            <span class=\"material-icons\" id=\"req-training-icon\" style=\"color: #94a3b8; font-size: 24px;\">hourglass_empty</span>\r\n            <div>\r\n              <p style=\"font-weight: 600; font-size: 14px; margin: 0;\" id=\"req-training-title\">2. ชั่วโมงการอบรม</p>\r\n              <p style=\"font-size: 12px; color: #64748b; margin: 2px 0 0 0;\" id=\"req-training-desc\">Soft 0/12 ชม. | Hard 0/18 ชม.</p>\r\n            </div>\r\n          </div>\r\n          <div id=\"req-checklist\" style=\"display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-radius: 10px; background: white; border: 1px solid #e2e8f0;\">\r\n            <span class=\"material-icons\" id=\"req-checklist-icon\" style=\"color: #94a3b8; font-size: 24px;\">hourglass_empty</span>\r\n            <div>\r\n              <p style=\"font-weight: 600; font-size: 14px; margin: 0;\" id=\"req-checklist-title\">3. Checklist บริษัท</p>\r\n              <p style=\"font-size: 12px; color: #64748b; margin: 2px 0 0 0;\" id=\"req-checklist-desc\">ต้องมีบริษัทที่อาจารย์รีวิวผ่านแล้ว</p>\r\n            </div>\r\n          </div>\r\n          <div id=\"req-interview\" style=\"display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-radius: 10px; background: white; border: 1px solid #e2e8f0;\">\r\n            <span class=\"material-icons\" id=\"req-interview-icon\" style=\"color: #94a3b8; font-size: 24px;\">hourglass_empty</span>\r\n            <div>\r\n              <p style=\"font-weight: 600; font-size: 14px; margin: 0;\" id=\"req-interview-title\">4. สถานะการยื่น</p>\r\n              <p style=\"font-size: 12px; color: #64748b; margin: 2px 0 0 0;\" id=\"req-interview-desc\">ต้องมีบริษัทที่ \"สัมภาษณ์ผ่านแล้ว\"</p>\r\n            </div>\r\n          </div>\r\n        </div>\r\n      </div>\r\n    </section>\r\n\r\n    <!-- 6. ข้อมูลบริษัท ที่เข้าฝึกงาน -->\r\n    <section class=\"card\" id=\"placement-section\" style=\"display: none;\">\r\n      <div class=\"card-header\">\r\n        <span class=\"material-icons header-icon\">how_to_reg</span>\r\n        <h2 class=\"card-title\">ข้อมูลบริษัท ที่เข้าฝึกงาน</h2>\r\n      </div>\r\n      <div class=\"card-body\">\r\n        <!-- Badge แสดงสถานะการอนุมัติที่ฝึกงานจากอาจารย์ -->\r\n        <div id=\"plc-status-container\" style=\"display: none; margin-bottom: 20px; padding: 12px 18px; border-radius: 8px; background: #f8fafc; border: 1px solid #e2e8f0; align-items: center; gap: 10px;\">\r\n          <span id=\"plc-status-badge\" class=\"status-wait\" style=\"font-size: 14px; font-weight: 600; padding: 4px 12px; border-radius: 6px;\">สถานะ: ☐ รอผล</span>\r\n          <span id=\"plc-status-note\" style=\"font-size: 14px; color: #475569;\"></span>\r\n        </div>\r\n\r\n        <form id=\"placement-form\">\r\n          <div class=\"form-grid\">\r\n            <div class=\"form-group\">\r\n              <label class=\"form-label\">ตำแหน่งที่ฝึก</label>\r\n              <input type=\"text\" class=\"input-field\" id=\"plc-position\" value=\"Software Developer\" required>\r\n            </div>\r\n            <div class=\"form-group\">\r\n              <label class=\"form-label\">ชื่อแหล่งฝึกงาน</label>\r\n              <div id=\"company-field-wrapper\" style=\"position: relative; width: 100%;\">\r\n                <select class=\"input-field\" id=\"plc-company-select\" style=\"width: 100%;\">\r\n                  <option value=\"\">-- เลือกบริษัทที่สัมภาษณ์ผ่านแล้ว --</option>\r\n                  <option value=\"__other__\">อื่นๆ (กรอกระบุเอง)</option>\r\n                </select>\r\n                <div id=\"plc-custom-company-wrap\" style=\"display: none; position: relative; width: 100%;\">\r\n                  <input type=\"text\" class=\"input-field\" id=\"plc-companyNameTh\" placeholder=\"กรอกชื่อแหล่งฝึกงาน...\" style=\"width: 100%; padding-right: 125px;\">\r\n                  <button type=\"button\" id=\"btn-back-to-select\" style=\"position: absolute; right: 6px; top: 50%; transform: translateY(-50%); background: #ffffff; border: 1px solid #cbd5e1; border-radius: 8px; padding: 4px 10px; font-size: 12px; font-family: inherit; color: #475569; cursor: pointer; display: flex; align-items: center; gap: 4px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); transition: all 0.15s ease;\" onmouseover=\"this.style.background='#f1f5f9';this.style.borderColor='#94a3b8';\" onmouseout=\"this.style.background='#ffffff';this.style.borderColor='#cbd5e1';\" title=\"กลับไปเลือกจากรายการ\">\r\n                    <span class=\"material-icons\" style=\"font-size: 14px; color: #2563eb;\">list</span> เลือกจากรายการ\r\n                  </button>\r\n                </div>\r\n              </div>\r\n            </div>\r\n            <div class=\"form-group\">\r\n              <label class=\"form-label\">ชื่อบุคคลที่ให้ทำหนังสือขอความอนุเคราะห์</label>\r\n              <input type=\"text\" class=\"input-field\" id=\"plc-contactPersonName\" placeholder=\"...\" required>\r\n            </div>\r\n            <div class=\"form-group\">\r\n              <label class=\"form-label\">ตำแหน่งบุคคลที่ให้ทำหนังสือขอความอนุเคราะห์</label>\r\n              <input type=\"text\" class=\"input-field\" id=\"plc-contactPersonPosition\" placeholder=\"...\" required>\r\n            </div>\r\n            <div class=\"form-group\">\r\n              <label class=\"form-label\">ที่อยู่บริษัท</label>\r\n              <input type=\"text\" class=\"input-field\" id=\"plc-companyAddress\" placeholder=\"...\" required>\r\n            </div>\r\n            <div class=\"form-group\">\r\n              <label class=\"form-label\">เบอร์โทรติดต่อสถานประกอบการ / แหล่งฝึก</label>\r\n              <input type=\"text\" class=\"input-field\" id=\"plc-companyPhone1\" value=\"\" required>\r\n            </div>\r\n            <div class=\"form-group\">\r\n              <label class=\"form-label\">เบอร์โทรติดต่อสถานประกอบการ / แหล่งฝึก (สำรอง)</label>\r\n              <input type=\"text\" class=\"input-field\" id=\"plc-companyPhone2\" placeholder=\"\" required>\r\n            </div>\r\n            <div class=\"form-group\">\r\n              <label class=\"form-label\">Email สถานประกอบการ / แหล่งฝึก</label>\r\n              <input type=\"email\" class=\"input-field\" id=\"plc-companyEmail\" value=\"...@gmail.com\" required>\r\n            </div>\r\n            <div class=\"form-group\">\r\n              <label class=\"form-label\">จังหวัด</label>\r\n              <select class=\"input-field\" id=\"plc-province\" required>\r\n                <option value=\"\" disabled selected>-- เลือกจังหวัด --</option>\r\n                <option value=\"กรุงเทพมหานคร\">กรุงเทพมหานคร</option>\r\n                <option value=\"กระบี่\">กระบี่</option>\r\n                <option value=\"กาญจนบุรี\">กาญจนบุรี</option>\r\n                <option value=\"กาฬสินธุ์\">กาฬสินธุ์</option>\r\n                <option value=\"กำแพงเพชร\">กำแพงเพชร</option>\r\n                <option value=\"ขอนแก่น\">ขอนแก่น</option>\r\n                <option value=\"จันทบุรี\">จันทบุรี</option>\r\n                <option value=\"ฉะเชิงเทรา\">ฉะเชิงเทรา</option>\r\n                <option value=\"ชลบุรี\">ชลบุรี</option>\r\n                <option value=\"ชัยนาท\">ชัยนาท</option>\r\n                <option value=\"ชัยภูมิ\">ชัยภูมิ</option>\r\n                <option value=\"ชุมพร\">ชุมพร</option>\r\n                <option value=\"เชียงราย\">เชียงราย</option>\r\n                <option value=\"เชียงใหม่\">เชียงใหม่</option>\r\n                <option value=\"ตรัง\">ตรัง</option>\r\n                <option value=\"ตราด\">ตราด</option>\r\n                <option value=\"ตาก\">ตาก</option>\r\n                <option value=\"นครนายก\">นครนายก</option>\r\n                <option value=\"นครปฐม\">นครปฐม</option>\r\n                <option value=\"นครพนม\">นครพนม</option>\r\n                <option value=\"นครราชสีมา\">นครราชสีมา</option>\r\n                <option value=\"นครศรีธรรมราช\">นครศรีธรรมราช</option>\r\n                <option value=\"นครสวรรค์\">นครสวรรค์</option>\r\n                <option value=\"นนทบุรี\">นนทบุรี</option>\r\n                <option value=\"นราธิวาส\">นราธิวาส</option>\r\n                <option value=\"น่าน\">น่าน</option>\r\n                <option value=\"บึงกาฬ\">บึงกาฬ</option>\r\n                <option value=\"บุรีรัมย์\">บุรีรัมย์</option>\r\n                <option value=\"ปทุมธานี\">ปทุมธานี</option>\r\n                <option value=\"ประจวบคีรีขันธ์\">ประจวบคีรีขันธ์</option>\r\n                <option value=\"ปราจีนบุรี\">ปราจีนบุรี</option>\r\n                <option value=\"ปัตตานี\">ปัตตานี</option>\r\n                <option value=\"พะเยา\">พะเยา</option>\r\n                <option value=\"พระนครศรีอยุธยา\">พระนครศรีอยุธยา</option>\r\n                <option value=\"พังงา\">พังงา</option>\r\n                <option value=\"พัทลุง\">พัทลุง</option>\r\n                <option value=\"พิจิตร\">พิจิตร</option>\r\n                <option value=\"พิษณุโลก\">พิษณุโลก</option>\r\n                <option value=\"เพชรบุรี\">เพชรบุรี</option>\r\n                <option value=\"เพชรบูรณ์\">เพชรบูรณ์</option>\r\n                <option value=\"แพร่\">แพร่</option>\r\n                <option value=\"ภูเก็ต\">ภูเก็ต</option>\r\n                <option value=\"มหาสารคาม\">มหาสารคาม</option>\r\n                <option value=\"มุกดาหาร\">มุกดาหาร</option>\r\n                <option value=\"แม่ฮ่องสอน\">แม่ฮ่องสอน</option>\r\n                <option value=\"ยโสธร\">ยโสธร</option>\r\n                <option value=\"ยะลา\">ยะลา</option>\r\n                <option value=\"ร้อยเอ็ด\">ร้อยเอ็ด</option>\r\n                <option value=\"ระนอง\">ระนอง</option>\r\n                <option value=\"ระยอง\">ระยอง</option>\r\n                <option value=\"ราชบุรี\">ราชบุรี</option>\r\n                <option value=\"ลพบุรี\">ลพบุรี</option>\r\n                <option value=\"ลำปาง\">ลำปาง</option>\r\n                <option value=\"ลำพูน\">ลำพูน</option>\r\n                <option value=\"เลย\">เลย</option>\r\n                <option value=\"ศรีสะเกษ\">ศรีสะเกษ</option>\r\n                <option value=\"สกลนคร\">สกลนคร</option>\r\n                <option value=\"สงขลา\">สงขลา</option>\r\n                <option value=\"สตูล\">สตูล</option>\r\n                <option value=\"สมุทรปราการ\">สมุทรปราการ</option>\r\n                <option value=\"สมุทรสงคราม\">สมุทรสงคราม</option>\r\n                <option value=\"สมุทรสาคร\">สมุทรสาคร</option>\r\n                <option value=\"สระแก้ว\">สระแก้ว</option>\r\n                <option value=\"สระบุรี\">สระบุรี</option>\r\n                <option value=\"สิงห์บุรี\">สิงห์บุรี</option>\r\n                <option value=\"สุโขทัย\">สุโขทัย</option>\r\n                <option value=\"สุพรรณบุรี\">สุพรรณบุรี</option>\r\n                <option value=\"สุราษฎร์ธานี\">สุราษฎร์ธานี</option>\r\n                <option value=\"สุรินทร์\">สุรินทร์</option>\r\n                <option value=\"หนองคาย\">หนองคาย</option>\r\n                <option value=\"หนองบัวลำภู\">หนองบัวลำภู</option>\r\n                <option value=\"อ่างทอง\">อ่างทอง</option>\r\n                <option value=\"อำนาจเจริญ\">อำนาจเจริญ</option>\r\n                <option value=\"อุดรธานี\">อุดรธานี</option>\r\n                <option value=\"อุตรดิตถ์\">อุตรดิตถ์</option>\r\n                <option value=\"อุทัยธานี\">อุทัยธานี</option>\r\n                <option value=\"อุบลราชธานี\">อุบลราชธานี</option>\r\n              </select>\r\n            </div>\r\n          </div>\r\n\r\n          <div class=\"btn-submit-wrap\">\r\n            <button type=\"submit\" class=\"btn btn-primary btn-lg\">ยืนยันและบันทึก</button>\r\n          </div>\r\n        </form>\r\n      </div>\r\n    </section>\r\n\r\n  </main>\r\n\r\n  <!-- CV Modal -->\r\n  <div id=\"cv-modal\" style=\"display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 1000; justify-content: center; align-items: center; cursor: zoom-out; backdrop-filter: blur(2px);\" onclick=\"closeCvModal()\">\r\n    <div style=\"position: relative; width: 90%; height: 90%; display: flex; justify-content: center; align-items: center; cursor: default;\" onclick=\"event.stopPropagation();\">\r\n      <img id=\"cv-modal-img\" src=\"\" alt=\"Full CV\" style=\"display: none; max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); background-color: white;\">\r\n      <iframe id=\"cv-modal-pdf\" src=\"\" style=\"display: none; width: 100%; height: 100%; border: none; border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); background-color: white;\"></iframe>\r\n      <button onclick=\"closeCvModal()\" style=\"position: absolute; top: -40px; right: 0; background: none; border: none; color: white; cursor: pointer;\">\r\n        <span class=\"material-icons\" style=\"font-size: 32px;\">close</span>\r\n      </button>\r\n    </div>\r\n  </div>";
+
+const STUDENT_PROFILE_CONTENT_HTML = `
+<div class="student-profile-layout">
+  <div class="student-profile-top-grid">
+    <section class="student-profile-card student-profile-photo-card">
+      <h3 class="student-profile-card-title"><span class="material-icons">person</span> รูปประจำตัว <span class="student-profile-photo-size">ขนาด 1.5 - 2 นิ้ว</span></h3>
+      <div class="student-profile-photo-area">
+        <div class="upload-zone upload-zone--photo" id="photo-dropzone">
+          <input type="file" id="profile-photo-input" accept="image/jpeg,image/png" hidden />
+          <img id="profile-photo-preview" src="" alt="รูปประจำตัวนิสิต" />
+          <div id="photo-prompt">
+            <span class="material-icons">cloud_upload</span>
+            <p>ลากและวางไฟล์ภาพที่นี่<br />JPG/PNG ไม่เกิน 10MB</p>
+            <button type="button" class="btn btn-tonal btn-sm">เลือกไฟล์ภาพ</button>
+          </div>
+        </div>
+        <button type="button" class="btn btn-primary btn-sm student-profile-upload-button" onclick="document.getElementById('profile-photo-input').click()">
+          <span class="material-icons">upload</span> อัปโหลดรูปประจำตัว
+        </button>
+        <p class="student-profile-hint">แต่งกายด้วยชุดนิสิตถูกระเบียบ<br />เข้าโหลดรูปได้ที่ <a href="https://reg.up.ac.th/" target="_blank" rel="noopener noreferrer">reg.up.ac.th</a></p>
+      </div>
+    </section>
+
+    <section class="student-profile-card">
+      <h3 class="student-profile-card-title"><span class="material-icons">school</span> ข้อมูลการศึกษา / ทะเบียนประวัติ</h3>
+      <div class="student-profile-fields student-profile-education-fields">
+        <div class="student-profile-field">
+          <label for="prof-nameTh">ชื่อ-สกุล (ไทย) <span class="student-profile-reg-badge">🔒 REG</span></label>
+          <input class="input-field" id="prof-nameTh" readonly />
+        </div>
+        <div class="student-profile-field">
+          <label for="prof-nameEn">Name &amp; Surname (English)</label>
+          <input class="input-field" id="prof-nameEn" />
+        </div>
+        <div class="student-profile-field">
+          <label for="prof-studentCode">รหัสนิสิต <span class="student-profile-reg-badge">🔒 REG</span></label>
+          <input class="input-field" id="prof-studentCode" readonly />
+        </div>
+        <div class="student-profile-field">
+          <label for="prof-major">สาขา <span class="student-profile-reg-badge">🔒 REG</span></label>
+          <input class="input-field" id="prof-major" readonly />
+        </div>
+        <div class="student-profile-field">
+          <label for="prof-curriculum">หลักสูตร <span class="student-profile-reg-badge">🔒 REG</span></label>
+          <input class="input-field" id="prof-curriculum" readonly />
+        </div>
+        <div class="student-profile-field">
+          <label for="prof-faculty">คณะ <span class="student-profile-reg-badge">🔒 REG</span></label>
+          <input class="input-field" id="prof-faculty" readonly />
+        </div>
+        <div class="student-profile-field student-profile-field-full">
+          <label for="prof-email">Email (@up.ac.th) <span class="student-profile-reg-badge">🔒 REG</span></label>
+          <input class="input-field" id="prof-email" value="" readonly />
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <div class="student-profile-middle-grid">
+    <section class="student-profile-card">
+      <h3 class="student-profile-card-title"><span class="material-icons">person_outline</span> ข้อมูลส่วนบุคคลและการศึกษา</h3>
+      <div class="student-profile-fields">
+        <div class="student-profile-field">
+          <label for="prof-advisor">อาจารย์ที่ปรึกษา</label>
+          <select class="input-field" id="prof-advisor">
+            <option value="">-- เลือกอาจารย์ที่ปรึกษา --</option>
+          </select>
+        </div>
+        <div class="student-profile-field">
+          <label for="prof-phone">เบอร์โทรศัพท์ติดต่อ <span class="student-profile-required">*</span></label>
+          <input class="input-field" id="prof-phone" type="tel" inputmode="numeric" pattern="[0-9]{9,10}" maxlength="10" title="กรุณากรอกเบอร์โทรศัพท์เป็นตัวเลข 9-10 หลัก" required value="" />
+        </div>
+        <div class="student-profile-field">
+          <label for="prof-internship-start">วันที่เริ่มฝึกงาน <span class="student-profile-reg-badge">🔒 REG</span></label>
+          <input class="input-field" id="prof-internship-start" value="" placeholder="ข้อมูลจาก REG" readonly />
+        </div>
+        <div class="student-profile-field">
+          <label for="prof-internship-end">วันที่สิ้นสุดฝึกงาน <span class="student-profile-reg-badge">🔒 REG</span></label>
+          <input class="input-field" id="prof-internship-end" value="" placeholder="ข้อมูลจาก REG" readonly />
+        </div>
+      </div>
+      <input id="prof-year" type="hidden" />
+      <input id="prof-gpa" type="hidden" />
+    </section>
+
+    <section class="student-profile-card">
+      <h3 class="student-profile-card-title"><span class="material-icons">link</span> ข้อมูลการติดต่อและโซเชียลมีเดีย</h3>
+      <div class="student-profile-fields student-profile-contact-fields">
+        <div class="student-profile-field">
+          <label for="prof-lineId">Internship Email (gmail.com) <span class="student-profile-required">*</span></label>
+          <input class="input-field" id="prof-lineId" type="email" pattern="[^@\\s]+@gmail\\.com" title="กรุณากรอกอีเมลที่ลงท้ายด้วย @gmail.com" required value="" placeholder="name@gmail.com" />
+        </div>
+        <div class="student-profile-field">
+          <label for="prof-facebook">Github</label>
+          <input class="input-field" id="prof-facebook" type="text" value="" placeholder="Github" />
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <section class="student-profile-card student-profile-other-card">
+    <h3 class="student-profile-card-title"><span class="material-icons">description</span> อื่นๆ</h3>
+    <div class="student-profile-field">
+      <label for="prof-other">ข้อมูลเพิ่มเติม</label>
+      <textarea class="input-field student-profile-textarea" id="prof-other" placeholder="ข้อมูลเพิ่มเติม เช่น ความสามารถพิเศษ โรคประจำตัว หรือข้อจำกัด"></textarea>
+      <p class="student-profile-hint">ระบุข้อมูลเพิ่มเติมที่เป็นประโยชน์ต่อการฝึกงาน เช่น ความสามารถพิเศษ ความสนใจ หรือข้อมูลที่ควรแจ้งอาจารย์</p>
+    </div>
+  </section>
+
+  <div class="student-profile-actions">
+    <button type="button" class="btn btn-primary btn-md" id="save-profile-btn">
+      <span class="material-icons">save</span> บันทึกข้อมูลส่วนตัว
+    </button>
+  </div>
+</div>`;
+
+const STUDENT_PROFILE_PAGE_BODY_HTML = (() => {
+  const photoInputIndex = PAGE_BODY_HTML.indexOf('id="profile-photo-input"');
+  const contentStart = PAGE_BODY_HTML.lastIndexOf('<div class="info-row">', photoInputIndex);
+  const contentEnd = PAGE_BODY_HTML.indexOf('\r\n      </div>\r\n    </section>', contentStart);
+
+  if (photoInputIndex < 0 || contentStart < 0 || contentEnd < 0) {
+    throw new Error("Unable to locate the student profile content in StatusAllPage.");
+  }
+
+  return `${PAGE_BODY_HTML.slice(0, contentStart)}${STUDENT_PROFILE_CONTENT_HTML}${PAGE_BODY_HTML.slice(contentEnd)}`;
+})();
+
+// ---------------------------------------------------------------------------
+// Sidebar หมวดหมู่ (ฝั่งนิสิต) — สถานะเมนู/badge ถูกอัปเดตโดย status_all_tabs.js
+// ---------------------------------------------------------------------------
+function navButton(tab: string, icon: string, label: string, extraAttrs = ""): string {
+  return `
+          <button type="button" class="status-nav-item" data-tab="${tab}" aria-current="false"${extraAttrs}>
+            <span class="material-icons status-nav-icon" aria-hidden="true">${icon}</span>
+            <span class="status-nav-text">
+              <span class="status-nav-label">${label}</span>
+              <span class="status-nav-reason" data-nav-reason="${tab}"></span>
+            </span>
+            <span class="status-nav-badge" data-nav-badge="${tab}">…</span>
+          </button>`;
+}
+
+const STATUS_ALL_SIDEBAR_HTML = `
+      <aside class="status-all-sidebar" aria-label="เมนูหมวดหมู่ข้อมูลนิสิต">
+        <div class="status-brand">
+          <div class="status-brand-mark" aria-hidden="true"><span class="material-icons">school</span></div>
+          <div class="status-brand-text">
+            <div class="status-brand-title">ระบบเตรียมฝึกงาน</div>
+            <div class="status-brand-subtitle">Student · ICT UP</div>
+          </div>
+        </div>
+        <div class="status-nav-heading">หมวดหมู่</div>
+        <nav class="status-nav" id="status-all-nav" aria-label="หมวดข้อมูลการฝึกงาน">
+          ${navButton("personal", "how_to_reg", "ข้อมูลส่วนตัวนิสิต")}
+          ${navButton("training", "school", "ชั่วโมงการอบรม")}
+          ${navButton("cv", "description", "กรอกใบ CV")}
+          ${navButton("checklist-locked", "lock", "Checklist และสถานะการยื่น", ' data-stage="1" data-locked="true"')}
+          ${navButton("checklist", "fact_check", "Checklist", ' data-stage="2" hidden')}
+          ${navButton("submission", "send", "สถานะการยื่น", ' data-stage="2" hidden')}
+          ${navButton("placement", "business", "ข้อมูลบริษัทที่เข้าฝึกงาน", ' data-stage="2" hidden')}
+        </nav>
+        <div class="status-sidebar-note">
+          <strong>ข้อมูลการฝึกงานของนิสิต</strong>
+          กรอกข้อมูลให้ครบทีละหมวด เมนูถัดไปจะปลดล็อกอัตโนมัติเมื่อผ่านเงื่อนไข
+        </div>
+      </aside>`;
+
+// panel ที่แต่ละ <section class="card"> ระดับบนสุดอยู่ (เรียงตามลำดับในหน้า)
+const STATUS_ALL_SECTION_TABS = [
+  "personal",
+  "training",
+  "cv",
+  "checklist-locked", // #checklist-locked-card
+  "checklist", // #checklist-section
+  "submission", // #submission-section
+  "placement", // #placement-locked-card
+  "placement", // #placement-section
+];
+
+const STATUS_ALL_PAGE_BODY_HTML = (() => {
+  const html = STUDENT_PROFILE_PAGE_BODY_HTML;
+  const starts = [...html.matchAll(/<section class="card"/g)].map((m) => m.index as number);
+  const mainEnd = html.lastIndexOf("</main>");
+  const mainStart = html.indexOf("<main ");
+
+  if (starts.length !== STATUS_ALL_SECTION_TABS.length || mainEnd < 0 || mainStart < 0 || mainStart > starts[0]) {
+    throw new Error("Unable to locate the status-all sections for the sidebar layout.");
+  }
+
+  let panels = "";
+  let i = 0;
+  while (i < starts.length) {
+    const tab = STATUS_ALL_SECTION_TABS[i];
+    let j = i;
+    while (j + 1 < starts.length && STATUS_ALL_SECTION_TABS[j + 1] === tab) j++;
+    const end = j + 1 < starts.length ? starts[j + 1] : mainEnd;
+    const active = tab === "personal" ? " is-active" : "";
+    panels += `
+        <div class="status-all-panel${active}" data-panel="${tab}">
+        ${html.slice(starts[i], end).trimEnd()}
+        </div>`;
+    i = j + 1;
+  }
+
+  // โครงแบบเดียวกับ admin-dashboard: sidebar เต็มความสูงชิดซ้าย + <main> อยู่ด้านขวา
+  const mainOpenEnd = html.indexOf(">", mainStart) + 1;
+  const mainOpenTag = html.slice(mainStart, mainOpenEnd).replace('class="', 'class="status-all-main ');
+  return `${html.slice(0, mainStart)}<div class="status-all-shell">${STATUS_ALL_SIDEBAR_HTML}
+    ${mainOpenTag}${html.slice(mainOpenEnd, starts[0])}
+      <div class="status-all-panels">${panels}
+      </div>
+  ${html.slice(mainEnd, mainEnd + "</main>".length)}
+  </div>${html.slice(mainEnd + "</main>".length)}`;
+})();
+
+export default function StatusAllPage() {
+  return (
+    <PageShell
+      pageKey="status_all"
+      title={PAGE_TITLE}
+      styles={PAGE_STYLES}
+      scripts={PAGE_SCRIPTS}
+      bodyHtml={STATUS_ALL_PAGE_BODY_HTML}
+    />
+  );
+}

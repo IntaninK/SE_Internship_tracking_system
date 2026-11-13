@@ -1,4 +1,5 @@
 import * as xlsx from "xlsx";
+import { normalizeMajor } from "./majors";
 
 export interface ExtractedRowData {
   studentCode: string;
@@ -8,6 +9,8 @@ export interface ExtractedRowData {
   curriculum: string;
   gpa: number | null;
   studentStatus: string;
+  softSkillHours?: number | null;
+  hardSkillHours?: number | null;
 }
 
 export interface MatchedStudent {
@@ -16,9 +19,12 @@ export interface MatchedStudent {
   nameEn: string;
   year: number;
   major: string;
+  curriculum?: string;
   gpa: number | null;
   email: string;
   studentStatus: string;
+  softSkillHours?: number | null;
+  hardSkillHours?: number | null;
 }
 
 export interface SkippedStudent {
@@ -130,6 +136,8 @@ export function extractRowData(row: Record<string, any>): ExtractedRowData {
   const curriculum = findVal(/หลักสูตร|curriculum/i);
   const gpaRaw = findVal(/เกรด.*เฉลี่ย|^gpa$/i);
   const studentStatus = findVal(/สถานะ.*นิสิต|^สถานะ$/i);
+  const softRaw = findVal(/soft.*skill|ชั่วโมง.*soft/i);
+  const hardRaw = findVal(/hard.*skill|ชั่วโมง.*hard/i);
 
   let gpa: number | null = null;
   if (gpaRaw) {
@@ -139,6 +147,18 @@ export function extractRowData(row: Record<string, any>): ExtractedRowData {
     }
   }
 
+  let softSkillHours: number | null = null;
+  if (softRaw) {
+    const parsedSoft = parseInt(softRaw, 10);
+    if (!isNaN(parsedSoft) && parsedSoft >= 0) softSkillHours = parsedSoft;
+  }
+
+  let hardSkillHours: number | null = null;
+  if (hardRaw) {
+    const parsedHard = parseInt(hardRaw, 10);
+    if (!isNaN(parsedHard) && parsedHard >= 0) hardSkillHours = parsedHard;
+  }
+
   return {
     studentCode,
     nameTh,
@@ -146,7 +166,9 @@ export function extractRowData(row: Record<string, any>): ExtractedRowData {
     major,
     curriculum,
     gpa,
-    studentStatus
+    studentStatus,
+    softSkillHours,
+    hardSkillHours,
   };
 }
 
@@ -154,13 +176,17 @@ export function extractRowData(row: Record<string, any>): ExtractedRowData {
  * วิเคราะห์ไฟล์ Excel / CSV Buffer ที่อัปโหลดมาจาก REG
  * @param {Buffer} buffer 
  * @param {number|null} [customAcademicYear] ถ้าไม่ได้ระบุจะคำนวณอัตโนมัติตามเดือนมิถุนายน
+ * @param {{ targetDepartment?: string | null; allowAllMajors?: boolean }} [options]
  * @returns {ParseSpreadsheetResult}
  */
 export function parseStudentSpreadsheet(
   buffer: Buffer,
-  customAcademicYear: number | null = null
+  customAcademicYear: number | null = null,
+  options?: { targetDepartment?: string | null; allowAllMajors?: boolean }
 ): ParseSpreadsheetResult {
   const academicYear = customAcademicYear || calculateCurrentAcademicYear();
+  const allowAllMajors = Boolean(options?.allowAllMajors);
+  const targetDepartment = options?.targetDepartment || null;
   
   // อ่านไฟล์ Workbook
   const workbook = xlsx.read(buffer, { type: "buffer" });
@@ -195,17 +221,33 @@ export function parseStudentSpreadsheet(
     }
     seenStudentCodes.add(data.studentCode);
 
-    // ตรวจสอบเงื่อนไขสาขาวิศวกรรมซอฟต์แวร์
-    const isSE = isSoftwareEngineering(data.major, data.curriculum);
-    if (!isSE) {
-      skippedStudents.push({
-        rowNumber: i + 1,
-        studentCode: data.studentCode,
-        nameTh: data.nameTh || "-",
-        major: data.major || data.curriculum || "ไม่ระบุ",
-        reason: "ไม่ใช่สาขาวิศวกรรมซอฟต์แวร์"
-      });
-      continue;
+    // ตรวจสอบเงื่อนไขสาขาวิชา (ถ้าไม่ได้เปิด allowAllMajors สำหรับเจ้าหน้าที่คณะ/Admin กลาง)
+    if (!allowAllMajors) {
+      if (targetDepartment) {
+        const combined = `${data.major || ""} ${data.curriculum || ""}`.toLowerCase();
+        if (!combined.includes(targetDepartment.toLowerCase())) {
+          skippedStudents.push({
+            rowNumber: i + 1,
+            studentCode: data.studentCode,
+            nameTh: data.nameTh || "-",
+            major: data.major || data.curriculum || "ไม่ระบุ",
+            reason: `ไม่ใช่สาขา${targetDepartment}`,
+          });
+          continue;
+        }
+      } else {
+        const isSE = isSoftwareEngineering(data.major, data.curriculum);
+        if (!isSE) {
+          skippedStudents.push({
+            rowNumber: i + 1,
+            studentCode: data.studentCode,
+            nameTh: data.nameTh || "-",
+            major: data.major || data.curriculum || "ไม่ระบุ",
+            reason: "ไม่ใช่สาขาวิศวกรรมซอฟต์แวร์",
+          });
+          continue;
+        }
+      }
     }
 
     // คำนวณชั้นปี
@@ -219,10 +261,14 @@ export function parseStudentSpreadsheet(
       nameTh: data.nameTh,
       nameEn: "-",
       year,
-      major: data.major || "วิศวกรรมซอฟต์แวร์",
+      // ตัดเลขนำหน้า/คำนำหน้า เช่น "221 วิศวกรรมซอฟต์แวร์" -> "วิศวกรรมซอฟต์แวร์"
+      major: normalizeMajor(data.major || targetDepartment) || "วิศวกรรมซอฟต์แวร์",
+      curriculum: data.curriculum || undefined,
       gpa: data.gpa,
       email,
-      studentStatus: data.studentStatus || "กำลังศึกษา"
+      studentStatus: data.studentStatus || "กำลังศึกษา",
+      softSkillHours: data.softSkillHours ?? null,
+      hardSkillHours: data.hardSkillHours ?? null,
     });
   }
 
@@ -238,11 +284,126 @@ export function parseStudentSpreadsheet(
   };
 }
 
-module.exports = {
-  calculateCurrentAcademicYear,
-  calculateStudentYear,
-  isSoftwareEngineering,
-  parseStudentSpreadsheet,
-  cleanStr,
-  extractRowData,
-};
+export interface ExtractedCheckInRow {
+  studentCode: string;
+  hintName: string;
+  hintMajor: string;
+  rowNumber: number;
+}
+
+/**
+ * สแกนหารหัสนิสิตจากไฟล์ใบลงชื่อหน้างาน (.xlsx, .xls, .csv)
+ * รองรับทั้งไฟล์ที่มีหัวตารางและไม่มีหัวตาราง รวมถึงกรณีพิมพ์มือหรือก๊อปวางจาก Google Sheets
+ */
+export function parseCheckInSpreadsheet(buffer: Buffer): ExtractedCheckInRow[] {
+  const workbook = xlsx.read(buffer, { type: "buffer" });
+  if (!workbook.SheetNames || workbook.SheetNames.length === 0) {
+    throw new Error("ไม่พบแผ่นงาน (Sheet) ในไฟล์ที่อัปโหลด");
+  }
+
+  const results: ExtractedCheckInRow[] = [];
+  const seenCodes = new Set<string>();
+
+  for (const sheetName of workbook.SheetNames) {
+    const sheet = workbook.Sheets[sheetName];
+    if (!sheet) continue;
+
+    const rows = xlsx.utils.sheet_to_json<any[]>(sheet, { header: 1, defval: "" });
+    if (!rows || rows.length === 0) continue;
+
+    let codeColIdx = -1;
+    let nameColIdx = -1;
+    let majorColIdx = -1;
+
+    // ตรวจหาหัวคอลัมน์จาก 5 แถวแรก (ถ้ามี)
+    for (let r = 0; r < Math.min(rows.length, 5); r++) {
+      const row = rows[r];
+      if (!Array.isArray(row)) continue;
+      for (let c = 0; c < row.length; c++) {
+        const cellText = cleanStr(row[c]).replace(/\s+/g, "");
+        if (!cellText) continue;
+        if (codeColIdx === -1 && /รหัส.*นิสิต|student.*id|student.*code|^รหัส$/i.test(cellText)) {
+          codeColIdx = c;
+        } else if (nameColIdx === -1 && /ชื่อ.*สกุล|ชื่อ.*นิสิต|fullname|name|^ชื่อ$/i.test(cellText)) {
+          nameColIdx = c;
+        } else if (majorColIdx === -1 && /สาขา|หลักสูตร|major|department/i.test(cellText)) {
+          majorColIdx = c;
+        }
+      }
+      if (codeColIdx !== -1) break;
+    }
+
+    for (let r = 0; r < rows.length; r++) {
+      const row = rows[r];
+      if (!Array.isArray(row) || row.length === 0) continue;
+
+      let detectedCode = "";
+      let codeCellIndex = -1;
+
+      // 1. ถ้าทราบคอลัมน์รหัสนิสิตชัดเจน ให้ดึงจากคอลัมน์นั้นก่อน
+      if (codeColIdx !== -1 && row[codeColIdx] !== undefined) {
+        const rawCodeCell = cleanStr(row[codeColIdx]).replace(/[-\s]/g, "");
+        const match8 = rawCodeCell.match(/\b(\d{8})\b/);
+        if (match8) {
+          detectedCode = match8[1];
+          codeCellIndex = codeColIdx;
+        } else if (/^\d{6,10}$/.test(rawCodeCell)) {
+          // กรณีพิมพ์รหัสตกหล่นหรือเกินหลักในคอลัมน์รหัสนิสิต (เช่น 7 หรือ 9 หลัก) ให้ดึงมาแจ้งเตือนใน Preview
+          detectedCode = rawCodeCell;
+          codeCellIndex = codeColIdx;
+        }
+      }
+
+      // 2. ถ้ายังไม่เจอ ให้สแกนทุกช่องในแถวเพื่อหาเลข 8 หลัก (เช่น 64xxxxxx - 69xxxxxx)
+      if (!detectedCode) {
+        for (let c = 0; c < row.length; c++) {
+          const cellStr = cleanStr(row[c]).replace(/[-\s]/g, "");
+          if (!cellStr) continue;
+          const match = cellStr.match(/\b([567]\d{7})\b/);
+          if (match) {
+            detectedCode = match[1];
+            codeCellIndex = c;
+            break;
+          }
+        }
+      }
+
+      if (!detectedCode) continue;
+      if (seenCodes.has(detectedCode)) continue;
+      seenCodes.add(detectedCode);
+
+      // ดึงชื่อและสาขาจากแถวเดียวกัน (ถ้ามีในไฟล์) เพื่อใช้แสดงผลเสริมใน Preview
+      let hintName = "";
+      let hintMajor = "";
+
+      if (nameColIdx !== -1 && nameColIdx !== codeCellIndex && row[nameColIdx] !== undefined) {
+        hintName = cleanStr(row[nameColIdx]);
+      }
+      if (majorColIdx !== -1 && majorColIdx !== codeCellIndex && row[majorColIdx] !== undefined) {
+        hintMajor = cleanStr(row[majorColIdx]);
+      }
+
+      if (!hintName) {
+        for (let c = 0; c < row.length; c++) {
+          if (c === codeCellIndex || c === majorColIdx) continue;
+          const val = cleanStr(row[c]);
+          if (!val || /^\d+$/.test(val)) continue;
+          if (/[ก-๙a-zA-Z]{2,}/.test(val) && !/วิศวกรรม|วิทยาการ|เทคโนโลยี|คอมพิวเตอร์|สารสนเทศ|ภูมิสารสนเทศ|ธุรกิจ/i.test(val)) {
+            hintName = val;
+            break;
+          }
+        }
+      }
+
+      results.push({
+        studentCode: detectedCode,
+        hintName,
+        hintMajor,
+        rowNumber: r + 1,
+      });
+    }
+  }
+
+  return results;
+}
+

@@ -1,50 +1,63 @@
 import { Request, Response, NextFunction } from "express";
 import prisma from "../db";
 
-// Middleware: ตรวจสอบว่าเป็น ADVISOR, STAFF หรือ ADMIN
+// Middleware: ตรวจสอบว่าเป็นอาจารย์ที่ปรึกษา, อาจารย์นิเทศก์, อาจารย์รายวิชา หรือเจ้าหน้าที่
 export async function requireAdvisor(req: Request, res: Response, next: NextFunction) {
   if (!req.session || !req.session.user) {
-    return res.redirect("/pages/login.html");
-  }
-
-  // ซิงค์ role ล่าสุดจาก Database เผื่อกรณีเปลี่ยน role ใน DB ขณะที่ session เดิมยังเปิดอยู่
-  if (req.session.user.role !== "ADVISOR" && req.session.user.role !== "STAFF" && req.session.user.role !== "ADMIN") {
-    try {
-      const dbUser = await prisma.user.findUnique({
-        where: { id: req.session.user.id },
-        select: { role: true, username: true },
-      });
-      if (dbUser) {
-        req.session.user.role = dbUser.role;
-        if (dbUser.username) req.session.user.username = dbUser.username;
-      }
-    } catch (err) {
-      console.error("requireAdvisor sync role error:", err);
-    }
-  }
-
-  const role = req.session.user.role;
-  if (role !== "ADVISOR" && role !== "STAFF" && role !== "ADMIN") {
-    return res.status(403).json({
-      success: false,
-      message: "ไม่มีสิทธิ์เข้าถึง (สำหรับอาจารย์ที่ปรึกษาเท่านั้น)",
-    });
+    return res.redirect("/login");
   }
 
   try {
-    // หา Staff record ของ user นี้
-    let staff = await prisma.staff.findUnique({
-      where: { userId: req.session.user.id },
+    const dbUser = await prisma.user.findUnique({
+      where: { id: req.session.user.id },
+      include: { staff: true },
     });
+
+    if (!dbUser) {
+      return res.status(401).json({ success: false, message: "ไม่พบข้อมูลผู้ใช้" });
+    }
+
+    req.session.user.role = dbUser.role;
+    if (dbUser.username) req.session.user.username = dbUser.username;
+
+    let staff = dbUser.staff;
+    const role = dbUser.role;
+
+    const hasStaffAccess = Boolean(
+      staff?.isAdvisor ||
+        staff?.isSupervisor ||
+        staff?.isCourseAdmin ||
+        staff?.isStaff ||
+        role === "ADVISOR" ||
+        role === "STAFF" ||
+        role === "ADMIN"
+    );
+
+    if (!hasStaffAccess) {
+      return res.status(403).json({
+        success: false,
+        message: "ไม่มีสิทธิ์เข้าถึง (สำหรับอาจารย์ที่ปรึกษาเท่านั้น)",
+      });
+    }
 
     if (!staff) {
       staff = await prisma.staff.create({
         data: {
-          userId: req.session.user.id,
-          name: req.session.user.username || req.session.user.email,
+          userId: dbUser.id,
+          name: dbUser.username || dbUser.email,
+          isCourseAdmin: role === "ADMIN",
+          isAdvisor: role === "ADVISOR",
+          isStaff: role === "STAFF",
+          isSupervisor: false,
         },
       });
     }
+
+    req.session.user.isAdvisor = Boolean(staff.isAdvisor || role === "ADVISOR");
+    req.session.user.isCourseAdmin = Boolean(staff.isCourseAdmin || role === "ADMIN");
+    req.session.user.isSupervisor = Boolean(staff.isSupervisor);
+    req.session.user.isStaff = Boolean(staff.isStaff || role === "STAFF");
+    req.session.user.department = staff.department || null;
 
     req.staff = staff;
     next();
@@ -55,5 +68,3 @@ export async function requireAdvisor(req: Request, res: Response, next: NextFunc
 }
 
 export default requireAdvisor;
-module.exports = requireAdvisor;
-module.exports.default = requireAdvisor;

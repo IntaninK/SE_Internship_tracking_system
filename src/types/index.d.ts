@@ -8,6 +8,12 @@ declare module "express-session" {
       username: string;
       email: string;
       role: Role | string;
+      isAdvisor?: boolean;
+      isCourseAdmin?: boolean;
+      isSupervisor?: boolean;
+      isStaff?: boolean;
+      department?: string | null;
+      activeRole?: string;
     };
   }
 }
