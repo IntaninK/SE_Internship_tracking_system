@@ -6,7 +6,7 @@
     "deanSignatory": "ผู้ช่วยศาสตราจารย์ ดร.พรเทพ โรจนวสุ",
     "deanPosition": "คณบดีคณะเทคโนโลยีสารสนเทศและการสื่อสาร",
     "signatureDataUrl": "",
-    "updatedAt": "2026-11-10T03:08:55.071Z"
+    "updatedAt": "2026-11-13T09:11:02.821Z"
   },
   "majorUnlockRules": [
     {
@@ -19,7 +19,7 @@
       "openDate": "2026-01-01",
       "closeDate": "2026-04-30",
       "note": "เรียนเตรียมความพร้อมเทอมนี้ และออกฝึกงานในเทอมถัดไปทันที",
-      "updatedAt": "2026-11-10T03:08:55.071Z"
+      "updatedAt": "2026-11-13T09:11:02.821Z"
     },
     {
       "code": "CS",
@@ -31,7 +31,7 @@
       "openDate": "2026-06-01",
       "closeDate": "2026-08-31",
       "note": "เรียนเตรียมความพร้อมตอนปี 3 รอปลดล็อกยื่นขอฝึกงานตอนขึ้นปี 4",
-      "updatedAt": "2026-11-10T03:08:55.071Z"
+      "updatedAt": "2026-11-13T09:11:02.821Z"
     },
     {
       "code": "CPE",
@@ -43,7 +43,7 @@
       "openDate": "2026-06-01",
       "closeDate": "2026-08-31",
       "note": "เรียนเตรียมความพร้อมตอนปี 3 รอปลดล็อกยื่นขอฝึกงานตอนขึ้นปี 4",
-      "updatedAt": "2026-11-10T03:08:55.071Z"
+      "updatedAt": "2026-11-13T09:11:02.821Z"
     },
     {
       "code": "IT",
@@ -55,7 +55,7 @@
       "openDate": "2026-01-15",
       "closeDate": "2026-05-15",
       "note": "เปิดให้ยื่น Checklist และขอหนังสือขอความอนุเคราะห์รอบ 1/2569",
-      "updatedAt": "2026-11-10T03:08:55.071Z"
+      "updatedAt": "2026-11-13T09:11:02.821Z"
     },
     {
       "code": "DB",
@@ -67,7 +67,7 @@
       "openDate": "2026-01-15",
       "closeDate": "2026-05-15",
       "note": "เปิดให้ยื่น Checklist และขอหนังสือขอความอนุเคราะห์รอบ 1/2569",
-      "updatedAt": "2026-11-10T03:08:55.071Z"
+      "updatedAt": "2026-11-13T09:11:02.821Z"
     },
     {
       "code": "CGM",
@@ -79,7 +79,7 @@
       "openDate": "2026-06-01",
       "closeDate": "2026-08-31",
       "note": "อยู่ระหว่างสะสมชั่วโมงเตรียมความพร้อม รอปลดล็อกระบบยื่นบริษัท",
-      "updatedAt": "2026-11-10T03:08:55.071Z"
+      "updatedAt": "2026-11-13T09:11:02.821Z"
     },
     {
       "code": "GIS",
@@ -91,7 +91,7 @@
       "openDate": "2026-01-15",
       "closeDate": "2026-05-15",
       "note": "เปิดให้ยื่น Checklist สถานประกอบการตามกำหนดการหลักสูตร",
-      "updatedAt": "2026-11-10T03:08:55.071Z"
+      "updatedAt": "2026-11-13T09:11:02.821Z"
     },
     {
       "code": "DSA",
@@ -103,7 +103,7 @@
       "openDate": "2026-06-01",
       "closeDate": "2026-08-31",
       "note": "เรียนเตรียมความพร้อมปี 3 รอปลดล็อกยื่นสถานประกอบการตอนปี 4",
-      "updatedAt": "2026-11-10T03:08:55.071Z"
+      "updatedAt": "2026-11-13T09:11:02.821Z"
     }
   ],
   "trainingEvents": [
@@ -121,38 +121,7 @@
       "academicYear": "2568",
       "createdBy": "พี่จอม (เจ้าหน้าที่คณะ / Super Admin)",
       "createdAt": "2026-01-10T09:00:00.000Z",
-      "checkIns": [
-        {
-          "studentCode": "67024964",
-          "nameTh": "กันตินันท์ เก่งมาก",
-          "major": "วิศวกรรมซอฟต์แวร์",
-          "checkedInAt": "2026-11-11T02:26:56.935Z",
-          "trainingRecordId": 68,
-          "sessionId": "ALL",
-          "sessionTitle": "ทั้งกิจกรรม",
-          "creditedHours": 6
-        },
-        {
-          "studentCode": "67023110",
-          "nameTh": "เอกัทร อินทร์สวัสดิ์",
-          "major": "วิศวกรรมซอฟต์แวร์",
-          "checkedInAt": "2026-11-11T02:26:56.882Z",
-          "trainingRecordId": 67,
-          "sessionId": "ALL",
-          "sessionTitle": "ทั้งกิจกรรม",
-          "creditedHours": 6
-        }
-      ],
-      "sessions": [
-        {
-          "id": "SES-1",
-          "title": "ทั้งกิจกรรม",
-          "date": "2026-01-18",
-          "startTime": "09:00",
-          "endTime": "16:00",
-          "hours": 6
-        }
-      ]
+      "checkIns": []
     },
     {
       "id": "EVT-2568-02",
@@ -168,48 +137,7 @@
       "academicYear": "2568",
       "createdBy": "พี่จอม (เจ้าหน้าที่คณะ / Super Admin)",
       "createdAt": "2026-01-12T10:30:00.000Z",
-      "checkIns": [
-        {
-          "studentCode": "67099999",
-          "nameTh": "ไมเคิล แจ็คสัน",
-          "major": "วิศวกรรมซอฟต์แวร์",
-          "checkedInAt": "2026-11-12T07:42:58.715Z",
-          "trainingRecordId": 76,
-          "sessionId": "SES-1",
-          "sessionTitle": "ทั้งกิจกรรม (2026-01-25)",
-          "creditedHours": 6
-        },
-        {
-          "studentCode": "67024999",
-          "nameTh": "ซง โกคู",
-          "major": "วิศวกรรมซอฟต์แวร์",
-          "checkedInAt": "2026-11-12T07:42:58.667Z",
-          "trainingRecordId": 75,
-          "sessionId": "SES-1",
-          "sessionTitle": "ทั้งกิจกรรม (2026-01-25)",
-          "creditedHours": 6
-        },
-        {
-          "studentCode": "67023110",
-          "nameTh": "เอกัทร อินทร์สวัสดิ์",
-          "major": "วิศวกรรมซอฟต์แวร์",
-          "checkedInAt": "2026-11-12T07:42:58.613Z",
-          "trainingRecordId": 74,
-          "sessionId": "SES-1",
-          "sessionTitle": "ทั้งกิจกรรม (2026-01-25)",
-          "creditedHours": 6
-        }
-      ],
-      "sessions": [
-        {
-          "id": "SES-1",
-          "title": "ทั้งกิจกรรม",
-          "date": "2026-01-25",
-          "startTime": "08:30",
-          "endTime": "16:30",
-          "hours": 6
-        }
-      ]
+      "checkIns": []
     }
   ],
   "companyMasterData": [
@@ -226,7 +154,37 @@
       "status": "PENDING_REVIEW",
       "submittedByStudentCode": "67024999",
       "submittedByStudentName": "ซง โกคู",
-      "createdAt": "2026-11-13T04:08:22.587Z"
+      "createdAt": "2026-11-13T09:11:09.772Z"
+    },
+    {
+      "id": "COMP-NEW-19",
+      "nameTh": "google",
+      "nameEn": "-",
+      "province": "รอระบุจังหวัด",
+      "address": "รอตรวจสอบที่อยู่จากนิสิต",
+      "hrContactName": "-",
+      "hrPhone": "-",
+      "hrEmail": "-",
+      "recommendedPositions": "นักศึกษาฝึกงาน / สหกิจศึกษา",
+      "status": "PENDING_REVIEW",
+      "submittedByStudentCode": "67024965",
+      "submittedByStudentName": "test student",
+      "createdAt": "2026-11-11T06:47:37.701Z"
+    },
+    {
+      "id": "COMP-NEW-10",
+      "nameTh": "tesla",
+      "nameEn": "-",
+      "province": "ฉะเชิงเทรา",
+      "address": "13111/1",
+      "hrContactName": "HR",
+      "hrPhone": "098-999-9999",
+      "hrEmail": "sawat@pt.pypt",
+      "recommendedPositions": "Software Developer",
+      "status": "PENDING_REVIEW",
+      "submittedByStudentCode": "67012345",
+      "submittedByStudentName": "เอกภัทร",
+      "createdAt": "2026-09-27T15:48:16.340Z"
     },
     {
       "id": "COMP-NEW-PLC-41",
@@ -241,54 +199,7 @@
       "status": "PENDING_REVIEW",
       "submittedByStudentCode": "67000000",
       "submittedByStudentName": "สรวิชร์ คงใจ",
-      "createdAt": "2026-11-13T04:08:22.586Z"
-    },
-    {
-      "id": "COMP-NEW-57531",
-      "nameTh": "google",
-      "nameEn": "-",
-      "province": "รอระบุจังหวัด",
-      "address": "รอตรวจสอบที่อยู่",
-      "hrContactName": "-",
-      "hrPhone": "-",
-      "hrEmail": "-",
-      "recommendedPositions": "นิสิตฝึกงาน / สหกิจศึกษา",
-      "status": "VERIFIED",
-      "submittedByStudentCode": "67024965",
-      "submittedByStudentName": "test student",
-      "createdAt": "2026-11-11T06:47:37.531Z",
-      "verifiedAt": "2026-11-13T03:55:50.523Z"
-    },
-    {
-      "id": "COMP-NEW-15",
-      "nameTh": "sdkfskdl",
-      "nameEn": "",
-      "province": "นครนายก",
-      "address": "fefe",
-      "hrContactName": "fefesf",
-      "hrPhone": "098-xxx-xxxx",
-      "hrEmail": "...@gmail.com",
-      "recommendedPositions": "Software Developer",
-      "status": "PENDING_REVIEW",
-      "submittedByStudentCode": "67023110",
-      "submittedByStudentName": "เอกัทร อินทร์สวัสดิ์",
-      "createdAt": "2026-11-09T08:37:38.673Z"
-    },
-    {
-      "id": "COMP-NEW-10",
-      "nameTh": "tesla",
-      "nameEn": "-",
-      "province": "ฉะเชิงเทรา",
-      "address": "13111/1",
-      "hrContactName": "HR",
-      "hrPhone": "098-999-9999",
-      "hrEmail": "sawat@pt.pypt",
-      "recommendedPositions": "Software Developer",
-      "status": "VERIFIED",
-      "submittedByStudentCode": "67012345",
-      "submittedByStudentName": "เอกภัทร",
-      "createdAt": "2026-09-27T15:48:16.340Z",
-      "verifiedAt": "2026-11-11T02:40:04.416Z"
+      "createdAt": "2026-11-13T09:11:09.772Z"
     },
     {
       "id": "COMP-M01",
@@ -361,139 +272,8 @@
       "verifiedAt": "2025-11-18T08:00:00.000Z"
     }
   ],
-  "dismissedCompanyNames": [],
-  "docWorkflowMap": {
-    "1": {
-      "studentId": 1,
-      "studentCode": "67024964",
-      "companyName": "บริษัท กสิกร บิซิเนส-เทคโนโลยี กรุ๊ป (KBTG)",
-      "interviewDate": "2026-02-15",
-      "requestLetterIssued": true,
-      "requestLetterDocNo": "อว 7316/ว 253",
-      "requestLetterDate": "2026-11-11",
-      "companyResponseStatus": "ADVISOR_APPROVED",
-      "companyResponseFileName": "แบบตอบรับนิสิตฝึกงานtest.pdf",
-      "companyResponseFileUrl": "https://res.cloudinary.com/j5ccelrs/image/upload/v1794388940/se_internship/acceptance_forms/1794388937255-____________________test.pdf",
-      "advisorAcceptanceStatus": "APPROVED",
-      "dispatchLetterIssued": false,
-      "isLocked": false,
-      "unlockedByAdmin": true
-    },
-    "41": {
-      "studentId": 41,
-      "studentCode": "67099999",
-      "companyName": "เทสล่า",
-      "interviewDate": "2026-02-15",
-      "requestLetterIssued": true,
-      "requestLetterDocNo": "อว 7316/ว 945",
-      "requestLetterDate": "2026-11-13",
-      "requestLetterBatchId": "REQ-BATCH-762201",
-      "requestLetterSignatureSnapshot": "",
-      "companyResponseStatus": "WAITING_RESPONSE",
-      "companyResponseFileName": "",
-      "companyResponseFileUrl": "",
-      "companyResponseUploadedAt": "",
-      "companyResponseSubmittedByStudent": false,
-      "advisorAcceptanceStatus": "NONE",
-      "advisorAcceptanceNote": "",
-      "advisorAcceptanceReviewedAt": "",
-      "dispatchLetterIssued": false,
-      "dispatchLetterDocNo": "",
-      "dispatchLetterDate": "",
-      "dispatchLetterSignatureSnapshot": "",
-      "isLocked": true
-    },
-    "43": {
-      "studentId": 43,
-      "studentCode": "67024999",
-      "companyName": "เทสล่า",
-      "interviewDate": "2026-02-15",
-      "requestLetterIssued": true,
-      "requestLetterDocNo": "อว 7316/ว 974",
-      "requestLetterDate": "2026-11-13",
-      "requestLetterBatchId": "REQ-BATCH-755702",
-      "requestLetterSignatureSnapshot": "",
-      "companyResponseStatus": "WAITING_RESPONSE",
-      "companyResponseFileName": "",
-      "companyResponseFileUrl": "",
-      "companyResponseUploadedAt": "",
-      "companyResponseSubmittedByStudent": false,
-      "advisorAcceptanceStatus": "NONE",
-      "advisorAcceptanceNote": "",
-      "advisorAcceptanceReviewedAt": "",
-      "dispatchLetterIssued": false,
-      "dispatchLetterDocNo": "",
-      "dispatchLetterDate": "",
-      "dispatchLetterSignatureSnapshot": "",
-      "isLocked": true
-    },
-    "97": {
-      "studentId": 97,
-      "studentCode": "67024965",
-      "companyName": "google",
-      "interviewDate": "2026-02-15",
-      "requestLetterIssued": true,
-      "requestLetterDocNo": "อว 7316/ว 188",
-      "requestLetterDate": "2026-11-11",
-      "requestLetterBatchId": "REQ-BATCH-739527",
-      "requestLetterSignatureSnapshot": "",
-      "companyResponseStatus": "WAITING_RESPONSE",
-      "dispatchLetterIssued": false,
-      "dispatchLetterSignatureSnapshot": "",
-      "isLocked": true,
-      "companyResponseFileName": "แบบตอบรับนิสิตฝึกงานtest.pdf",
-      "companyResponseFileUrl": "https://res.cloudinary.com/j5ccelrs/image/upload/v1794379761/se_internship/acceptance_forms/1794379759054-____________________test.pdf",
-      "companyResponseUploadedAt": "2026-11-11T06:49:28.337Z",
-      "companyResponseSubmittedByStudent": true,
-      "companyResponseOcr": {
-        "status": "DONE",
-        "result": "ACCEPTED",
-        "confidence": 0.92,
-        "reasons": [
-          "ตรวจพบรอยติ๊กในช่อง ☐ \"สามารถรับนิสิตเข้าฝึกงานได้\""
-        ],
-        "warnings": [],
-        "signals": {
-          "acceptCheckboxInk": 0.1403,
-          "rejectCheckboxInk": 0,
-          "acceptZoneInk": 0.1416,
-          "rejectZoneInk": 0.0108,
-          "acceptChecked": true,
-          "rejectChecked": false,
-          "acceptDetailsWritten": true,
-          "rejectDetailsWritten": false
-        },
-        "engine": "builtin-template-analyzer",
-        "analyzedAt": "2026-11-11T06:55:27.837Z"
-      },
-      "unlockedByAdmin": false
-    }
-  },
+  "docWorkflowMap": {},
   "archivedApplications": [
-    {
-      "id": "ARCH-658302",
-      "studentId": 1,
-      "studentCode": "67024964",
-      "studentName": "กันตินันท์ เก่งมาก",
-      "major": "วิศวกรรมซอฟต์แวร์",
-      "companyName": "tesla",
-      "position": "Software Developer",
-      "reason": "COMPANY_REJECTED",
-      "note": "สถานประกอบการแจ้งเต็มอัตรา / ไม่ผ่านการคัดเลือก",
-      "archivedAt": "2026-11-11T06:14:18.302Z"
-    },
-    {
-      "id": "ARCH-449818",
-      "studentId": 1,
-      "studentCode": "67024964",
-      "studentName": "กันตินันท์ เก่งมาก",
-      "major": "วิศวกรรมซอฟต์แวร์",
-      "companyName": "tesla",
-      "position": "Software Developer",
-      "reason": "COMPANY_REJECTED",
-      "note": "สถานประกอบการแจ้งเต็มอัตรา / ไม่ผ่านการคัดเลือก",
-      "archivedAt": "2026-11-11T05:04:09.818Z"
-    },
     {
       "id": "ARCH-001",
       "studentId": 0,
@@ -506,15 +286,5 @@
       "note": "สถานประกอบการแจ้งเต็มอัตราในรอบเทอมนี้ (ปลดล็อกให้ยื่นบริษัทใหม่แล้ว)",
       "archivedAt": "2026-01-08T14:20:00.000Z"
     }
-  ],
-  "studentRoundsMap": {
-    "1": {
-      "studentId": 1,
-      "currentRound": 1,
-      "currentTerm": "2/2568",
-      "isRound1Completed": false,
-      "historyRounds": [],
-      "isSameCompanyAsRound1": false
-    }
-  }
+  ]
 }

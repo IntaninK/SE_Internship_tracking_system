@@ -11,6 +11,19 @@ export interface PageShellProps {
   children?: React.ReactNode;
 }
 
+// pageKey ของหน้าฝั่งนิสิต: หน้าเหล่านี้จะถูกครอบด้วย .student-scale เพื่อขยายสเกลการแสดงผล
+// (ดู src/css/main.css ส่วน "Student pages scale") หน้าอาจารย์ / admin / login ไม่อยู่ในรายการนี้
+const STUDENT_PAGE_KEYS = new Set<string>([
+  "dashboard",
+  "status_all",
+  "Profile",
+  "Personal_Information",
+  "checklist",
+  "CV",
+  "Certificate",
+  "submission_status",
+]);
+
 function resolveScriptUrl(src: string): string {
   const clean = src.replace(/^\.\.\//, "/").replace(/^\.\//, "/");
   if (clean.startsWith("/components/") || clean.startsWith("/api/")) {
@@ -136,8 +149,10 @@ export default function PageShell({
       {styles.map((css, idx) => (
         <style key={idx} dangerouslySetInnerHTML={{ __html: css }} />
       ))}
-      <div dangerouslySetInnerHTML={{ __html: bodyHtml }} />
-      {children}
+      <div className={STUDENT_PAGE_KEYS.has(pageKey) ? "student-scale" : undefined}>
+        <div dangerouslySetInnerHTML={{ __html: bodyHtml }} />
+        {children}
+      </div>
     </>
   );
 }

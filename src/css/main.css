@@ -611,3 +611,368 @@ select.input-field {
 }
 
 } /* ปิด @layer legacy */
+
+/* =========================================================
+   Student pages scale
+   ขยายสเกลหน้าฝั่งนิสิตให้เท่ากับการซูม browser 125%
+   - wrapper .student-scale ถูกใส่โดย PageShell เฉพาะ pageKey ของนิสิต
+   - ใช้ CSS zoom (layout คำนวณใหม่ตามขนาดที่ขยาย ไม่เกิด scrollbar เพี้ยนแบบ transform)
+   - media query ยังอ้างอิงความกว้างจอจริง จึงสเกลเฉพาะจอที่กว้างพอให้พื้นที่หลังสเกล
+     ยังเหลือ >= 1200px (breakpoint ของเมนู header) — จอเล็กกว่านั้นไม่สเกล
+   - หน่วย vw ภายใน element ที่ถูก zoom จะถูกคูณด้วย zoom ด้วย จึงต้องหารชดเชย
+   อยู่นอก @layer legacy เพื่อให้ชนะ !important ใน modern-ict.css ด้วย specificity
+   ========================================================= */
+.student-scale {
+  --student-zoom: 1;
+}
+
+@media (min-width: 1320px) {
+  .student-scale {
+    --student-zoom: 1.1;
+    zoom: var(--student-zoom);
+  }
+}
+
+@media (min-width: 1500px) {
+  .student-scale {
+    --student-zoom: 1.25;
+  }
+}
+
+.student-scale .main-content.dashboard-content {
+  margin-inline: calc(10vw / var(--student-zoom)) !important;
+}
+
+@media (max-width: 700px) {
+  .student-scale .main-content.dashboard-content {
+    margin-inline: 12px !important;
+  }
+}
+
+/* =========================================================
+   status-all: Sidebar หมวดหมู่ (ฝั่งนิสิต)
+   โครงและหน้าตาเดียวกับ sidebar ของ admin-dashboard
+   (#admin-dashboard .admin-layout / .admin-sidebar / .admin-workspace-nav)
+   แต่แยก class เพื่อไม่กระทบหน้า admin
+   ========================================================= */
+.status-all-shell {
+  --status-sidebar-width: 300px;
+  /* ความสูง header จริงถูกตั้งโดย status_all_tabs.js (ค่าเริ่มต้น 70px) */
+  --status-header-height: 70px;
+  display: block;
+  width: 100%;
+  /* เว้นที่ให้ sidebar ที่ fixed อยู่ชิดซ้าย */
+  padding-left: var(--status-sidebar-width);
+  box-sizing: border-box;
+}
+
+/* เนื้อหาด้านขวา: เลิกใช้ margin 10vw ของ dashboard-content เพราะมี sidebar แล้ว */
+.student-scale .status-all-shell .main-content.status-all-main,
+.status-all-shell .main-content.status-all-main {
+  width: 100%;
+  max-width: none !important;
+  min-width: 0;
+  margin: 0 !important;
+  padding: 32px clamp(22px, 3vw, 44px) 52px !important;
+  box-sizing: border-box;
+}
+
+.status-all-sidebar {
+  /* เต็มความสูงจอ: ยึดขอบซ้าย ตั้งแต่ใต้ header ถึงขอบล่างของจอ */
+  position: fixed;
+  top: var(--status-header-height);
+  bottom: 0;
+  left: 0;
+  z-index: 40;
+  display: flex;
+  width: var(--status-sidebar-width);
+  flex-direction: column;
+  overflow-y: auto;
+  border-right: 1px solid #e2e8f0;
+  background: #fff;
+  box-sizing: border-box;
+  color: #0f172a;
+  font-size: 16px;
+  line-height: 1.6;
+}
+
+.status-brand {
+  display: flex;
+  min-height: 76px;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 20px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.status-brand-mark {
+  display: grid;
+  width: 40px;
+  height: 40px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 10px;
+  background: #16a34a;
+  color: #fff;
+}
+
+.status-brand-mark .material-icons {
+  font-size: 22px;
+}
+
+.status-brand-text {
+  min-width: 0;
+}
+
+.status-brand-title {
+  overflow: hidden;
+  color: #0f172a;
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.4;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.status-brand-subtitle {
+  margin-top: 2px;
+  color: #64748b;
+  font-size: 15px;
+}
+
+.status-nav-heading {
+  padding: 22px 24px 10px;
+  color: #94a3b8;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.status-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 0 12px 18px;
+}
+
+.status-nav-item {
+  display: flex;
+  width: 100%;
+  min-height: 50px;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 13px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: #64748b;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 500;
+  text-align: left;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.status-nav-item[hidden] {
+  display: none;
+}
+
+.status-nav-item:hover {
+  background: #f8fafc;
+  color: #0f172a;
+}
+
+.status-nav-item[aria-current="page"] {
+  border-left: 3px solid #3730a3;
+  background: #eef2ff;
+  color: #3730a3;
+  font-weight: 700;
+}
+
+.status-nav-item[data-locked="true"] {
+  color: #94a3b8;
+}
+
+.status-nav-item[data-locked="true"][aria-current="page"] {
+  border-left-color: #94a3b8;
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+.status-nav-icon {
+  flex: 0 0 auto;
+  font-size: 21px !important;
+}
+
+.status-nav-text {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.status-nav-label {
+  overflow: hidden;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.status-nav-reason {
+  color: #94a3b8;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.4;
+}
+
+.status-nav-reason[hidden] {
+  display: none;
+}
+
+.status-nav-badge {
+  flex: 0 0 auto;
+  margin-left: auto;
+  padding: 3px 8px;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  background: #f1f5f9;
+  color: #475569;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+
+.status-nav-badge[data-tone="done"] {
+  border-color: #bbf7d0;
+  background: #f0fdf4;
+  color: #15803d;
+}
+
+.status-nav-badge[data-tone="pending"] {
+  border-color: #fde68a;
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.status-nav-badge[data-tone="todo"] {
+  border-color: #fecaca;
+  background: #fef2f2;
+  color: #dc2626;
+}
+
+.status-nav-badge[data-tone="fail"] {
+  border-color: #fca5a5;
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.status-nav-badge[data-tone="locked"],
+.status-nav-badge[data-tone="muted"] {
+  border-color: #e2e8f0;
+  background: #f8fafc;
+  color: #94a3b8;
+}
+
+.status-sidebar-note {
+  margin: auto 16px 16px;
+  padding: 15px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #f8fafc;
+  color: #64748b;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.status-sidebar-note strong {
+  display: block;
+  margin-bottom: 3px;
+  color: #3730a3;
+  font-size: 15px;
+}
+
+.status-all-panels {
+  min-width: 0;
+}
+
+.status-all-panel {
+  display: none;
+}
+
+.status-all-panel.is-active {
+  display: block;
+}
+
+/* การ์ดใน panel ชิดด้านบน (เดิม .card มี margin-top: 50px) */
+.status-all-panel > .card {
+  margin-top: 0;
+}
+
+/* ระหว่างรอข้อมูลโหลดครบเพื่อตัดสินว่าหมวดจาก URL ล็อกหรือไม่ */
+.status-all-shell.is-resolving .status-all-panels {
+  visibility: hidden;
+}
+
+@media (max-width: 1000px) {
+  .status-sidebar-note {
+    margin-right: 12px;
+    margin-left: 12px;
+    padding: 10px;
+  }
+}
+
+/* แท็บเล็ต/มือถือ: sidebar กลายเป็นแท็บแนวนอนเลื่อนได้ด้านบน (แบบเดียวกับ admin ที่ 760px) */
+@media (max-width: 900px) {
+  .status-all-shell {
+    padding-left: 0;
+  }
+
+  .status-all-sidebar {
+    position: static;
+    width: 100%;
+    height: auto;
+    min-height: 0;
+    overflow: visible;
+    border-right: 0;
+    border-bottom: 1px solid #e2e8f0;
+  }
+
+  .status-brand {
+    min-height: 62px;
+    padding: 8px 16px;
+  }
+
+  .status-brand-mark {
+    width: 36px;
+    height: 36px;
+  }
+
+  .status-nav-heading,
+  .status-nav-reason,
+  .status-sidebar-note {
+    display: none !important;
+  }
+
+  .status-nav {
+    flex-direction: row;
+    overflow-x: auto;
+    padding: 8px 12px;
+    scrollbar-width: thin;
+  }
+
+  .status-nav-item {
+    width: auto;
+    min-width: max-content;
+    min-height: 46px;
+    font-size: 15px;
+  }
+
+  .student-scale .status-all-shell .main-content.status-all-main,
+  .status-all-shell .main-content.status-all-main {
+    padding: 20px 14px 32px !important;
+  }
+}

@@ -8,6 +8,8 @@ let currentCompaniesData = [];
 let currentSubmissionsData = [];
 let currentPlacementData = null;
 let currentAcceptanceData = null;
+// true เมื่อโหลดข้อมูลรอบแรกครบทุกส่วนแล้ว (ใช้โดย sidebar ใน status_all_tabs.js)
+let statusAllDataReady = false;
 
 // โหลดข้อมูลทั้งหมดเข้าสู่ทั้ง 6 Section
 async function initPage() {
@@ -17,6 +19,8 @@ async function initPage() {
   await loadCompanies();
   await loadSubmissions();
   await loadPlacement();
+  statusAllDataReady = true;
+  checkPlacementUnlock();
 }
 
 // 1. โหลดข้อมูลส่วนตัว
@@ -212,49 +216,10 @@ async function loadTrainings() {
   try {
     const res = await fetch('/api/student/trainings');
     const data = await res.json();
-    const tbody = document.getElementById('trainings-table-body');
-    tbody.innerHTML = '';
-
     if (data.success && data.trainings) {
       currentTrainingsData = data.trainings;
       applyInternshipLock(data.internshipLock);
-
-      if (data.trainings.length > 0) {
-        data.trainings.forEach((t, idx) => {
-          let statusText = '☐ รอผล';
-          let statusClass = 'status-wait';
-          if (t.status === 'APPROVED') {
-            statusText = '✓ ผ่าน';
-            statusClass = 'status-pass';
-          } else if (t.status === 'REJECTED') {
-            statusText = '✗ ไม่ผ่าน';
-            statusClass = 'status-fail';
-          }
-
-          const tr = document.createElement('tr');
-          const certUrl = t.certificateFileUrl || '';
-          tr.innerHTML = `
-            <td>${idx + 1}</td>
-            <td>${t.title}</td>
-            <td>${t.skillType === 'HARD' ? 'Hard skill' : 'Soft skill'}</td>
-            <td>${t.hours}</td>
-            <td class="${statusClass}">${statusText}</td>
-            <td>${t.note || '-'}</td>
-            <td style="text-align:center;">
-              ${certUrl
-                ? `<a href="${certUrl}" target="_blank" style="color:#2563eb; font-size:16px; text-decoration:none; white-space:nowrap;">ดูตัวอย่าง</a>`
-                : '<span style="color:#94a3b8; font-size:16px;">-</span>'
-              }
-            </td>
-            <td>${isInternshipLocked
-              ? '<span class="material-icons" style="font-size:16px; color:#94a3b8;" title="ล็อกระหว่างฝึกงาน">lock</span>'
-              : `<button type="button" class="btn btn-tonal btn-xs" onclick="deleteTraining(${t.id})">ลบ</button>`}</td>
-          `;
-          tbody.appendChild(tr);
-        });
-      } else {
-        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: #888; padding: 20px;">ยังไม่มีข้อมูลการอบรม</td></tr>';
-      }
+      renderTrainingsPage();
     }
   } catch (err) {
     console.error('Load trainings error:', err);
@@ -262,6 +227,119 @@ async function loadTrainings() {
     checkPlacementUnlock();
   }
 }
+
+// แบ่งหน้าตารางชั่วโมงการอบรม (หน้าละ 9 รายการ)
+const TRAININGS_PAGE_SIZE = 9;
+let trainingsPage = 1;
+
+function renderTrainingsPage() {
+  const tbody = document.getElementById('trainings-table-body');
+  if (!tbody) return;
+  tbody.innerHTML = '';
+
+  const list = currentTrainingsData || [];
+  const totalPages = Math.max(1, Math.ceil(list.length / TRAININGS_PAGE_SIZE));
+  if (trainingsPage > totalPages) trainingsPage = totalPages;
+  if (trainingsPage < 1) trainingsPage = 1;
+  const start = (trainingsPage - 1) * TRAININGS_PAGE_SIZE;
+  const pageItems = list.slice(start, start + TRAININGS_PAGE_SIZE);
+
+  if (list.length > 0) {
+    pageItems.forEach((t, i) => {
+      const idx = start + i;
+      let statusText = '☐ รอผล';
+      let statusClass = 'status-wait';
+      if (t.status === 'APPROVED') {
+        statusText = '✓ ผ่าน';
+        statusClass = 'status-pass';
+      } else if (t.status === 'REJECTED') {
+        statusText = '✗ ไม่ผ่าน';
+        statusClass = 'status-fail';
+      }
+
+      const tr = document.createElement('tr');
+      const certUrl = t.certificateFileUrl || '';
+      tr.innerHTML = `
+        <td>${idx + 1}</td>
+        <td>${t.title}</td>
+        <td>${t.skillType === 'HARD' ? 'Hard skill' : 'Soft skill'}</td>
+        <td>${t.hours}</td>
+        <td class="${statusClass}">${statusText}</td>
+        <td>${t.note || '-'}</td>
+        <td style="text-align:center;">
+          ${certUrl
+            ? `<a href="${certUrl}" target="_blank" style="color:#2563eb; font-size:16px; text-decoration:none; white-space:nowrap;">ดูตัวอย่าง</a>`
+            : '<span style="color:#94a3b8; font-size:16px;">-</span>'
+          }
+        </td>
+        <td>${isInternshipLocked
+          ? '<span class="material-icons" style="font-size:16px; color:#94a3b8;" title="ล็อกระหว่างฝึกงาน">lock</span>'
+          : `<button type="button" class="btn btn-tonal btn-xs" onclick="deleteTraining(${t.id})">ลบ</button>`}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+  } else {
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: #888; padding: 20px;">ยังไม่มีข้อมูลการอบรม</td></tr>';
+  }
+
+  renderTrainingsPagination(list.length, totalPages, start, pageItems.length);
+}
+
+function renderTrainingsPagination(total, totalPages, start, shown) {
+  const tbody = document.getElementById('trainings-table-body');
+  const table = tbody ? tbody.closest('table') : null;
+  if (!table) return;
+
+  let bar = document.getElementById('trainings-pagination');
+  if (!bar) {
+    bar = document.createElement('div');
+    bar.id = 'trainings-pagination';
+    table.insertAdjacentElement('afterend', bar);
+  }
+
+  // แสดงแถบเปลี่ยนหน้าเฉพาะเมื่อเกิน 9 รายการ
+  if (total <= TRAININGS_PAGE_SIZE) {
+    bar.innerHTML = '';
+    bar.style.display = 'none';
+    return;
+  }
+  bar.style.cssText = 'display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; padding:14px 4px 0;';
+
+  const btnBase = 'min-width:36px; height:36px; padding:0 12px; border-radius:8px; font-size:14px; font-weight:600; display:inline-flex; align-items:center; justify-content:center; gap:4px; font-family:inherit;';
+  const navBtn = (label, target, disabled, iconFirst) => {
+    const icon = `<span class="material-icons" style="font-size:18px;">${iconFirst ? 'chevron_left' : 'chevron_right'}</span>`;
+    const style = disabled
+      ? `${btnBase} background:#F1F5F9; color:#94A3B8; border:1px solid #E2E8F0; cursor:not-allowed;`
+      : `${btnBase} background:#FFFFFF; color:#1E293B; border:1px solid #CBD5E1; cursor:pointer;`;
+    return `<button type="button" ${disabled ? 'disabled' : `onclick="goTrainingsPage(${target})"`} style="${style}">${iconFirst ? icon + label : label + icon}</button>`;
+  };
+
+  let pages = '';
+  for (let p = 1; p <= totalPages; p++) {
+    const active = p === trainingsPage;
+    const style = active
+      ? `${btnBase} background:#1D4ED8; color:#FFFFFF; border:1px solid #1D4ED8; box-shadow:0 0 0 3px #BFDBFE; cursor:default;`
+      : `${btnBase} background:transparent; color:#1E293B; border:1px solid transparent; cursor:pointer;`;
+    pages += `<button type="button" ${active ? '' : `onclick="goTrainingsPage(${p})"`} style="${style}">${p}</button>`;
+  }
+
+  bar.innerHTML = `
+    <div style="display:flex; align-items:center; gap:8px; font-size:14px; color:#475569; font-weight:500;">
+      <span style="width:8px; height:8px; border-radius:50%; background:#10B981; display:inline-block;"></span>
+      แสดงผล <b style="color:#1E293B;">${start + 1} - ${start + shown}</b> จากทั้งหมด <b style="color:#1E293B;">${total}</b> รายการ
+    </div>
+    <div style="display:flex; align-items:center; gap:6px;">
+      ${navBtn('ก่อนหน้า', trainingsPage - 1, trainingsPage <= 1, true)}
+      ${pages}
+      ${navBtn('ถัดไป', trainingsPage + 1, trainingsPage >= totalPages, false)}
+    </div>
+  `;
+}
+
+window.goTrainingsPage = function(page) {
+  trainingsPage = page;
+  renderTrainingsPage();
+};
 
 window.deleteTraining = async function(id) {
   if (confirm('คุณต้องการลบรายการอบรมนี้หรือไม่?')) {
@@ -313,6 +391,8 @@ function renderCvPreview(fileUrl, fileName, status, note) {
   currentCvUrl = fileUrl;
   cvUploadContent.style.display = 'none';
   cvPreviewContainer.style.display = 'flex';
+  const cvChangeBtn = document.getElementById('cv-change-btn');
+  if (cvChangeBtn) cvChangeBtn.style.display = 'inline-flex';
 
   // สถานะ CV: CVตรวจแล้ว / ผ่าน & รอผล & CVไม่ผ่าน / ทำใหม่
   if (status === 'APPROVED') {
@@ -517,16 +597,9 @@ function renderStudentAcceptanceCell() {
   if (!acc || !acc.requestLetterIssued) {
     return '<span style="font-size:12.5px; color:#64748B;">รอเจ้าหน้าที่ออกหนังสือขอความอนุเคราะห์</span>';
   }
-  const reqBtn = `<button type="button" onclick="downloadStudentOfficialLetter('REQUEST')" style="background:#EEF2FF; color:#312E81; border:1px solid #C7D2FE; padding:4px 9px; border-radius:6px; font-size:11.5px; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:4px;">📥 โหลดหนังสือขอความอนุเคราะห์</button>`;
-  const blankFormBtn = `<a href="/documents/acceptance_form_se.pdf" download="แบบตอบรับนิสิตฝึกงาน_SE.pdf" target="_blank" rel="noopener" style="background:#F0FDF4; color:#166534; border:1px solid #BBF7D0; padding:4px 9px; border-radius:6px; font-size:11.5px; font-weight:700; text-decoration:none; display:inline-flex; align-items:center; gap:4px;">📄 โหลดแบบตอบรับเปล่า</a>`;
-  const dispBtn = acc.dispatchLetterIssued
-    ? `<button type="button" onclick="downloadStudentOfficialLetter('DISPATCH')" style="background:#DBEAFE; color:#1E40AF; border:1px solid #93C5FD; padding:4px 9px; border-radius:6px; font-size:11.5px; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:4px;">📥 โหลดหนังสือส่งตัว (PDF)</button>`
-    : '';
-
   if (acc.status === 'ACCEPTED') {
     return `
-      <div style="font-size:12.5px; font-weight:700; color:#15803D; margin-bottom:4px;">✅ เจ้าหน้าที่ยืนยัน: บริษัทตอบรับแล้ว</div>
-      <div style="display:flex; gap:5px; flex-wrap:wrap;">${reqBtn}${blankFormBtn}${dispBtn}</div>
+      <div style="font-size:12.5px; font-weight:700; color:#15803D;">✅ เจ้าหน้าที่ยืนยัน: บริษัทตอบรับแล้ว</div>
     `;
   }
   if (acc.status === 'REJECTED') {
@@ -536,15 +609,12 @@ function renderStudentAcceptanceCell() {
     return `
       <div style="font-size:12px; font-weight:600; color:#B45309; margin-bottom:4px;">⏳ อัปโหลดใบตอบรับแล้ว (รอเจ้าหน้าที่ยืนยัน)</div>
       <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
-        ${reqBtn}
-        ${blankFormBtn}
         ${acc.fileUrl ? `<a href="${acc.fileUrl}" target="_blank" rel="noopener" style="font-size:11.5px; color:#2563EB; font-weight:600;">📎 ดูไฟล์ที่อัปโหลด</a>` : ''}
       </div>
     `;
   }
   return `
-    <div style="font-size:12px; color:#2563EB; font-weight:600; margin-bottom:4px;">📄 ออกหนังสือแล้ว (${escapeStudentHtml(acc.requestLetterDocNo || '-')})</div>
-    <div style="display:flex; gap:5px; flex-wrap:wrap;">${reqBtn}${blankFormBtn}</div>
+    <div style="font-size:12px; color:#2563EB; font-weight:600;">📄 ออกหนังสือแล้ว (${escapeStudentHtml(acc.requestLetterDocNo || '-')})</div>
   `;
 }
 
@@ -1091,6 +1161,12 @@ function checkPlacementUnlock() {
   // -----------------------------------------------------------------------
   const isChecklistUnlocked = isCvApproved && isTrainingComplete;
 
+  // เงื่อนไขส่วนที่ 6 (คำนวณไว้ก่อน เพื่อส่งต่อให้ sidebar ด้วย)
+  const isChecklistApproved = currentCompaniesData.some(c => c.checklistStatus === 'APPROVED');
+  const isInterviewPassed = currentSubmissionsData.some(
+    comp => comp.submission && comp.submission.status === 'INTERVIEW_PASSED'
+  );
+
   // อัปเดต UI ใน Card ปลดล็อกส่วนที่ 4 & 5 (checklist-locked-card)
   updateRequirementCard(
     'step-req-training',
@@ -1120,11 +1196,6 @@ function checkPlacementUnlock() {
     // -----------------------------------------------------------------------
     // 🔒 2. ตรวจสอบการปลดล็อก ส่วนที่ 6 (ข้อมูลบริษัท ที่เข้าฝึกงาน)
     // -----------------------------------------------------------------------
-    const isChecklistApproved = currentCompaniesData.some(c => c.checklistStatus === 'APPROVED');
-    const isInterviewPassed = currentSubmissionsData.some(
-      comp => comp.submission && comp.submission.status === 'INTERVIEW_PASSED'
-    );
-
     // อัปเดต UI ใน Card แสดงเงื่อนไขส่วนที่ 6 (placement-locked-card)
     updateRequirementCard('req-cv', isCvApproved, '1. กรอกใบ CV', isCvApproved ? '✓ CVตรวจแล้ว / ผ่าน' : 'รออาจารย์ตรวจผ่าน');
     updateRequirementCard('req-training', isTrainingComplete, '2. ชั่วโมงการอบรม', `Soft ${approvedSoftHours}/12 ชม. | Hard ${approvedHardHours}/18 ชม.` + (isTrainingComplete ? ' (ผ่านครบ)' : ''));
@@ -1148,6 +1219,31 @@ function checkPlacementUnlock() {
     if (placementSection) placementSection.style.display = 'none';
     if (placementLockedCard) placementLockedCard.style.display = 'none';
   }
+
+  // ส่งสถานะเงื่อนไขชุดเดียวกันนี้ให้ sidebar (status_all_tabs.js) ใช้แสดงเมนู/badge
+  // ไม่มีการคำนวณเงื่อนไขปลดล็อกซ้ำในฝั่ง sidebar
+  window.dispatchEvent(new CustomEvent('status-all:unlock-state', {
+    detail: {
+      ready: statusAllDataReady,
+      cvHasFile: Boolean(currentCvData && currentCvData.fileUrl),
+      cvStatus: currentCvData ? currentCvData.status : null,
+      isCvApproved: Boolean(isCvApproved),
+      approvedSoftHours,
+      approvedHardHours,
+      requiredSoftHours: 12,
+      requiredHardHours: 18,
+      pendingTrainingCount: currentTrainingsData.filter(t => t.status !== 'APPROVED' && t.status !== 'REJECTED').length,
+      isTrainingComplete,
+      isChecklistUnlocked: Boolean(isChecklistUnlocked),
+      companyCount: currentCompaniesData.length,
+      isChecklistApproved,
+      hasPendingChecklist: currentCompaniesData.some(c => c.checklistStatus !== 'APPROVED' && c.checklistStatus !== 'REJECTED'),
+      submissionCount: currentSubmissionsData.length,
+      isInterviewPassed,
+      isPlacementUnlocked: Boolean(isChecklistUnlocked && isChecklistApproved && isInterviewPassed),
+      placementStatus: currentPlacementData ? currentPlacementData.status : null,
+    },
+  }));
 }
 
 // Helper อัปเดตสถานะและไอคอนในกล่อง Requirements Card
