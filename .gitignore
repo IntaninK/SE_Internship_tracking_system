@@ -19,7 +19,8 @@ server_test.js
 .claude/
 .windsurf/
 .vscode/
-docs/
+docs/*
+!docs/requirements/
 super_admin_state.json
 data/super_admin_state.json
 __pycache__/
