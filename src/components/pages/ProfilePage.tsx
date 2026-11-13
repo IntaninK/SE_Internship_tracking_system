@@ -85,14 +85,7 @@ const PAGE_BODY_HTML = `
                 <label class="text-xs font-bold text-slate-600 flex items-center gap-1">เบอร์โทร <span class="srs-editable-tag">✏️</span></label>
                 <input class="input-field text-xs" id="p-phone" readonly />
               </div>
-              <div class="flex flex-col gap-1">
-                <label class="text-xs font-bold text-slate-600 flex items-center gap-1">Line ID <span class="srs-editable-tag">✏️</span></label>
-                <input class="input-field text-xs" id="p-lineId" readonly />
-              </div>
-              <div class="flex flex-col gap-1">
-                <label class="text-xs font-bold text-slate-600 flex items-center gap-1">Facebook <span class="srs-editable-tag">✏️</span></label>
-                <input class="input-field text-xs" id="p-facebook" readonly />
-              </div>
+
             </div>
           </div>
         </div>

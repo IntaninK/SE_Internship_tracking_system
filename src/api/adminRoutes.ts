@@ -10,6 +10,7 @@ import {
   calculateEventHours,
   EventSessionItem,
   EventCheckInItem,
+  getStudentRoundState,
 } from "../utils/superAdminStore";
 import { analyzeAcceptanceForm, fetchFileBuffer } from "../utils/acceptanceOcr";
 
@@ -557,6 +558,7 @@ router.get("/students", async (req: Request, res: Response) => {
         ? checkPlacementMatchesChecklist(s.placement, s.companies || [])
         : null;
 
+      const studentRoundState = getStudentRoundState(s.id, `${s.semester || "2"}/${s.academicYear || "2568"}`);
       return {
         id: s.id,
         userId: s.userId,
@@ -589,6 +591,13 @@ router.get("/students", async (req: Request, res: Response) => {
         placementStatus: s.placement ? s.placement.status : null,
         isMatchedWithChecklist,
         hasChecklistApproved: (s.companies || []).some((c: any) => c.checklistStatus === "APPROVED"),
+        roundInfo: {
+          currentRound: studentRoundState.currentRound,
+          currentTerm: studentRoundState.currentTerm,
+          isRound1Completed: studentRoundState.isRound1Completed,
+          isSameCompanyAsRound1: studentRoundState.isSameCompanyAsRound1,
+          historyRounds: studentRoundState.historyRounds || [],
+        },
       };
     });
 
@@ -874,6 +883,7 @@ router.get("/students/:studentId", async (req: Request, res: Response) => {
           }
         : null,
       acceptanceWorkflow: state.docWorkflowMap[String(student.id)] || null,
+      roundInfo: getStudentRoundState(student.id, `${student.semester || "2"}/${student.academicYear || "2568"}`),
     });
   } catch (err) {
     console.error("GET /api/admin/students/:id error:", err);

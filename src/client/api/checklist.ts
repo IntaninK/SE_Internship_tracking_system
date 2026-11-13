@@ -8,20 +8,50 @@ let currentPlacementData = null;
 let isDroppedStudent = false;
 
 const STANDARD_POSITIONS = [
-  "Software Engineer / Developer",
+  // --- สายพัฒนาซอฟต์แวร์ และระบบดิจิทัล (SE / CS / IT) ---
+  "Full-Stack Developer",
   "Frontend Developer",
   "Backend Developer",
-  "Full-Stack Developer",
   "Mobile App Developer (iOS / Android / Flutter)",
-  "Data Scientist / Data Analyst / Data Engineer",
+  "Software Engineer / Developer",
   "DevOps / Cloud Engineer",
   "QA / Software Tester",
-  "UI/UX Designer / Product Designer",
   "System Analyst / Business Analyst",
-  "Network & Security / Cybersecurity",
-  "IT Support / System Administrator",
+
+  // --- สายปัญญาประดิษฐ์ วิทยาการข้อมูล และฐานข้อมูล (CS / DSA / IT) ---
   "AI / Machine Learning Engineer",
-  "Game Developer",
+  "Data Scientist",
+  "Data Analyst",
+  "Data Engineer",
+  "Business Intelligence (BI) Analyst",
+  "Database Administrator (DBA)",
+
+  // --- สายโครงสร้างพื้นฐาน เครือข่าย ความปลอดภัย และฮาร์ดแวร์ (IT / CPE) ---
+  "Network & Security Engineer",
+  "Cybersecurity Specialist",
+  "System Administrator / IT Support",
+  "Embedded Systems / IoT Developer",
+  "Hardware & Computer Engineer",
+
+  // --- สายกราฟิก มัลติมีเดีย และเกม (CG / MT) ---
+  "UI/UX Designer / Product Designer",
+  "Graphic Designer / 2D Artist",
+  "3D Modeler / 3D Animator",
+  "Game Developer / Game Programmer",
+  "Video Editor / Motion Graphics",
+
+  // --- สายภูมิสารสนเทศศาสตร์ (GIS) ---
+  "GIS Specialist / GIS Developer",
+  "Spatial Data Analyst",
+  "Remote Sensing Specialist",
+  "เจ้าหน้าที่สารสนเทศภูมิศาสตร์",
+
+  // --- สายคอมพิวเตอร์ธุรกิจ และเทคโนโลยีดิจิทัล (BC) ---
+  "Digital Marketing Specialist",
+  "E-Commerce Specialist",
+  "ERP / CRM Consultant (SAP, Odoo)",
+  "Digital Business Coordinator",
+
   "OTHER"
 ];
 

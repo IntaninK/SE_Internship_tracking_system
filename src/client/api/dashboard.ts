@@ -315,6 +315,88 @@ updateStageWithDetails(currentStepIdx, data.cv, data.trainings, data.companies, 
       document.getElementById('comp-phone').textContent = data.placement.companyPhone1 || '-';
       document.getElementById('comp-email').textContent = data.placement.companyEmail || '-';
     }
+
+    // ==========================================
+    // Multi-Round Internship Tracking (SCRUM-73)
+    // ==========================================
+    const roundInfo = data.roundInfo;
+    if (roundInfo) {
+      // 1. อัปเดตข้อมูลบน Dev Test Toolbar
+      const devStatusBadge = document.getElementById('dev-round-status-badge');
+      if (devStatusBadge) {
+        devStatusBadge.textContent = `รอบที่ ${roundInfo.currentRound} (${roundInfo.currentTerm || '-'}) ${roundInfo.isRound1Completed ? '• จบรอบ 1 แล้ว' : '• กำลังฝึกรอบ 1'}`;
+        if (roundInfo.currentRound >= 2) {
+          devStatusBadge.className = 'font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded border border-emerald-300';
+        } else {
+          devStatusBadge.className = 'font-bold text-purple-700 bg-purple-100 px-2 py-0.5 rounded border border-purple-300';
+        }
+      }
+
+      // 2. แสดง/ซ่อนการ์ดตัวเลือกรอบที่ 2 (Transition Card)
+      // เงื่อนไข: อยู่ในรอบ 1 และผ่านเกณฑ์จบรอบ 1 แล้ว (canCompleteRound1 หรือ isRound1Completed)
+      const transitionCard = document.getElementById('round-transition-card');
+      if (transitionCard) {
+        if (roundInfo.currentRound === 1 && (roundInfo.canCompleteRound1 || roundInfo.isRound1Completed)) {
+          transitionCard.style.display = 'block';
+        } else {
+          transitionCard.style.display = 'none';
+        }
+      }
+
+      // 3. แสดง/ซ่อนการ์ด Accordion พับเก็บประวัติรอบที่ 1
+      // เงื่อนไข: อยู่ในรอบที่ 2 ขึ้นไป หรือมีข้อมูลประวัติใน historyRounds
+      const accordionCard = document.getElementById('round1-accordion-card');
+      if (accordionCard) {
+        if (roundInfo.currentRound >= 2 || (roundInfo.historyRounds && roundInfo.historyRounds.length > 0)) {
+          accordionCard.style.display = 'block';
+
+          const r1 = roundInfo.historyRounds && roundInfo.historyRounds[0];
+          if (r1) {
+            const termBadge = document.getElementById('accordion-term-badge');
+            const r1Name = document.getElementById('r1-comp-name');
+            const r1Pos = document.getElementById('r1-comp-pos');
+            const r1Addr = document.getElementById('r1-comp-addr');
+            const r1Contact = document.getElementById('r1-comp-contact');
+            const r1Checklist = document.getElementById('r1-checklist-badge');
+            const r1Acceptance = document.getElementById('r1-acceptance-info');
+            const r1DocsList = document.getElementById('r1-docs-list');
+
+            if (termBadge) termBadge.textContent = r1.term || 'รอบ 1';
+            if (r1Name) r1Name.textContent = r1.companyName || '-';
+            if (r1Pos) r1Pos.textContent = r1.position || '-';
+            if (r1Addr) r1Addr.textContent = `${r1.companyAddress || '-'} ${r1.province && r1.province !== '-' ? '(' + r1.province + ')' : ''}`;
+            if (r1Contact) r1Contact.textContent = `${r1.phone || '-'} / ${r1.email || '-'}`;
+            if (r1Checklist) {
+              r1Checklist.textContent = r1.checklistStatus === 'APPROVED' ? 'ผ่านครบทุกขั้นตอน' : (r1.checklistStatus || 'ผ่าน');
+            }
+            if (r1Acceptance) {
+              r1Acceptance.textContent = r1.companyResponseStatus === 'ACCEPTED' ? 'ตอบรับเข้าฝึกงานเรียบร้อย' : (r1.companyResponseStatus || 'ตอบรับแล้ว');
+            }
+
+            if (r1DocsList) {
+              const docs = [];
+              if (r1.requestLetterIssued) {
+                docs.push(`📄 หนังสือขอความอนุเคราะห์ (${r1.requestLetterDocNo ? 'เลขที่: ' + r1.requestLetterDocNo : 'ออกหนังสือแล้ว'})`);
+              }
+              if (r1.companyResponseFileUrl) {
+                docs.push(`📄 แบบตอบรับ: <a href="${r1.companyResponseFileUrl}" target="_blank" class="text-blue-600 underline font-semibold">${r1.companyResponseFileName || 'เปิดดูแบบตอบรับ'}</a>`);
+              }
+              if (r1.dispatchLetterIssued) {
+                docs.push(`📄 หนังสือส่งตัว (${r1.dispatchLetterDocNo ? 'เลขที่: ' + r1.dispatchLetterDocNo : 'ออกหนังสือแล้ว'})`);
+              }
+
+              if (docs.length > 0) {
+                r1DocsList.innerHTML = docs.map(d => `<div class="text-xs text-gray-700 bg-gray-50 px-2 py-1 rounded border border-gray-200">${d}</div>`).join('');
+              } else {
+                r1DocsList.innerHTML = '<span class="text-gray-400 italic">ไม่มีไฟล์แนบประวัติ</span>';
+              }
+            }
+          }
+        } else {
+          accordionCard.style.display = 'none';
+        }
+      }
+    }
   })
   .catch(err => console.error('Error fetching dashboard summary:', err));
 }
@@ -326,3 +408,69 @@ loadDashboardData();
 window.addEventListener('app:data-updated', () => {
   loadDashboardData();
 });
+
+
+// ==========================================
+// Handlers สำหรับ Multi-Round (SCRUM-73)
+// ==========================================
+window.toggleRound1Accordion = function() {
+  const body = document.getElementById('round1-accordion-body');
+  const arrow = document.getElementById('accordion-arrow');
+  const toggleText = document.getElementById('accordion-toggle-text');
+  if (!body) return;
+  const isHidden = body.style.display === 'none';
+  body.style.display = isHidden ? 'block' : 'none';
+  if (arrow) arrow.style.transform = isHidden ? 'rotate(180deg)' : 'rotate(0deg)';
+  if (toggleText) toggleText.textContent = isHidden ? 'พับเก็บ' : 'คลี่ดูรายละเอียด';
+};
+
+window.submitRoundChoice = async function(action) {
+  const termSelect = document.getElementById('round2-term-select');
+  const term = termSelect ? termSelect.value : 'Summer 3/2569';
+  
+  const actionLabel = action === 'SAME_COMPANY' 
+    ? 'ยืนยันฝึกงานที่เดิมต่อสำหรับรอบที่ 2' 
+    : 'ยืนยันเปลี่ยนสถานที่ฝึกงานใหม่สำหรับรอบที่ 2';
+    
+  if (!confirm(`${actionLabel}\nรอบเทอม: ${term}\n\nคุณแน่ใจหรือไม่ที่จะดำเนินการต่อ?`)) {
+    return;
+  }
+
+  try {
+    const res = await fetch('/api/student/round/complete-round-1', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action, term }),
+    });
+    const data = await res.json();
+    if (data.success) {
+      alert(data.message);
+      loadDashboardData();
+    } else {
+      alert(data.message || 'เกิดข้อผิดพลาดในการบันทึกรอบที่ 2');
+    }
+  } catch (err) {
+    console.error('Error submitting round choice:', err);
+    alert('เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์');
+  }
+};
+
+window.devToggleRound = async function(mode) {
+  try {
+    const res = await fetch('/api/student/round/dev-toggle-round', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mode }),
+    });
+    const data = await res.json();
+    if (data.success) {
+      alert(data.message);
+      loadDashboardData();
+    } else {
+      alert(data.message || 'เกิดข้อผิดพลาด');
+    }
+  } catch (err) {
+    console.error('Error in devToggleRound:', err);
+    alert('เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์');
+  }
+};

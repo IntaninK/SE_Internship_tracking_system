@@ -16,8 +16,8 @@ fetch('/api/student/profile')
                 document.getElementById('p-gpa').value = s.gpa ? Number(s.gpa).toFixed(2) : '-';
                 document.getElementById('p-major').value = s.major || 'วิศวกรรมซอฟต์แวร์';
                 document.getElementById('p-phone').value = s.phone || '-';
-                document.getElementById('p-lineId').value = s.lineId || '-';
-                document.getElementById('p-facebook').value = s.facebook || '-';
+                const elLine = document.getElementById('p-lineId'); if (elLine) elLine.value = s.lineId || '-';
+                const elFb = document.getElementById('p-facebook'); if (elFb) elFb.value = s.facebook || '-';
 
                 if (s.profileImageUrl) {
                     const photo = document.getElementById('p-photo');

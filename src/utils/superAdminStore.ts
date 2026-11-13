@@ -128,6 +128,43 @@ export interface ArchivedCompanyAttempt {
   archivedAt: string;
 }
 
+export interface InternshipRoundHistory {
+  round: number; // เช่น 1
+  term: string; // เช่น "2/2568"
+  academicYear?: string;
+  semester?: string;
+  companyName: string;
+  position?: string;
+  companyAddress?: string;
+  province?: string;
+  contactPersonName?: string;
+  phone?: string;
+  email?: string;
+  checklistStatus?: string;
+  checklistAnswers?: Array<{ itemId: number; description: string; checked: boolean; detail?: string }>;
+  requestLetterDocNo?: string;
+  requestLetterDate?: string;
+  requestLetterIssued?: boolean;
+  companyResponseStatus?: string;
+  companyResponseFileUrl?: string;
+  companyResponseFileName?: string;
+  dispatchLetterDocNo?: string;
+  dispatchLetterDate?: string;
+  dispatchLetterIssued?: boolean;
+  completedAt: string;
+  note?: string;
+}
+
+export interface StudentRoundState {
+  studentId: number;
+  currentRound: number; // 1 หรือ 2
+  currentTerm: string; // "2/2568", "3/2569 (Summer)", "1/2570"
+  isSameCompanyAsRound1?: boolean;
+  isRound1Completed: boolean;
+  round1CompletedAt?: string;
+  historyRounds: InternshipRoundHistory[];
+}
+
 export interface SuperAdminState {
   academicConfig: {
     currentAcademicYear: string;
@@ -144,6 +181,7 @@ export interface SuperAdminState {
   dismissedCompanyNames?: string[];
   docWorkflowMap: Record<string, StudentDocWorkflowRecord>;
   archivedApplications: ArchivedCompanyAttempt[];
+  studentRoundsMap?: Record<string, StudentRoundState>;
 }
 
 const DATA_DIR = path.join(process.cwd(), "data");
@@ -409,11 +447,35 @@ export function loadSuperAdminState(): SuperAdminState {
       archivedApplications: Array.isArray(parsed.archivedApplications)
         ? parsed.archivedApplications
         : DEFAULT_STATE.archivedApplications,
+      studentRoundsMap: parsed.studentRoundsMap || {},
     };
   } catch (err) {
     console.error("Failed to load super_admin_state.json, using default:", err);
     return JSON.parse(JSON.stringify(DEFAULT_STATE));
   }
+}
+
+export function getStudentRoundState(studentId: number, defaultTerm: string = "2/2568"): StudentRoundState {
+  const state = loadSuperAdminState();
+  const map = state.studentRoundsMap || {};
+  const key = String(studentId);
+  if (!map[key]) {
+    return {
+      studentId,
+      currentRound: 1,
+      currentTerm: defaultTerm,
+      isRound1Completed: false,
+      historyRounds: [],
+    };
+  }
+  return map[key];
+}
+
+export function saveStudentRoundState(studentId: number, roundState: StudentRoundState): void {
+  const state = loadSuperAdminState();
+  if (!state.studentRoundsMap) state.studentRoundsMap = {};
+  state.studentRoundsMap[String(studentId)] = roundState;
+  saveSuperAdminState(state);
 }
 
 export function saveSuperAdminState(state: SuperAdminState): void {

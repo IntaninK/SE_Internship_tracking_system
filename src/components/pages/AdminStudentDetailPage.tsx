@@ -101,16 +101,56 @@ const PAGE_BODY_HTML = `
                 <label class="text-xs font-bold text-slate-600">เบอร์โทรศัพท์ติดต่อ</label>
                 <input class="input-field text-xs" id="d-phone" readonly />
               </div>
-              <div class="flex flex-col gap-1">
-                <label class="text-xs font-bold text-slate-600">Line ID</label>
-                <input class="input-field text-xs" id="d-lineId" readonly />
-              </div>
-              <div class="flex flex-col gap-1">
-                <label class="text-xs font-bold text-slate-600">Facebook</label>
-                <input class="input-field text-xs" id="d-facebook" readonly />
+
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ประวัติการฝึกงานรอบที่ 1 (กรณีฝึกงานรอบที่ 2 - SCRUM-73) -->
+    <section class="card" id="admin-round-history-section" style="display:none;">
+      <div class="card-header" style="background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%);">
+        <span class="material-icons header-icon" style="color:#DDD6FE;">folder_shared</span>
+        <div class="flex-1 flex items-center justify-between">
+          <h2 class="card-title" style="margin:0;">ประวัติการฝึกงานรอบที่ 1 (ข้อมูลที่พับเก็บไว้)</h2>
+          <span id="admin-r1-term-badge" class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-white/20 text-white border border-white/30">รอบที่ 1</span>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="bg-gray-50 p-4 rounded-xl border border-gray-200">
+            <h4 class="text-xs font-bold text-gray-800 flex items-center gap-1.5 mb-2.5">
+              <span class="material-icons text-indigo-600 text-sm">apartment</span>
+              สถานประกอบการรอบที่ 1
+            </h4>
+            <div class="space-y-1.5 text-xs">
+              <div class="flex"><span class="w-28 text-gray-500 shrink-0">ชื่อบริษัท:</span><span id="admin-r1-comp-name" class="font-bold text-gray-800">-</span></div>
+              <div class="flex"><span class="w-28 text-gray-500 shrink-0">ตำแหน่ง:</span><span id="admin-r1-comp-pos" class="font-medium text-gray-800">-</span></div>
+              <div class="flex"><span class="w-28 text-gray-500 shrink-0">ที่อยู่/จังหวัด:</span><span id="admin-r1-comp-addr" class="text-gray-700">-</span></div>
+              <div class="flex"><span class="w-28 text-gray-500 shrink-0">ติดต่อ:</span><span id="admin-r1-comp-contact" class="text-gray-700">-</span></div>
+            </div>
+          </div>
+          <div class="bg-gray-50 p-4 rounded-xl border border-gray-200">
+            <h4 class="text-xs font-bold text-gray-800 flex items-center gap-1.5 mb-2.5">
+              <span class="material-icons text-emerald-600 text-sm">verified</span>
+              เอกสาร &amp; การอนุมัติรอบที่ 1
+            </h4>
+            <div class="space-y-1.5 text-xs">
+              <div class="flex items-center"><span class="w-28 text-gray-500 shrink-0">สถานะ Checklist:</span><span id="admin-r1-checklist-badge" class="font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">ผ่านครบทุกขั้นตอน</span></div>
+              <div class="flex"><span class="w-28 text-gray-500 shrink-0">แบบตอบรับ:</span><span id="admin-r1-acceptance-info" class="text-gray-700">-</span></div>
+              <div class="pt-1.5 border-t border-gray-200">
+                <span class="text-gray-500 block mb-1">หนังสือราชการ / เอกสารรอบ 1:</span>
+                <div id="admin-r1-docs-list" class="space-y-1">
+                  <span class="text-gray-400 italic">ไม่มีไฟล์แนบ</span>
+                </div>
               </div>
             </div>
           </div>
+        </div>
+        <div class="mt-3 p-3 bg-purple-50 rounded-xl border border-purple-100 flex items-center gap-2 text-xs text-purple-900">
+          <span class="material-icons text-purple-600 text-base">info</span>
+          <span>นิสิตกำลังดำเนินการใน <strong>รอบที่ 2</strong> โดยชั่วโมงอบรม Soft/Hard skills จากรอบแรกได้รับการรับรองและคงอยู่ต่อเนื่อง 100%</span>
         </div>
       </div>
     </section>

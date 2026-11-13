@@ -169,7 +169,7 @@ const PAGE_BODY_HTML = `
           </select>
 
           <select id="sort-by" class="input-field" style="width:auto; min-width:165px; font-size:13px; padding:7px 12px; cursor:pointer; font-weight:500;">
-            <option value="critical" selected>🚨 เรียง: วิกฤตสุด ➔ เบาสุด</option>
+            <option value="critical" selected>📌 เรียง: ต้องติดตาม ➔ พร้อมฝึกงาน</option>
             <option value="studentCode_desc">🔢 เรียง: รหัสนิสิต (มาก ➔ น้อย)</option>
             <option value="studentCode_asc">🔤 เรียง: รหัสนิสิต (น้อย ➔ มาก)</option>
             <option value="name_asc">👤 เรียง: ชื่อ-นามสกุล (ก-ฮ)</option>

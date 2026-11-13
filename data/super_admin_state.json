@@ -168,7 +168,48 @@
       "academicYear": "2568",
       "createdBy": "พี่จอม (เจ้าหน้าที่คณะ / Super Admin)",
       "createdAt": "2026-01-12T10:30:00.000Z",
-      "checkIns": []
+      "checkIns": [
+        {
+          "studentCode": "67099999",
+          "nameTh": "ไมเคิล แจ็คสัน",
+          "major": "วิศวกรรมซอฟต์แวร์",
+          "checkedInAt": "2026-11-12T07:42:58.715Z",
+          "trainingRecordId": 76,
+          "sessionId": "SES-1",
+          "sessionTitle": "ทั้งกิจกรรม (2026-01-25)",
+          "creditedHours": 6
+        },
+        {
+          "studentCode": "67024999",
+          "nameTh": "ซง โกคู",
+          "major": "วิศวกรรมซอฟต์แวร์",
+          "checkedInAt": "2026-11-12T07:42:58.667Z",
+          "trainingRecordId": 75,
+          "sessionId": "SES-1",
+          "sessionTitle": "ทั้งกิจกรรม (2026-01-25)",
+          "creditedHours": 6
+        },
+        {
+          "studentCode": "67023110",
+          "nameTh": "เอกัทร อินทร์สวัสดิ์",
+          "major": "วิศวกรรมซอฟต์แวร์",
+          "checkedInAt": "2026-11-12T07:42:58.613Z",
+          "trainingRecordId": 74,
+          "sessionId": "SES-1",
+          "sessionTitle": "ทั้งกิจกรรม (2026-01-25)",
+          "creditedHours": 6
+        }
+      ],
+      "sessions": [
+        {
+          "id": "SES-1",
+          "title": "ทั้งกิจกรรม",
+          "date": "2026-01-25",
+          "startTime": "08:30",
+          "endTime": "16:30",
+          "hours": 6
+        }
+      ]
     }
   ],
   "companyMasterData": [
@@ -294,47 +335,18 @@
     "1": {
       "studentId": 1,
       "studentCode": "67024964",
-      "companyName": "tesla",
+      "companyName": "บริษัท กสิกร บิซิเนส-เทคโนโลยี กรุ๊ป (KBTG)",
       "interviewDate": "2026-02-15",
       "requestLetterIssued": true,
       "requestLetterDocNo": "อว 7316/ว 253",
       "requestLetterDate": "2026-11-11",
-      "requestLetterBatchId": "REQ-BATCH-755139",
-      "requestLetterSignatureSnapshot": "",
       "companyResponseStatus": "ADVISOR_APPROVED",
-      "dispatchLetterIssued": false,
-      "dispatchLetterSignatureSnapshot": "",
-      "isLocked": false,
-      "unlockedByAdmin": true,
       "companyResponseFileName": "แบบตอบรับนิสิตฝึกงานtest.pdf",
       "companyResponseFileUrl": "https://res.cloudinary.com/j5ccelrs/image/upload/v1794388940/se_internship/acceptance_forms/1794388937255-____________________test.pdf",
-      "companyResponseUploadedAt": "2026-11-11T09:22:22.331Z",
-      "companyResponseSubmittedByStudent": true,
-      "companyResponseOcr": {
-        "status": "DONE",
-        "result": "ACCEPTED",
-        "confidence": 0.92,
-        "reasons": [
-          "ตรวจพบรอยติ๊กในช่อง ☐ \"สามารถรับนิสิตเข้าฝึกงานได้\""
-        ],
-        "warnings": [],
-        "signals": {
-          "acceptCheckboxInk": 0.1403,
-          "rejectCheckboxInk": 0,
-          "acceptZoneInk": 0.1416,
-          "rejectZoneInk": 0.0108,
-          "acceptChecked": true,
-          "rejectChecked": false,
-          "acceptDetailsWritten": true,
-          "rejectDetailsWritten": false
-        },
-        "engine": "builtin-template-analyzer",
-        "analyzedAt": "2026-11-11T09:22:20.869Z"
-      },
       "advisorAcceptanceStatus": "APPROVED",
-      "advisorAcceptanceNote": "อาจารย์ที่ปรึกษาตรวจสอบและอนุมัติแบบตอบรับแล้ว",
-      "advisorAcceptanceReviewedAt": "2026-11-12T03:01:39.982Z",
-      "advisorAcceptanceReviewedBy": "Kantinan Kengkla"
+      "dispatchLetterIssued": false,
+      "isLocked": false,
+      "unlockedByAdmin": true
     },
     "97": {
       "studentId": 97,
@@ -415,5 +427,15 @@
       "note": "สถานประกอบการแจ้งเต็มอัตราในรอบเทอมนี้ (ปลดล็อกให้ยื่นบริษัทใหม่แล้ว)",
       "archivedAt": "2026-01-08T14:20:00.000Z"
     }
-  ]
+  ],
+  "studentRoundsMap": {
+    "1": {
+      "studentId": 1,
+      "currentRound": 1,
+      "currentTerm": "2/2568",
+      "isRound1Completed": false,
+      "historyRounds": [],
+      "isSameCompanyAsRound1": false
+    }
+  }
 }

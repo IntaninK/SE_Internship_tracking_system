@@ -375,6 +375,11 @@ function renderStudentTable(students, total, page, totalPages) {
         <div style="display:flex; align-items:center; gap:6px;">
           <span>${s.studentCode}</span>
           <span class="inline-block px-1.5 py-0.2 text-[10.5px] font-semibold rounded bg-indigo-50 text-indigo-700 border border-indigo-200" title="รอบฝึกงาน: ${s.semester === 'SUMMER' ? 'Summer' : 'เทอม ' + (s.semester || '2')}">${(s.studentCode ? s.studentCode.substring(0, 2) : '67') + '/' + (s.semester || '2')}</span>
+          ${s.roundInfo && s.roundInfo.currentRound >= 2 ? `
+            <span class="inline-flex items-center px-1.5 py-0.5 text-[10px] font-bold rounded bg-purple-100 text-purple-800 border border-purple-200" title="รอบที่ 2 (${s.roundInfo.currentTerm || ''})">
+              รอบ 2
+            </span>
+          ` : ''}
         </div>
       </td>
       <td>${s.nameTh}</td>

@@ -73,6 +73,53 @@ async function initStudentDetail() {
     renderAcceptanceFormReview(data.acceptanceWorkflow);
     renderDocumentSummary(data);
 
+    // Multi-round history (SCRUM-73)
+    const roundSection = document.getElementById('admin-round-history-section');
+    if (roundSection && data.roundInfo) {
+      if (data.roundInfo.currentRound >= 2 || (data.roundInfo.historyRounds && data.roundInfo.historyRounds.length > 0)) {
+        roundSection.style.display = 'block';
+        const r1 = data.roundInfo.historyRounds && data.roundInfo.historyRounds[0];
+        if (r1) {
+          const badgeEl = document.getElementById('admin-r1-term-badge');
+          const compNameEl = document.getElementById('admin-r1-comp-name');
+          const compPosEl = document.getElementById('admin-r1-comp-pos');
+          const compAddrEl = document.getElementById('admin-r1-comp-addr');
+          const compContactEl = document.getElementById('admin-r1-comp-contact');
+          const checklistBadgeEl = document.getElementById('admin-r1-checklist-badge');
+          const acceptanceInfoEl = document.getElementById('admin-r1-acceptance-info');
+          const docsListEl = document.getElementById('admin-r1-docs-list');
+
+          if (badgeEl) badgeEl.textContent = `รอบ 1 (${r1.term || '-'})`;
+          if (compNameEl) compNameEl.textContent = r1.companyName || '-';
+          if (compPosEl) compPosEl.textContent = r1.position || '-';
+          if (compAddrEl) compAddrEl.textContent = `${r1.companyAddress || '-'} ${r1.province && r1.province !== '-' ? '(' + r1.province + ')' : ''}`;
+          if (compContactEl) compContactEl.textContent = `${r1.phone || '-'} / ${r1.email || '-'}`;
+          if (checklistBadgeEl) checklistBadgeEl.textContent = r1.checklistStatus === 'APPROVED' ? 'ผ่านครบทุกขั้นตอน' : (r1.checklistStatus || 'ผ่าน');
+          if (acceptanceInfoEl) acceptanceInfoEl.textContent = r1.companyResponseStatus === 'ACCEPTED' ? 'ตอบรับเข้าฝึกงานเรียบร้อย' : (r1.companyResponseStatus || 'ตอบรับแล้ว');
+
+          if (docsListEl) {
+            const docs = [];
+            if (r1.requestLetterIssued) {
+              docs.push(`📄 หนังสือขอความอนุเคราะห์ (${r1.requestLetterDocNo ? 'เลขที่: ' + r1.requestLetterDocNo : 'ออกหนังสือแล้ว'})`);
+            }
+            if (r1.companyResponseFileUrl) {
+              docs.push(`📄 แบบตอบรับ: <a href="${r1.companyResponseFileUrl}" target="_blank" class="text-blue-600 underline font-semibold">${r1.companyResponseFileName || 'เปิดดูแบบตอบรับ'}</a>`);
+            }
+            if (r1.dispatchLetterIssued) {
+              docs.push(`📄 หนังสือส่งตัว (${r1.dispatchLetterDocNo ? 'เลขที่: ' + r1.dispatchLetterDocNo : 'ออกหนังสือแล้ว'})`);
+            }
+            if (docs.length > 0) {
+              docsListEl.innerHTML = docs.map(d => `<div class="text-xs text-gray-700 bg-white p-1.5 rounded border border-gray-200">${d}</div>`).join('');
+            } else {
+              docsListEl.innerHTML = '<span class="text-gray-400 italic">ไม่มีไฟล์แนบประวัติ</span>';
+            }
+          }
+        }
+      } else {
+        roundSection.style.display = 'none';
+      }
+    }
+
     const btnGoToChecklist = document.getElementById('btn-goto-checklist-review') as HTMLAnchorElement | null;
     if (btnGoToChecklist) {
       btnGoToChecklist.href = `/advisor-checklist-review?studentId=${studentId}`;
@@ -134,8 +181,8 @@ function renderProfile(s) {
   document.getElementById('d-major').value = s.major || '';
   document.getElementById('student-detail-email').value = s.email || '';
   document.getElementById('d-phone').value = s.phone || '';
-  document.getElementById('d-lineId').value = s.lineId || '';
-  document.getElementById('d-facebook').value = s.facebook || '';
+  const elLine = document.getElementById('d-lineId'); if (elLine) elLine.value = s.lineId || '';
+  const elFb = document.getElementById('d-facebook'); if (elFb) elFb.value = s.facebook || '';
 }
 
 // ==========================================

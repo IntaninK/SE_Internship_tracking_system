@@ -398,7 +398,16 @@ function renderStudentTable(students, total, page, totalPages) {
       }
 
       tr.innerHTML = `
-        <td>${s.studentCode}</td>
+        <td>
+          <div style="display:flex; align-items:center; gap:6px;">
+            <span>${s.studentCode}</span>
+            ${s.roundInfo && s.roundInfo.currentRound >= 2 ? `
+              <span class="inline-flex items-center px-1.5 py-0.5 text-[10px] font-bold rounded bg-purple-100 text-purple-800 border border-purple-200" title="รอบที่ 2 (${s.roundInfo.currentTerm || ''})">
+                รอบ 2
+              </span>
+            ` : ''}
+          </div>
+        </td>
         <td>${s.nameTh}</td>
         <td><span class="text-xs font-medium text-slate-700" title="${s.major || '-'}">${formatMajorName(s.major)}</span></td>
         <td>${s.advisorName || '<span class="text-gray-400">-</span>'}</td>
@@ -4801,7 +4810,7 @@ window.renderDocumentQueueTable = function() {
             style="background:#EEF2FF; color:#312E81; border:1px solid #C7D2FE; padding:3px 8px; border-radius:6px; font-size:11px; font-weight:700; cursor:pointer;">
             📄 หนังสือขอความอนุเคราะห์
           </button>
-          <a href="/documents/acceptance_form_se.pdf" download="แบบตอบรับนิสิตฝึกงาน_SE.pdf" target="_blank" rel="noopener"
+          <a href="/documents/acceptance_form_se.pdf" download="แบบตอบรับการฝึกงาน_มหาวิทยาลัยพะเยา.pdf" target="_blank" rel="noopener"
             style="background:#F0FDF4; color:#166534; border:1px solid #BBF7D0; padding:3px 8px; border-radius:6px; font-size:11px; font-weight:700; text-decoration:none;">
             📥 แบบตอบรับเปล่า
           </a>
@@ -5222,6 +5231,11 @@ window.openOfficialLetterPreview = function(type, studentIds, companyName) {
   const areaEl = document.getElementById('official-letter-print-area');
   if (!modal || !areaEl) return;
 
+  const cleanCompName = String(companyName || 'สถานประกอบการ').trim();
+  window.currentLetterDocTitle = type === 'DISPATCH'
+    ? `หนังสือส่งตัวนิสิตฝึกงาน (${cleanCompName})`
+    : `ขอความอนุเคราะห์รับนิสิตฝึกงาน มหาวิทยาลัยพะเยา (${cleanCompName})`;
+
   const students = (superAdminData.documentQueue || []).filter(d => studentIds.includes(d.studentId));
   const first = students[0] || {
     studentCode: '67023110',
@@ -5341,6 +5355,7 @@ window.closeOfficialLetterModal = function() {
 window.printOfficialLetter = function() {
   const areaEl = document.getElementById('official-letter-print-area');
   if (!areaEl) return;
+  const docTitle = window.currentLetterDocTitle || 'หนังสือราชการ คณะ ICT มหาวิทยาลัยพะเยา';
   const win = window.open('', '_blank', 'width=900,height=750');
   if (!win) {
     window.print();
@@ -5351,13 +5366,40 @@ window.printOfficialLetter = function() {
     <html lang="th">
       <head>
         <meta charset="utf-8" />
-        <title>หนังสือราชการ คณะ ICT มหาวิทยาลัยพะเยา</title>
+        <title>${docTitle}</title>
         <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700;800&display=swap" rel="stylesheet" />
         <style>
-          body { font-family: 'Sarabun', sans-serif; padding: 24px 36px; color: #0F172A; line-height: 1.65; }
+          @page {
+            size: A4 portrait;
+            margin: 25mm 20mm 20mm 30mm; /* ระเบียบสารบรรณ: ซ้าย 30mm (3 ซม.), ขวา 20mm (2 ซม.), บน 25mm (2.5 ซม.), ล่าง 20mm (2 ซม.) */
+          }
+          * { box-sizing: border-box; }
+          body {
+            font-family: 'Sarabun', 'TH Sarabun New', sans-serif;
+            font-size: 16pt;
+            line-height: 1.6;
+            color: #000;
+            padding: 0;
+            margin: 0;
+            word-break: keep-all;
+            word-wrap: break-word;
+            line-break: strict;
+          }
+          p {
+            text-align: justify;
+            text-justify: inter-cluster;
+            line-height: 1.6;
+            margin-bottom: 12px;
+          }
           @media print {
             body { padding: 0; }
-            .official-acceptance-page { border-top: none !important; margin-top: 0 !important; padding-top: 12px !important; page-break-before: always; break-before: page; }
+            .official-acceptance-page {
+              border-top: none !important;
+              margin-top: 0 !important;
+              padding-top: 0 !important;
+              page-break-before: always;
+              break-before: page;
+            }
           }
         </style>
       </head>

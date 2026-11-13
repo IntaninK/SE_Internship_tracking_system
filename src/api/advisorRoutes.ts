@@ -1,7 +1,7 @@
 import express, { Request, Response } from "express";
 import prisma from "../db";
 import requireAdvisor from "../auth/requireAdvisor";
-import { loadSuperAdminState, saveSuperAdminState } from "../utils/superAdminStore";
+import { loadSuperAdminState, saveSuperAdminState, getStudentRoundState } from "../utils/superAdminStore";
 
 const router = express.Router();
 
@@ -281,6 +281,7 @@ router.get("/students", async (req: Request, res: Response) => {
         acceptanceStatus,
         acceptanceFileName,
         acceptanceFileUrl,
+        roundInfo: getStudentRoundState(s.id, `${s.semester || "2"}/${s.academicYear || "2568"}`),
       };
     });
 

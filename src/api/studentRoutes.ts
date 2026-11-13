@@ -5,7 +5,13 @@ import prisma from "../db";
 import requireLogin from "../auth/requireLogin";
 import { uploadToCloudinary } from "../utils/cloudinary";
 import { analyzeAcceptanceForm } from "../utils/acceptanceOcr";
-import { loadSuperAdminState, saveSuperAdminState } from "../utils/superAdminStore";
+import {
+  loadSuperAdminState,
+  saveSuperAdminState,
+  getStudentRoundState,
+  saveStudentRoundState,
+  StudentRoundState,
+} from "../utils/superAdminStore";
 
 const router = express.Router();
 
@@ -1290,6 +1296,15 @@ router.get("/dashboard-summary", async (req: Request, res: Response) => {
       ? checkPlacementMatchesChecklist(student.placement, student.companies || [])
       : false;
 
+    const state = loadSuperAdminState();
+    const defaultTerm = `${student.semester || "2"}/${student.academicYear || "2568"}`;
+    const roundState = getStudentRoundState(student.id, defaultTerm);
+
+    const isPlacementApproved = Boolean(student.placement && student.placement.status === "APPROVED");
+    const docWf = state.docWorkflowMap?.[String(student.id)];
+    const hasDispatchLetter = Boolean(docWf?.dispatchLetterIssued);
+    const canCompleteRound1 = isPlacementApproved || hasDispatchLetter || roundState.isRound1Completed;
+
     res.json({
       success: true,
       hasProfile: true,
@@ -1334,10 +1349,283 @@ router.get("/dashboard-summary", async (req: Request, res: Response) => {
             isMatchedWithChecklist,
           }
         : null,
+      roundInfo: {
+        currentRound: roundState.currentRound,
+        currentTerm: roundState.currentTerm || defaultTerm,
+        isRound1Completed: roundState.isRound1Completed,
+        canCompleteRound1,
+        isSameCompanyAsRound1: Boolean(roundState.isSameCompanyAsRound1),
+        round1CompletedAt: roundState.round1CompletedAt || null,
+        historyRounds: roundState.historyRounds || [],
+      },
     });
   } catch (err) {
     console.error("GET /api/student/dashboard-summary error:", err);
     res.status(500).json({ success: false, message: "ดึงข้อมูลสรุป Dashboard ไม่สำเร็จ" });
+  }
+});
+
+// ==========================================
+// 9. การจัดการรอบการฝึกงาน (SCRUM-73: Multi-Round Internship)
+// ==========================================
+router.post("/round/complete-round-1", async (req: Request, res: Response) => {
+  try {
+    const student = await getStudentByUserId(req.session.user!.id);
+    if (!student) return res.status(404).json({ success: false, message: "ไม่พบข้อมูลนิสิต" });
+
+    const { action, term } = req.body;
+    if (!action || !term) {
+      return res.status(400).json({ success: false, message: "กรุณาระบุทางเลือกและเทอมสำหรับรอบที่ 2" });
+    }
+
+    const state = loadSuperAdminState();
+    const defaultTerm = `${student.semester || "2"}/${student.academicYear || "2568"}`;
+    const roundState = getStudentRoundState(student.id, defaultTerm);
+
+    const docWf = state.docWorkflowMap?.[String(student.id)];
+    const approvedComp = student.companies.find((c) => c.checklistStatus === "APPROVED");
+
+    // 1. บันทึกข้อมูลของรอบที่ 1 เข้า historyRounds (ถ้ายังไม่เคยบันทึก)
+    if (roundState.historyRounds.length === 0) {
+      roundState.historyRounds.push({
+        round: 1,
+        term: roundState.currentTerm || defaultTerm,
+        academicYear: student.academicYear || "2568",
+        semester: student.semester || "2",
+        companyName: student.placement?.companyNameTh || approvedComp?.name || docWf?.companyName || "สถานประกอบการรอบที่ 1",
+        position: student.placement?.position || "ไม่ระบุตำแหน่ง",
+        companyAddress: student.placement?.companyAddress || "-",
+        province: student.placement?.province || "-",
+        contactPersonName: student.placement?.contactPersonName || "-",
+        phone: student.placement?.companyPhone1 || "-",
+        email: student.placement?.companyEmail || "-",
+        checklistStatus: approvedComp?.checklistStatus || "APPROVED",
+        requestLetterDocNo: docWf?.requestLetterDocNo,
+        requestLetterDate: docWf?.requestLetterDate,
+        requestLetterIssued: docWf?.requestLetterIssued,
+        companyResponseStatus: docWf?.companyResponseStatus,
+        companyResponseFileUrl: docWf?.companyResponseFileUrl,
+        companyResponseFileName: docWf?.companyResponseFileName,
+        dispatchLetterDocNo: docWf?.dispatchLetterDocNo,
+        dispatchLetterDate: docWf?.dispatchLetterDate,
+        dispatchLetterIssued: docWf?.dispatchLetterIssued,
+        completedAt: new Date().toISOString(),
+      });
+    }
+
+    roundState.currentRound = 2;
+    roundState.currentTerm = term;
+    roundState.isRound1Completed = true;
+    roundState.round1CompletedAt = new Date().toISOString();
+
+    const isSummer = term.includes("Summer") || term.includes("3/");
+    const newSemester = isSummer ? "SUMMER" : "1";
+    const matchYear = term.match(/25\d{2}/);
+    const newYear = matchYear ? matchYear[0] : (student.academicYear || "2569");
+
+    if (action === "SAME_COMPANY") {
+      roundState.isSameCompanyAsRound1 = true;
+      await prisma.student.update({
+        where: { id: student.id },
+        data: {
+          semester: newSemester,
+          academicYear: newYear,
+        },
+      });
+    } else {
+      // NEW_COMPANY (เปลี่ยนสถานที่ฝึกใหม่)
+      roundState.isSameCompanyAsRound1 = false;
+
+      // 1. ดึง ID ของบริษัททั้งหมดของนิสิตคนนี้
+      const existingCompanies = await prisma.company.findMany({
+        where: { studentId: student.id },
+        select: { id: true },
+      });
+      const companyIds = existingCompanies.map((c) => c.id);
+
+      if (companyIds.length > 0) {
+        // ลบ answers และ submission ก่อนเพื่อไม่ให้ติด Foreign Key Constraint
+        await prisma.companyChecklistAnswer.deleteMany({
+          where: { companyId: { in: companyIds } },
+        });
+        await prisma.companySubmission.deleteMany({
+          where: { companyId: { in: companyIds } },
+        });
+        await prisma.company.deleteMany({
+          where: { id: { in: companyIds } },
+        });
+      }
+
+      // 2. ลบ placement เดิม เพื่อเปิดให้นิสิตยื่นที่ใหม่
+      await prisma.internshipPlacement.deleteMany({
+        where: { studentId: student.id },
+      });
+
+      // 3. ปรับปรุงสถานะนิสิต: รีเซ็ต stage กลับเป็น PENDING_DOCUMENTS
+      // ถ้าไม่ใช่ Summer (เช่น 1/2570 ปี 4) ให้อาจารย์ประจำวิชาใหม่เป็นผู้จัดสรรอาจารย์ที่ปรึกษา (advisorId = null)
+      const updateData: any = {
+        semester: newSemester,
+        academicYear: newYear,
+        stage: "PENDING_DOCUMENTS",
+      };
+      if (!isSummer) {
+        updateData.advisorId = null;
+      }
+
+      await prisma.student.update({
+        where: { id: student.id },
+        data: updateData,
+      });
+
+      // 4. รีเซ็ต docWorkflow สำหรับรอบใหม่
+      if (!state.docWorkflowMap) state.docWorkflowMap = {};
+      state.docWorkflowMap[String(student.id)] = {
+        studentId: student.id,
+        studentCode: student.studentCode,
+        companyName: "ยังไม่ยื่นบริษัท",
+        requestLetterIssued: false,
+        companyResponseStatus: "NOT_SENT",
+        dispatchLetterIssued: false,
+        isLocked: false,
+      };
+      saveSuperAdminState(state);
+    }
+
+    saveStudentRoundState(student.id, roundState);
+
+    res.json({
+      success: true,
+      message:
+        action === "SAME_COMPANY"
+          ? `ยืนยันฝึกงานที่เดิมต่อสำหรับรอบที่ 2 (${term}) เรียบร้อยแล้ว`
+          : `เริ่มต้นรอบที่ 2 สำหรับสถานที่ฝึกงานใหม่ (${term}) เรียบร้อยแล้ว กรุณากรอก Checklist บริษัทใหม่`,
+      roundState,
+    });
+  } catch (err) {
+    console.error("POST /api/student/round/complete-round-1 error:", err);
+    res.status(500).json({ success: false, message: "เกิดข้อผิดพลาดในการเปลี่ยนรอบฝึกงาน" });
+  }
+});
+
+// เครื่องมือสำหรับ Developer / Tester ในการจำลองจบรอบหรือรีเซ็ตกลับรอบ 1
+router.post("/round/dev-toggle-round", async (req: Request, res: Response) => {
+  try {
+    const student = await getStudentByUserId(req.session.user!.id);
+    if (!student) return res.status(404).json({ success: false, message: "ไม่พบข้อมูลนิสิต" });
+
+    const { mode } = req.body;
+    const defaultTerm = `${student.semester || "2"}/${student.academicYear || "2568"}`;
+    const roundState = getStudentRoundState(student.id, defaultTerm);
+
+    if (mode === "RESET_ROUND_1") {
+      const hist = roundState.historyRounds && roundState.historyRounds[0];
+
+      roundState.currentRound = 1;
+      roundState.currentTerm = "2/2568";
+      roundState.isRound1Completed = false;
+      roundState.isSameCompanyAsRound1 = false;
+      roundState.round1CompletedAt = undefined;
+      roundState.historyRounds = [];
+      saveStudentRoundState(student.id, roundState);
+
+      // ถ้าในตารางไม่มีบริษัท (เนื่องจากก่อนหน้านี้กดเปลี่ยนที่ใหม่แล้วลบไป) -> กู้คืนบริษัทและ placement ของรอบ 1 ให้
+      if (!student.companies || student.companies.length === 0) {
+        const comp = await prisma.company.create({
+          data: {
+            studentId: student.id,
+            name: hist?.companyName || "บริษัท กสิกร บิซิเนส-เทคโนโลยี กรุ๊ป (KBTG)",
+            checklistVersionId: 1,
+            checklistStatus: "APPROVED",
+            reviewedById: 15,
+            reviewedAt: new Date(),
+          },
+        });
+
+        const items = await prisma.checklistItem.findMany({
+          where: { section: { versionId: 1 } },
+        });
+
+        if (items.length > 0) {
+          await prisma.companyChecklistAnswer.createMany({
+            data: items.map((it, idx) => ({
+              companyId: comp.id,
+              checklistItemId: it.id,
+              checked: idx < 8,
+            })),
+          });
+        }
+
+        await prisma.companySubmission.create({
+          data: {
+            companyId: comp.id,
+            status: "INTERVIEW_PASSED",
+          },
+        });
+
+        await prisma.internshipPlacement.upsert({
+          where: { studentId: student.id },
+          create: {
+            studentId: student.id,
+            companyId: comp.id,
+            companyNameTh: hist?.companyName || "บริษัท กสิกร บิซิเนส-เทคโนโลยี กรุ๊ป (KBTG)",
+            position: hist?.position || "Frontend Developer",
+            companyAddress: hist?.companyAddress || "46/1 อาคาร KBTG ถ.สาทรเหนือ แขวงสีลม เขตบางรัก",
+            province: hist?.province || "กรุงเทพมหานคร",
+            companyPhone1: hist?.phone || "02-008-0000",
+            companyEmail: hist?.email || "recruitment@kbtg.tech",
+            status: "APPROVED",
+          },
+          update: {
+            companyId: comp.id,
+            companyNameTh: hist?.companyName || "บริษัท กสิกร บิซิเนส-เทคโนโลยี กรุ๊ป (KBTG)",
+            position: hist?.position || "Frontend Developer",
+            status: "APPROVED",
+          },
+        });
+      }
+
+      await prisma.student.update({
+        where: { id: student.id },
+        data: {
+          semester: "2",
+          academicYear: "2568",
+          stage: "READY",
+        },
+      });
+
+      const state = loadSuperAdminState();
+      if (!state.docWorkflowMap) state.docWorkflowMap = {};
+      state.docWorkflowMap[String(student.id)] = {
+        studentId: student.id,
+        studentCode: student.studentCode,
+        companyName: hist?.companyName || "บริษัท กสิกร บิซิเนส-เทคโนโลยี กรุ๊ป (KBTG)",
+        interviewDate: "2026-02-15",
+        requestLetterIssued: true,
+        requestLetterDocNo: hist?.requestLetterDocNo || "อว 7316/ว 253",
+        requestLetterDate: hist?.requestLetterDate || "2026-11-11",
+        companyResponseStatus: "ADVISOR_APPROVED",
+        companyResponseFileName: hist?.companyResponseFileName || "แบบตอบรับนิสิตฝึกงานtest.pdf",
+        companyResponseFileUrl: hist?.companyResponseFileUrl || "https://res.cloudinary.com/j5ccelrs/image/upload/v1794388940/se_internship/acceptance_forms/1794388937255-____________________test.pdf",
+        advisorAcceptanceStatus: "APPROVED",
+        dispatchLetterIssued: false,
+        isLocked: false,
+        unlockedByAdmin: true,
+      };
+      saveSuperAdminState(state);
+
+      return res.json({ success: true, message: "รีเซ็ตสถานะและกู้คืนข้อมูลบริษัทกลับสู่รอบที่ 1 เรียบร้อยแล้ว", roundState });
+    }
+
+    if (mode === "SIMULATE_COMPLETE") {
+      roundState.isRound1Completed = true;
+      saveStudentRoundState(student.id, roundState);
+      return res.json({ success: true, message: "จำลองการจบรอบที่ 1 เรียบร้อยแล้ว (พร้อมเลือกขึ้นรอบ 2)", roundState });
+    }
+
+    res.status(400).json({ success: false, message: "โหมดไม่ถูกต้อง" });
+  } catch (err) {
+    console.error("POST /api/student/round/dev-toggle-round error:", err);
+    res.status(500).json({ success: false, message: "เกิดข้อผิดพลาด" });
   }
 });
 
