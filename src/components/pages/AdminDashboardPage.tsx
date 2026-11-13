@@ -3,6 +3,7 @@
 import React from "react";
 import PageShell from "./PageShell";
 import FloatingNotification from "../FloatingNotification";
+import { ICT_MAJORS, majorLabel, majorOptionsHtml, ictMajorsDataScript } from "../../utils/majors";
 
 const PAGE_TITLE = "Super Admin (พี่จอม) & อาจารย์ประจำวิชา - คณะ ICT ม.พะเยา";
 const PAGE_STYLES: string[] = [`
@@ -654,6 +655,7 @@ const PAGE_SCRIPTS: string[] = [
   "../api/admin_dashboard.js"
 ];
 const PAGE_BODY_HTML = `
+${ictMajorsDataScript()}
   <div id="header-placeholder"></div>
   <div id="admin-dashboard">
     <div class="admin-layout" id="admin-layout">
@@ -814,14 +816,7 @@ const PAGE_BODY_HTML = `
 
             <select id="major-filter" class="input-field" style="width:auto; min-width:170px; font-size:13px; padding:7px 12px; cursor:pointer;">
               <option value="ALL">ทุกสาขาวิชา (คณะ ICT)</option>
-              <option value="วิศวกรรมซอฟต์แวร์">สาขาวิศวกรรมซอฟต์แวร์ (SE)</option>
-              <option value="ธุรกิจดิจิทัล">สาขาธุรกิจดิจิทัล (DB)</option>
-              <option value="วิทยาการคอมพิวเตอร์">สาขาวิทยาการคอมพิวเตอร์ (CS)</option>
-              <option value="เทคโนโลยีสารสนเทศ">สาขาเทคโนโลยีสารสนเทศ (IT)</option>
-              <option value="วิศวกรรมคอมพิวเตอร์">สาขาวิศวกรรมคอมพิวเตอร์ (CPE)</option>
-              <option value="คอมพิวเตอร์กราฟิกและมัลติมีเดีย">สาขาคอมพิวเตอร์กราฟิกฯ (CGM)</option>
-              <option value="ภูมิสารสนเทศศาสตร์">สาขาภูมิสารสนเทศศาสตร์ (GIS)</option>
-              <option value="วิทยาการข้อมูลและการประยุกต์">สาขาวิทยาการข้อมูลฯ (DSA)</option>
+${majorOptionsHtml("              ")}
             </select>
 
             <select id="year-filter" class="input-field" style="width:auto; min-width:115px; font-size:13px; padding:7px 12px; cursor:pointer;">
@@ -1124,19 +1119,19 @@ const PAGE_BODY_HTML = `
           <div class="card-header" style="border-top-left-radius:15px; border-top-right-radius:15px;">
             <span class="material-icons header-icon">add_task</span>
             <div>
-              <h2 class="card-title" style="margin:0;">สร้างกิจกรรมอบรมภายในคณะ</h2>
-              <p style="margin:2px 0 0 0; font-size:11.5px; color:#E0E7FF;">กำหนดได้หลายช่วงเวลา/หลายวัน และกรอกชั่วโมงแต่ละช่วงเองได้</p>
+              <h2 class="card-title" style="margin:0;">สร้างกิจกรรมใหม่</h2>
+              <p style="margin:2px 0 0 0; font-size:11.5px; color:#E0E7FF;">เพิ่มได้หลายวัน / หลายช่วงเวลา</p>
             </div>
           </div>
           <div class="card-body" style="overflow:visible !important;">
             <div style="display:flex; flex-direction:column; gap:12px;">
               <div>
-                <label style="font-size:12.5px; font-weight:700; color:#334155;">ชื่อกิจกรรมอบรม / สัมมนา <span style="color:#EF4444;">*</span></label>
-                <input type="text" id="evt-title" class="input-field" placeholder="เช่น อบรมเตรียมความพร้อม: การเขียน Resume &amp; บุคลิกภาพ" style="margin-top:4px;" />
+                <label style="font-size:12.5px; font-weight:700; color:#334155;">ชื่อกิจกรรม <span style="color:#EF4444;">*</span></label>
+                <input type="text" id="evt-title" class="input-field" placeholder="เช่น อบรมการเขียน Resume" style="margin-top:4px;" />
               </div>
 
               <div>
-                <label style="font-size:12.5px; font-weight:700; color:#334155;">ประเภทชั่วโมงทักษะ</label>
+                <label style="font-size:12.5px; font-weight:700; color:#334155;">ประเภทชั่วโมง</label>
                 <select id="evt-skill-type" class="input-field" style="margin-top:4px;">
                   <option value="SOFT">Soft Skill (เกณฑ์ 12 ชม.)</option>
                   <option value="HARD">Hard Skill (เกณฑ์ 18 ชม.)</option>
@@ -1148,11 +1143,11 @@ const PAGE_BODY_HTML = `
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
                   <label style="font-size:12.5px; font-weight:700; color:#1E293B; display:flex; align-items:center; gap:5px;">
                     <span class="material-icons" style="font-size:16px; color:#4338CA;">date_range</span>
-                    <span>ช่วงเวลา / วันที่อบรม &amp; ชั่วโมง</span>
+                    <span>วันและเวลาอบรม</span>
                   </label>
                   <button type="button" onclick="window.addEventSession()" style="background:#EEF2FF; border:1px solid #C7D2FE; color:#4338CA; border-radius:8px; padding:4px 10px; font-size:11.5px; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:4px;" class="hover:bg-indigo-100">
                     <span class="material-icons" style="font-size:14px;">add</span>
-                    <span>เพิ่มช่วงเวลา / วัน</span>
+                    <span>เพิ่มวัน</span>
                   </button>
                 </div>
 
@@ -1163,8 +1158,8 @@ const PAGE_BODY_HTML = `
                 <!-- กล่องสรุปชั่วโมงรวมทั้งกิจกรรม -->
                 <div style="margin-top:10px; padding:10px 14px; background:#ECFDF5; border:1px solid #A7F3D0; border-radius:10px; display:flex; align-items:center; justify-content:space-between;">
                   <div>
-                    <div style="font-size:12px; font-weight:700; color:#065F46;">ชั่วโมงรวมทั้งกิจกรรม:</div>
-                    <div id="evt-hours-summary-note" style="font-size:11px; color:#047857;">รวม 1 ช่วงเวลา (กรอกชั่วโมงแต่ละช่วงเองได้)</div>
+                    <div style="font-size:12px; font-weight:700; color:#065F46;">ชั่วโมงรวม</div>
+                    <div id="evt-hours-summary-note" style="font-size:11px; color:#047857;">1 ช่วงเวลา</div>
                   </div>
                   <div style="text-align:right;">
                     <span id="evt-total-hours-badge" style="font-size:22px; font-weight:800; color:#059669;">6</span>
@@ -1175,7 +1170,7 @@ const PAGE_BODY_HTML = `
 
               <div>
                 <label style="font-size:12.5px; font-weight:700; color:#334155; display:flex; justify-content:space-between; align-items:center;">
-                  <span>สาขาวิชาเป้าหมาย (เลือกได้หลายสาขา)</span>
+                  <span>สาขาที่เข้าร่วมได้</span>
                   <span id="evt-target-major-count" style="font-size:11px; font-weight:600; color:#4338CA;">(เลือก 8 สาขา)</span>
                 </label>
                 <input type="hidden" id="evt-target-major" value="ALL" />
@@ -1196,38 +1191,11 @@ const PAGE_BODY_HTML = `
                       </button>
                     </div>
                     <div id="evt-major-checkbox-list" style="display:flex; flex-direction:column; gap:2px;">
+${ICT_MAJORS.map((m) => `
                       <label style="display:flex; align-items:center; gap:8px; padding:5px 8px; border-radius:8px; cursor:pointer; font-size:12.5px;" class="hover:bg-slate-100">
-                        <input type="checkbox" class="evt-major-item" value="วิศวกรรมซอฟต์แวร์" onchange="window.updateSelectedMajors()" checked style="width:15px; height:15px; accent-color:#4338CA; cursor:pointer;" />
-                        <span>สาขาวิศวกรรมซอฟต์แวร์ (SE)</span>
-                      </label>
-                      <label style="display:flex; align-items:center; gap:8px; padding:5px 8px; border-radius:8px; cursor:pointer; font-size:12.5px;" class="hover:bg-slate-100">
-                        <input type="checkbox" class="evt-major-item" value="วิทยาการคอมพิวเตอร์" onchange="window.updateSelectedMajors()" checked style="width:15px; height:15px; accent-color:#4338CA; cursor:pointer;" />
-                        <span>สาขาวิทยาการคอมพิวเตอร์ (CS)</span>
-                      </label>
-                      <label style="display:flex; align-items:center; gap:8px; padding:5px 8px; border-radius:8px; cursor:pointer; font-size:12.5px;" class="hover:bg-slate-100">
-                        <input type="checkbox" class="evt-major-item" value="วิศวกรรมคอมพิวเตอร์" onchange="window.updateSelectedMajors()" checked style="width:15px; height:15px; accent-color:#4338CA; cursor:pointer;" />
-                        <span>สาขาวิศวกรรมคอมพิวเตอร์ (CPE)</span>
-                      </label>
-                      <label style="display:flex; align-items:center; gap:8px; padding:5px 8px; border-radius:8px; cursor:pointer; font-size:12.5px;" class="hover:bg-slate-100">
-                        <input type="checkbox" class="evt-major-item" value="เทคโนโลยีสารสนเทศ" onchange="window.updateSelectedMajors()" checked style="width:15px; height:15px; accent-color:#4338CA; cursor:pointer;" />
-                        <span>สาขาเทคโนโลยีสารสนเทศ (IT)</span>
-                      </label>
-                      <label style="display:flex; align-items:center; gap:8px; padding:5px 8px; border-radius:8px; cursor:pointer; font-size:12.5px;" class="hover:bg-slate-100">
-                        <input type="checkbox" class="evt-major-item" value="ธุรกิจดิจิทัล" onchange="window.updateSelectedMajors()" checked style="width:15px; height:15px; accent-color:#4338CA; cursor:pointer;" />
-                        <span>สาขาธุรกิจดิจิทัล (DB)</span>
-                      </label>
-                      <label style="display:flex; align-items:center; gap:8px; padding:5px 8px; border-radius:8px; cursor:pointer; font-size:12.5px;" class="hover:bg-slate-100">
-                        <input type="checkbox" class="evt-major-item" value="คอมพิวเตอร์กราฟิกและมัลติมีเดีย" onchange="window.updateSelectedMajors()" checked style="width:15px; height:15px; accent-color:#4338CA; cursor:pointer;" />
-                        <span>สาขาคอมพิวเตอร์กราฟิกฯ (CGM)</span>
-                      </label>
-                      <label style="display:flex; align-items:center; gap:8px; padding:5px 8px; border-radius:8px; cursor:pointer; font-size:12.5px;" class="hover:bg-slate-100">
-                        <input type="checkbox" class="evt-major-item" value="ภูมิสารสนเทศศาสตร์" onchange="window.updateSelectedMajors()" checked style="width:15px; height:15px; accent-color:#4338CA; cursor:pointer;" />
-                        <span>สาขาภูมิสารสนเทศศาสตร์ (GIS)</span>
-                      </label>
-                      <label style="display:flex; align-items:center; gap:8px; padding:5px 8px; border-radius:8px; cursor:pointer; font-size:12.5px;" class="hover:bg-slate-100">
-                        <input type="checkbox" class="evt-major-item" value="วิทยาการข้อมูลและการประยุกต์" onchange="window.updateSelectedMajors()" checked style="width:15px; height:15px; accent-color:#4338CA; cursor:pointer;" />
-                        <span>สาขาวิทยาการข้อมูลฯ (DSA)</span>
-                      </label>
+                        <input type="checkbox" class="evt-major-item" value="${m.name}" data-code="${m.code}" onchange="window.updateSelectedMajors()" checked style="width:15px; height:15px; accent-color:#4338CA; cursor:pointer;" />
+                        <span>${majorLabel(m)}</span>
+                      </label>`).join("")}
                     </div>
                   </div>
                 </div>
@@ -1235,7 +1203,7 @@ const PAGE_BODY_HTML = `
 
               <div>
                 <label style="font-size:12.5px; font-weight:700; color:#334155; display:flex; justify-content:space-between; align-items:center;">
-                  <span>ชั้นปีเป้าหมาย (เลือกได้หลายชั้นปี)</span>
+                  <span>ชั้นปีที่เข้าร่วมได้</span>
                   <span id="evt-target-year-count" style="font-size:11px; font-weight:600; color:#4338CA;">(เลือกทุกชั้นปี)</span>
                 </label>
                 <input type="hidden" id="evt-target-year" value="ALL" />
@@ -1282,13 +1250,13 @@ const PAGE_BODY_HTML = `
               </div>
 
               <div>
-                <label style="font-size:12.5px; font-weight:700; color:#334155;">สถานที่จัดงาน</label>
+                <label style="font-size:12.5px; font-weight:700; color:#334155;">สถานที่</label>
                 <input type="text" id="evt-location" class="input-field" value="ห้องประชุมคณะ ICT มหาวิทยาลัยพะเยา" style="margin-top:4px;" />
               </div>
 
               <button type="button" onclick="createTrainingEvent()" style="background:linear-gradient(135deg, #1E1B4B 0%, #4338CA 100%); color:white; border:none; padding:11px 16px; border-radius:12px; font-size:13px; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px; margin-top:4px;">
                 <span class="material-icons" style="font-size:18px;">add_circle</span>
-                <span>สร้างกิจกรรมอบรมใหม่</span>
+                <span>สร้างกิจกรรม</span>
               </button>
             </div>
           </div>
@@ -1300,8 +1268,8 @@ const PAGE_BODY_HTML = `
             <div style="display:flex; align-items:center; gap:10px;">
               <span class="material-icons header-icon">fact_check</span>
               <div>
-                <h2 class="card-title" style="margin:0;">บันทึก Check-in หน้างานด้วยรหัสนิสิต (ไม่ต้องอัปโหลดใบเซอร์เอง)</h2>
-                <p style="margin:2px 0 0 0; font-size:11.5px; color:#E0E7FF;">นำรหัสนิสิตจากใบลงชื่อหน้างานมากรอก/วาง ระบบจะ Map รหัสนิสิตและบวกชั่วโมงเข้าแดชบอร์ดทันที</p>
+                <h2 class="card-title" style="margin:0;">บันทึกผู้เข้าอบรม (Check-in)</h2>
+                <p style="margin:2px 0 0 0; font-size:11.5px; color:#E0E7FF;">เลือกกิจกรรม → ใส่รหัสนิสิต → ระบบบวกชั่วโมงให้อัตโนมัติ</p>
               </div>
             </div>
           </div>
@@ -1309,8 +1277,8 @@ const PAGE_BODY_HTML = `
             <!-- เลือกกิจกรรมที่จะ Check-in -->
             <div style="margin-bottom:16px; padding:14px 16px; background:#F8FAFC; border:1px solid #E2E8F0; border-radius:14px;">
               <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:8px;">
-                <label style="font-size:12.5px; font-weight:700; color:#1E293B;">
-                  1. เลือกกิจกรรมอบรมที่ต้องการบันทึก Check-in รหัสนิสิต:
+                <label style="font-size:13px; font-weight:800; color:#1E293B; display:inline-flex; align-items:center; gap:8px;">
+                  <span style="display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; border-radius:999px; background:#4338CA; color:white; font-size:12px; font-weight:800; flex-shrink:0;">1</span> เลือกกิจกรรม
                 </label>
                 <span id="filter-event-count-badge" style="font-size:11.5px; font-weight:600; color:#64748B;"></span>
               </div>
@@ -1320,28 +1288,21 @@ const PAGE_BODY_HTML = `
                 <!-- 1. ค้นหาชื่อกิจกรรม -->
                 <div style="flex:1; min-width:180px; position:relative;">
                   <span class="material-icons" style="position:absolute; left:10px; top:50%; transform:translateY(-50%); font-size:18px; color:#94A3B8; pointer-events:none; z-index:1;">search</span>
-                  <input type="text" id="filter-event-keyword" placeholder="ค้นหาชื่อกิจกรรม..." oninput="window.applyEventFilters()" class="input-field" style="padding-left:36px !important; height:34px !important; min-height:34px !important; font-size:12px; border-radius:8px; margin:0;" />
+                  <input type="text" id="filter-event-keyword" placeholder="ค้นหากิจกรรม..." oninput="window.applyEventFilters()" class="input-field" style="padding-left:36px !important; height:34px !important; min-height:34px !important; font-size:12px; border-radius:8px; margin:0;" />
                 </div>
 
                 <!-- 2. กรองสาขาวิชาเป้าหมาย -->
                 <div style="width:160px;">
                   <select id="filter-event-major" onchange="window.applyEventFilters()" class="input-field" style="height:34px; font-size:12px; padding:4px 8px; border-radius:8px; margin:0; font-weight:600; cursor:pointer;">
-                    <option value="ALL">🎯 ทุกสาขาวิชา</option>
-                    <option value="วิศวกรรมซอฟต์แวร์">วิศวกรรมซอฟต์แวร์ (SE)</option>
-                    <option value="วิทยาการคอมพิวเตอร์">วิทยาการคอมพิวเตอร์ (CS)</option>
-                    <option value="วิศวกรรมคอมพิวเตอร์">วิศวกรรมคอมพิวเตอร์ (CPE)</option>
-                    <option value="เทคโนโลยีสารสนเทศ">เทคโนโลยีสารสนเทศ (IT)</option>
-                    <option value="ธุรกิจดิจิทัล">ธุรกิจดิจิทัล (DB)</option>
-                    <option value="คอมพิวเตอร์กราฟิกและมัลติมีเดีย">คอมพิวเตอร์กราฟิกฯ (CGM)</option>
-                    <option value="ภูมิสารสนเทศศาสตร์">ภูมิสารสนเทศศาสตร์ (GIS)</option>
-                    <option value="วิทยาการข้อมูลและการประยุกต์">วิทยาการข้อมูลฯ (DSA)</option>
+                    <option value="ALL">ทุกสาขา</option>
+${majorOptionsHtml("                    ")}
                   </select>
                 </div>
 
                 <!-- 2.1 กรองชั้นปีเป้าหมาย -->
                 <div style="width:130px;">
                   <select id="filter-event-year" onchange="window.applyEventFilters()" class="input-field" style="height:34px; font-size:12px; padding:4px 8px; border-radius:8px; margin:0; font-weight:600; cursor:pointer;">
-                    <option value="ALL">🎓 ทุกชั้นปี</option>
+                    <option value="ALL">ทุกชั้นปี</option>
                     <option value="67">ปี 67 (ปี 3)</option>
                     <option value="68">ปี 68 (ปี 2)</option>
                     <option value="66">ปี 66 (ปี 4)</option>
@@ -1352,10 +1313,10 @@ const PAGE_BODY_HTML = `
                 <!-- 3. กรองวันที่ -->
                 <div style="width:130px;">
                   <select id="filter-event-date-preset" onchange="window.handleEventDatePresetChange()" class="input-field" style="height:34px; font-size:12px; padding:4px 8px; border-radius:8px; margin:0; font-weight:600; cursor:pointer;">
-                    <option value="ALL">📅 ทุกวันที่</option>
-                    <option value="TODAY">🔥 วันนี้</option>
-                    <option value="THIS_MONTH">📆 เดือนนี้</option>
-                    <option value="CUSTOM">🗓️ ระบุวันที่...</option>
+                    <option value="ALL">ทุกวันที่</option>
+                    <option value="TODAY">วันนี้</option>
+                    <option value="THIS_MONTH">เดือนนี้</option>
+                    <option value="CUSTOM">ระบุวันที่...</option>
                   </select>
                 </div>
 
@@ -1370,20 +1331,18 @@ const PAGE_BODY_HTML = `
               </div>
 
               <select id="checkin-event-select" class="input-field" onchange="renderSelectedEventCheckins()" style="font-weight:700; color:#1E1B4B;"></select>
-              <div id="checkin-selected-event-meta" style="margin-top:8px; font-size:12px; color:#475569;"></div>
+              <div id="checkin-selected-event-meta" style="margin-top:10px; padding:10px 12px; background:#FFFFFF; border:1px solid #E2E8F0; border-radius:10px; font-size:12px; color:#475569;"></div>
 
               <!-- เลือกช่วงเวลา/วันที่ ที่ต้องการ Check-in (รองรับ Option 1 แยกวัน/แยกช่วง) -->
               <div id="checkin-session-select-container" style="margin-top:10px; padding-top:10px; border-top:1px dashed #CBD5E1;">
                 <label style="font-size:12px; font-weight:700; color:#1E293B; display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-                  <span>เลือกรอบวันที่ / ช่วงเวลาที่ Check-in:</span>
+                  <span>บันทึกให้ช่วงไหน</span>
                   <span id="checkin-session-hours-badge" style="font-size:11px; font-weight:700; background:#E0E7FF; color:#3730A3; padding:2px 8px; border-radius:999px;"></span>
                 </label>
                 <select id="checkin-session-select" class="input-field" onchange="window.handleCheckInSessionChange()" style="font-size:12.5px; font-weight:600; color:#1E1B4B;">
-                  <option value="ALL">🌟 เช็คอินทั้งกิจกรรม (ทุกช่วงพร้อมกัน)</option>
+                  <option value="ALL">ทุกช่วง</option>
                 </select>
-                <div id="checkin-session-hint" style="font-size:11px; color:#64748B; margin-top:3px;">
-                  * สามารถเลือกบันทึกเฉพาะวันที่ 1 หรือ วันที่ 2 ตามที่นิสิตมาเข้าร่วมจริง (ชั่วโมงจะคิดแยกตามช่วง)
-                </div>
+                <div id="checkin-session-hint" style="font-size:11px; color:#64748B; margin-top:3px;"></div>
               </div>
             </div>
 
@@ -1391,24 +1350,24 @@ const PAGE_BODY_HTML = `
             <div style="margin-bottom:18px; padding:16px; background:#EEF2FF; border:1px solid #C7D2FE; border-radius:14px;">
               <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:10px; margin-bottom:8px;">
                 <div>
-                  <label style="font-size:12.5px; font-weight:700; color:#1E1B4B; display:block; margin-bottom:4px;">
-                    2. กรอกหรือวางรหัสนิสิตจากใบลงชื่อหน้างาน (รองรับทั้งพิมพ์ทีละรหัส, ก๊อปวาง หรือนำเข้าไฟล์ Excel / CSV):
+                  <label style="font-size:13px; font-weight:800; color:#1E1B4B; display:inline-flex; align-items:center; gap:8px; margin-bottom:4px;">
+                    <span style="display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; border-radius:999px; background:#4338CA; color:white; font-size:12px; font-weight:800; flex-shrink:0;">2</span> ใส่รหัสนิสิต
                   </label>
                   <p style="font-size:11.5px; color:#4338CA; margin:0;">
-                    * สามารถพิมพ์รหัสนิสิตคั่นด้วยเครื่องหมายจุลภาค (,), เว้นวรรค หรือกดปุ่ม <strong>นำเข้าไฟล์ Excel / CSV</strong> เพื่อพรีวิวตรวจสอบรายชื่อก่อนบันทึก
+                    พิมพ์หรือวางรหัส คั่นด้วย , หรือเว้นวรรค — หรือนำเข้าจากไฟล์
                   </p>
                 </div>
                 <button type="button" onclick="openCheckInImportModal()" style="background:linear-gradient(135deg, #065F46 0%, #10B981 100%); color:white; border:none; padding:8px 14px; border-radius:10px; font-size:12.5px; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:6px; white-space:nowrap; box-shadow:0 4px 12px rgba(16,185,129,0.25);">
                   <span class="material-icons" style="font-size:17px;">upload_file</span>
-                  <span>นำเข้าไฟล์ Excel / CSV</span>
+                  <span>นำเข้า Excel / CSV</span>
                 </button>
               </div>
               <div style="display:flex; gap:10px; align-items:stretch;" class="max-md:flex-col">
-                <textarea id="checkin-student-codes" class="input-field" rows="3" placeholder="ตัวอย่าง: 67023110, 67023111 หรือวางคอลัมน์รหัสนิสิตจาก Excel..." style="flex:1; font-family:monospace; font-size:13px;"></textarea>
+                <textarea id="checkin-student-codes" class="input-field" rows="3" placeholder="เช่น 67023110, 67023111" style="flex:1; font-family:monospace; font-size:13px;"></textarea>
                 <div style="display:flex; flex-direction:column; gap:6px; justify-content:center;">
                   <button type="button" onclick="submitEventCheckIn()" style="background:#10B981; color:white; border:none; padding:12px 18px; border-radius:12px; font-size:13px; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:6px; white-space:nowrap; height:100%;">
                     <span class="material-icons" style="font-size:18px;">how_to_reg</span>
-                    <span>บันทึก Check-in &amp; นับชั่วโมงทันที</span>
+                    <span>บันทึก Check-in</span>
                   </button>
                 </div>
               </div>
@@ -1418,20 +1377,20 @@ const PAGE_BODY_HTML = `
             <!-- ตารางรายชื่อนิสิตที่ Check-in ในกิจกรรมนี้แล้ว -->
             <div>
               <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:10px;">
-                <h4 style="font-size:13.5px; font-weight:700; color:#1E293B; margin:0;">
-                  รายชื่อนิสิตที่บันทึก Check-in ในกิจกรรมนี้แล้ว (<span id="checkin-list-count">0</span> คน)
+                <h4 style="font-size:13px; font-weight:800; color:#1E293B; margin:0; display:inline-flex; align-items:center; gap:8px;">
+                  <span style="display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; border-radius:999px; background:#4338CA; color:white; font-size:12px; font-weight:800; flex-shrink:0;">3</span> ผู้เข้าร่วมแล้ว <span style="background:#EEF2FF; color:#4338CA; padding:1px 8px; border-radius:999px; font-size:12px;"><span id="checkin-list-count">0</span> คน</span>
                 </h4>
                 <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
                   <div style="display:flex; align-items:center; gap:6px;">
-                    <label for="checkin-filter-major" style="font-size:12px; font-weight:700; color:#475569;">กรองสาขาวิชา:</label>
+                    <label for="checkin-filter-major" style="font-size:12px; font-weight:700; color:#475569;">สาขา</label>
                     <select id="checkin-filter-major" class="input-field" onchange="window.filterCheckInList()" style="padding:4px 10px; font-size:12px; width:auto; min-width:145px; height:32px; font-weight:600; cursor:pointer;">
-                      <option value="ALL">ทุกสาขาวิชา (ทั้งหมด)</option>
+                      <option value="ALL">ทุกสาขา</option>
                     </select>
                   </div>
                   <div style="display:flex; align-items:center; gap:6px;">
-                    <label for="checkin-filter-year" style="font-size:12px; font-weight:700; color:#475569;">กรองชั้นปี:</label>
+                    <label for="checkin-filter-year" style="font-size:12px; font-weight:700; color:#475569;">ชั้นปี</label>
                     <select id="checkin-filter-year" class="input-field" onchange="window.filterCheckInList()" style="padding:4px 10px; font-size:12px; width:auto; min-width:130px; height:32px; font-weight:600; cursor:pointer;">
-                      <option value="ALL">ทุกชั้นปี (ทั้งหมด)</option>
+                      <option value="ALL">ทุกชั้นปี</option>
                     </select>
                   </div>
                 </div>
@@ -1443,9 +1402,9 @@ const PAGE_BODY_HTML = `
                       <th>รหัสนิสิต</th>
                       <th>ชื่อ - นามสกุล</th>
                       <th>สาขาวิชา</th>
-                      <th>ช่วงที่เข้าร่วม</th>
-                      <th class="text-center">ชั่วโมงที่ได้รับ</th>
-                      <th>เวลาที่บันทึก</th>
+                      <th>ช่วง</th>
+                      <th class="text-center">ชั่วโมง</th>
+                      <th>บันทึกเมื่อ</th>
                       <th class="text-center" style="width:140px; white-space:nowrap;">
                         <div style="display:inline-flex; align-items:center; gap:6px; justify-content:center;">
                           <span>จัดการ</span>
@@ -1629,68 +1588,62 @@ const PAGE_BODY_HTML = `
           <span class="material-icons" style="color:#4338CA; font-size:28px;">verified</span>
           <div>
             <div style="font-size:13.5px; font-weight:800; color:#1E1B4B;">
-              ลำดับการออกเอกสารราชการ (นโยบายยื่นขอฝึกงานทีละ 1 บริษัท)
+              ขั้นตอนออกเอกสาร (นิสิตยื่นทีละ 1 บริษัท)
             </div>
-            <div style="font-size:12px; color:#3730A3; margin-top:2px;">
-              <strong>ขั้นที่ 1:</strong> ที่ปรึกษาอนุมัติ Checklist ➔ <strong>ขั้นที่ 2:</strong> พี่จอมออก <strong>"หนังสือขอความอนุเคราะห์ (+ แนบแบบฟอร์มใบตอบรับ)"</strong> ไปยื่น/สัมภาษณ์ (รวมกลุ่มบริษัทเดียวกันได้) ➔ <strong>ขั้นที่ 3:</strong> บริษัทส่งใบตอบรับ ➔ <strong>ถ้ารับ:</strong> ออก <strong>"หนังสือส่งตัว"</strong> | <strong>ถ้าปฏิเสธ:</strong> เก็บเข้า <strong>Archive</strong> และปลดล็อกให้ยื่นบริษัทใหม่
+            <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-top:6px; font-size:12px; color:#3730A3;">
+              <span style="background:white; border:1px solid #C7D2FE; border-radius:999px; padding:2px 10px;"><strong>1</strong> ที่ปรึกษาอนุมัติ Checklist</span>
+              <span>➔</span>
+              <span style="background:white; border:1px solid #C7D2FE; border-radius:999px; padding:2px 10px;"><strong>2</strong> ออกหนังสือขอความอนุเคราะห์ (+ใบตอบรับ)</span>
+              <span>➔</span>
+              <span style="background:white; border:1px solid #C7D2FE; border-radius:999px; padding:2px 10px;"><strong>3</strong> ตรวจใบตอบรับจากบริษัท</span>
+              <span>➔</span>
+              <span style="background:white; border:1px solid #C7D2FE; border-radius:999px; padding:2px 10px;"><strong>4</strong> ออกหนังสือส่งตัว</span>
+              <span style="color:#64748B;">(ถ้าบริษัทปฏิเสธ → เก็บเข้า Archive แล้วให้นิสิตยื่นบริษัทใหม่)</span>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- ส่วนที่ 1: การจัดกลุ่มนิสิตที่ไปบริษัทเดียวกัน (Group Request Letter) -->
-      <section class="card">
-        <div class="card-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
-          <div style="display:flex; align-items:center; gap:10px;">
-            <span class="material-icons header-icon">folder_shared</span>
-            <div>
-              <h2 class="card-title" style="margin:0;">ออกหนังสือขอความอนุเคราะห์แบบรวมกลุ่มสถานประกอบการเดียวกัน (Group Letter + ตารางแนบท้าย)</h2>
-              <p style="margin:2px 0 0 0; font-size:12px; color:#E0E7FF;">หากมีนิสิตไปบริษัทเดียวกันรอบเดียวกัน สามารถกดออกหนังสือฉบับเดียวพร้อมตารางรายชื่อแนบท้ายและแบบฟอร์มใบตอบรับได้ทันที</p>
-            </div>
-          </div>
-        </div>
-        <div class="card-body">
-          <div id="company-groups-container" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(320px, 1fr)); gap:12px;"></div>
-        </div>
-      </section>
-
-      <!-- ส่วนที่ 2: ตารางจัดการเอกสารรายบุคคล (หนังสือขอความอนุเคราะห์ -> ตรวจใบตอบรับ -> หนังสือส่งตัว) -->
+      <!-- คิวเอกสารราชการ แบบจัดกลุ่มตามสถานประกอบการ (กดที่บริษัทเพื่อดูรายชื่อนิสิต) -->
       <section class="card">
         <div class="card-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
           <div style="display:flex; align-items:center; gap:10px;">
             <span class="material-icons header-icon">assignment_turned_in</span>
             <div>
-              <h2 class="card-title" style="margin:0;">คิวออกหนังสือขอความอนุเคราะห์ (+ใบตอบรับ), ตรวจผลตอบรับจากบริษัท และออกหนังสือส่งตัว</h2>
-              <p style="margin:2px 0 0 0; font-size:12px; color:#E0E7FF;">ตรวจสอบสถานะรายคน พรีวิวเอกสารราชการ PDF และจัดการกรณีบริษัทตอบรับหรือปฏิเสธ</p>
+              <h2 class="card-title" style="margin:0;">คิวออกหนังสือ แยกตามบริษัท</h2>
+              <p style="margin:2px 0 0 0; font-size:12px; color:#E0E7FF;">กดที่ชื่อบริษัทเพื่อดูรายชื่อนิสิตและจัดการเอกสาร</p>
             </div>
-          </div>
-          <div style="display:flex; gap:8px;">
-            <select id="doc-queue-filter" class="input-field" onchange="renderDocumentQueueTable()" style="width:auto; font-size:12px; padding:6px 12px; background:white; color:#1E293B;">
-              <option value="ALL">แสดงนิสิตทั้งหมด</option>
-              <option value="READY_FOR_REQ">รอออกหนังสือขอความอนุเคราะห์</option>
-              <option value="WAITING_RESPONSE">ออกหนังสือแล้ว / รอผลใบตอบรับบริษัท</option>
-              <option value="ACCEPTED">บริษัทตอบรับแล้ว / พร้อมออกหนังสือส่งตัว</option>
-              <option value="DISPATCHED">ออกหนังสือส่งตัวเสร็จสิ้นแล้ว</option>
-            </select>
           </div>
         </div>
         <div class="card-body">
-          <div class="table-responsive">
-            <table class="data-table">
-              <thead>
-                <tr>
-                  <th style="width:18%;">รหัสนิสิต / ชื่อ-สกุล</th>
-                  <th style="width:20%;">สถานประกอบการ (ยื่นทีละ 1 แห่ง)</th>
-                  <th style="width:12%;">สถานะ Checklist</th>
-                  <th style="width:18%;">1. หนังสือขอความอนุเคราะห์ (+ใบตอบรับ)</th>
-                  <th style="width:16%;">2. ผลใบตอบรับจากบริษัท</th>
-                  <th style="width:16%;">3. หนังสือส่งตัวเข้าฝึกงาน</th>
-                </tr>
-              </thead>
-              <tbody id="doc-workflow-tbody">
-                <tr><td colspan="6" class="text-center py-6 text-gray-400">กำลังโหลดคิวงานเอกสารราชการ...</td></tr>
-              </tbody>
-            </table>
+          <!-- แถบตัวกรอง -->
+          <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:12px;">
+            <div style="flex:1; min-width:200px; position:relative;">
+              <span class="material-icons" style="position:absolute; left:10px; top:50%; transform:translateY(-50%); font-size:18px; color:#94A3B8; pointer-events:none;">search</span>
+              <input type="text" id="doc-queue-keyword" class="input-field" oninput="renderDocumentQueueTable()" placeholder="ค้นหาบริษัท / รหัส / ชื่อนิสิต" style="padding-left:36px !important; margin:0; font-size:12.5px;" />
+            </div>
+            <select id="doc-queue-major" class="input-field" onchange="renderDocumentQueueTable()" style="width:auto; min-width:150px; margin:0; font-size:12.5px;">
+              <option value="ALL">ทุกสาขา</option>
+            </select>
+            <select id="doc-queue-year" class="input-field" onchange="renderDocumentQueueTable()" style="width:auto; min-width:120px; margin:0; font-size:12.5px;">
+              <option value="ALL">ทุกชั้นปี</option>
+            </select>
+            <select id="doc-queue-filter" class="input-field" onchange="renderDocumentQueueTable()" style="width:auto; min-width:190px; margin:0; font-size:12.5px;">
+              <option value="ALL">ทุกสถานะ</option>
+              <option value="READY_FOR_REQ">รอออกหนังสือขอความอนุเคราะห์</option>
+              <option value="WAITING_RESPONSE">รอผลใบตอบรับจากบริษัท</option>
+              <option value="ACCEPTED">ตอบรับแล้ว / รอออกหนังสือส่งตัว</option>
+              <option value="DISPATCHED">ออกหนังสือส่งตัวแล้ว</option>
+            </select>
+            <label style="display:inline-flex; align-items:center; gap:6px; font-size:12.5px; color:#475569; cursor:pointer; white-space:nowrap;">
+              <input type="checkbox" id="doc-queue-hide-none" onchange="renderDocumentQueueTable()" checked style="width:15px; height:15px; accent-color:#4338CA;" />
+              ซ่อนนิสิตที่ยังไม่ยื่นบริษัท
+            </label>
+            <button type="button" onclick="window.toggleAllDocGroups()" id="doc-queue-expand-btn" style="background:#F1F5F9; border:1px solid #CBD5E1; color:#475569; border-radius:8px; padding:6px 10px; font-size:12px; font-weight:600; cursor:pointer;">ขยายทั้งหมด</button>
+          </div>
+          <div id="doc-queue-summary" style="font-size:12px; color:#64748B; margin-bottom:8px;"></div>
+          <div id="doc-workflow-groups" style="display:flex; flex-direction:column; gap:10px;">
+            <div style="padding:18px; text-align:center; color:#94A3B8;">กำลังโหลดคิวงานเอกสารราชการ...</div>
           </div>
         </div>
       </section>
@@ -1763,14 +1716,7 @@ const PAGE_BODY_HTML = `
 
             <select id="coop-major-filter" class="input-field" onchange="window.filterCoopTable ? window.filterCoopTable() : null" style="width:auto; min-width:170px; font-size:12.5px; height:36px; padding:4px 10px; border-radius:8px; cursor:pointer; background:#FFFFFF;">
               <option value="ALL">ทุกสาขาวิชา (คณะ ICT)</option>
-              <option value="วิศวกรรมซอฟต์แวร์">สาขาวิศวกรรมซอฟต์แวร์ (SE)</option>
-              <option value="ธุรกิจดิจิทัล">สาขาธุรกิจดิจิทัล (DB)</option>
-              <option value="วิทยาการคอมพิวเตอร์">สาขาวิทยาการคอมพิวเตอร์ (CS)</option>
-              <option value="เทคโนโลยีสารสนเทศ">สาขาเทคโนโลยีสารสนเทศ (IT)</option>
-              <option value="วิศวกรรมคอมพิวเตอร์">สาขาวิศวกรรมคอมพิวเตอร์ (CPE)</option>
-              <option value="คอมพิวเตอร์กราฟิก">สาขาคอมพิวเตอร์กราฟิกฯ (CGM)</option>
-              <option value="ภูมิสารสนเทศ">สาขาภูมิสารสนเทศศาสตร์ (GIS)</option>
-              <option value="วิทยาการข้อมูล">สาขาวิทยาการข้อมูลฯ (DSA)</option>
+${majorOptionsHtml("              ")}
             </select>
 
             <select id="coop-status-filter" class="input-field" onchange="window.filterCoopTable ? window.filterCoopTable() : null" style="width:auto; min-width:220px; font-size:12.5px; height:36px; padding:4px 10px; border-radius:8px; cursor:pointer; background:#FFFFFF; font-weight:600; color:#1E40AF;">
@@ -2175,14 +2121,7 @@ const PAGE_BODY_HTML = `
             >
               <option value="ALL">ทุกสาขาวิชา / สังกัด</option>
               <option value="__FACULTY__">ส่วนกลางทั้งคณะ ICT (8 สาขา)</option>
-              <option value="วิศวกรรมซอฟต์แวร์">สาขาวิศวกรรมซอฟต์แวร์ (SE)</option>
-              <option value="ธุรกิจดิจิทัล">สาขาธุรกิจดิจิทัล (DB)</option>
-              <option value="วิทยาการคอมพิวเตอร์">สาขาวิทยาการคอมพิวเตอร์ (CS)</option>
-              <option value="เทคโนโลยีสารสนเทศ">สาขาเทคโนโลยีสารสนเทศ (IT)</option>
-              <option value="วิศวกรรมคอมพิวเตอร์">สาขาวิศวกรรมคอมพิวเตอร์ (CPE)</option>
-              <option value="คอมพิวเตอร์กราฟิกและมัลติมีเดีย">สาขาคอมพิวเตอร์กราฟิกและมัลติมีเดีย (CG)</option>
-              <option value="ภูมิสารสนเทศศาสตร์">สาขาภูมิสารสนเทศศาสตร์ (GIS)</option>
-              <option value="วิทยาการข้อมูลและการประยุกต์">สาขาวิทยาการข้อมูลและการประยุกต์ (DSA)</option>
+${majorOptionsHtml("              ")}
             </select>
 
             <!-- ตัวกรองบทบาท (Role) -->

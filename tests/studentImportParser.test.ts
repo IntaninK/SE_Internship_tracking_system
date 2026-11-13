@@ -6,6 +6,7 @@ import {
   calculateStudentYear,
   parseCheckInSpreadsheet,
 } from "../src/utils/studentImportParser";
+import { normalizeMajor } from "../src/utils/majors";
 
 describe("calculateCurrentAcademicYear", () => {
   test("returns the same BE year for a date in June or later", () => {
@@ -74,3 +75,19 @@ describe("parseCheckInSpreadsheet", () => {
   });
 });
 
+
+describe("normalizeMajor", () => {
+  test("strips numeric prefix from imported major names", () => {
+    assert.equal(normalizeMajor("221 วิศวกรรมซอฟต์แวร์"), "วิศวกรรมซอฟต์แวร์");
+  });
+
+  test("maps prefixed, short and English names to the canonical major", () => {
+    assert.equal(normalizeMajor("สาขาวิชาภูมิสารสนเทศ"), "ภูมิสารสนเทศศาสตร์");
+    assert.equal(normalizeMajor("CGM"), "คอมพิวเตอร์กราฟิกและมัลติมีเดีย");
+    assert.equal(normalizeMajor("Computer Engineering"), "วิศวกรรมคอมพิวเตอร์");
+  });
+
+  test("keeps unknown majors but removes prefixes", () => {
+    assert.equal(normalizeMajor("123 สาขาอื่นๆ"), "อื่นๆ");
+  });
+});

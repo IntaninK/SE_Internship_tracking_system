@@ -1,4 +1,5 @@
 import * as xlsx from "xlsx";
+import { normalizeMajor } from "./majors";
 
 export interface ExtractedRowData {
   studentCode: string;
@@ -260,7 +261,8 @@ export function parseStudentSpreadsheet(
       nameTh: data.nameTh,
       nameEn: "-",
       year,
-      major: data.major || targetDepartment || "วิศวกรรมซอฟต์แวร์",
+      // ตัดเลขนำหน้า/คำนำหน้า เช่น "221 วิศวกรรมซอฟต์แวร์" -> "วิศวกรรมซอฟต์แวร์"
+      major: normalizeMajor(data.major || targetDepartment) || "วิศวกรรมซอฟต์แวร์",
       curriculum: data.curriculum || undefined,
       gpa: data.gpa,
       email,

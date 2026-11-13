@@ -2097,7 +2097,15 @@ router.get("/super-admin/overview", async (req: Request, res: Response) => {
     let stateModified = false;
 
     for (const st of allStudents) {
-      for (const comp of st.companies || []) {
+      // แหล่งชื่อบริษัท: Checklist (Company) + ข้อมูลสถานที่ฝึกงาน (Placement ที่ไม่ถูกปฏิเสธ)
+      // เดิมซิงก์เฉพาะ Company ทำให้ชื่อที่มาจาก Placement (ฟอร์มเก่า) ไม่ขึ้นใน Master Data
+      const nameSources: Array<{ id: string; name: string; createdAt?: Date | null }> = (st.companies || []).map(
+        (c) => ({ id: String(c.id), name: c.name, createdAt: c.createdAt })
+      );
+      if (st.placement?.companyNameTh && st.placement.status !== "REJECTED") {
+        nameSources.push({ id: `PLC-${st.placement.id}`, name: st.placement.companyNameTh, createdAt: null });
+      }
+      for (const comp of nameSources) {
         const cleanName = (comp.name || "").trim();
         if (!cleanName) continue;
         const norm = normalizeName(cleanName);
@@ -2169,10 +2177,20 @@ router.get("/super-admin/overview", async (req: Request, res: Response) => {
         (s.companies || [])[0] ||
         null;
 
+      // ใช้ชื่อจาก Checklist ที่ที่ปรึกษาอนุมัติเป็นหลัก (ชุดเดียวกับที่ซิงก์เข้า Master Data)
+      // ไม่ใช้ชื่อจาก Placement ที่ถูกปฏิเสธไปแล้ว
+      const approvedCompany = (s.companies || []).find((c) => c.checklistStatus === "APPROVED");
+      const usablePlacementName =
+        s.placement && s.placement.status !== "REJECTED" ? s.placement.companyNameTh : "";
       const companyName =
-        s.placement?.companyNameTh ||
+        approvedCompany?.name ||
+        usablePlacementName ||
         activeCompany?.name ||
         "";
+      const masterRec = companyName
+        ? state.companyMasterData.find((c) => normalizeName(c.nameTh) === normalizeName(companyName))
+        : null;
+      const inMasterData = Boolean(masterRec && masterRec.status !== "PENDING_REVIEW");
       const position = s.placement?.position || "นิสิตฝึกงาน / สหกิจศึกษา";
       const checklistStatus = activeCompany?.checklistStatus || "NONE";
       const wfKey = String(s.id);
@@ -2208,6 +2226,7 @@ router.get("/super-admin/overview", async (req: Request, res: Response) => {
         cvFileUrl: s.cv?.fileUrl || null,
         companyId: activeCompany?.id || null,
         companyName: companyName || "ยังไม่ยื่นบริษัท",
+        inMasterData,
         position,
         companyAddress: s.placement?.companyAddress || "-",
         companyProvince: s.placement?.province || "-",

@@ -1159,7 +1159,6 @@ router.post("/placement", async (req: Request, res: Response) => {
 
     const {
       position,
-      companyNameTh,
       contactPersonName,
       contactPersonPosition,
       companyAddress,
@@ -1170,10 +1169,22 @@ router.post("/placement", async (req: Request, res: Response) => {
       companyId,
     } = req.body;
 
+    // ชื่อบริษัทต้องมาจากบริษัทใน Checklist ของนิสิตที่ "สัมภาษณ์ผ่านแล้ว" เท่านั้น (ห้ามพิมพ์เอง)
+    // เพื่อให้ชื่อตรงกับฐานข้อมูลสถานประกอบการ และคิวออกหนังสือราชการ
+    const selectedCompany = (student.companies || []).find(
+      (c) => String(c.id) === String(companyId) && c.submission?.status === "INTERVIEW_PASSED"
+    );
+    if (!selectedCompany) {
+      return res.status(400).json({
+        success: false,
+        message: "กรุณาเลือกบริษัทที่สัมภาษณ์ผ่านแล้วจากรายการ (ไม่สามารถพิมพ์ชื่อบริษัทเองได้)",
+      });
+    }
+    const companyNameTh = selectedCompany.name;
+
     // บังคับกรอกครบทุกช่อง (กันการข้าม validation ฝั่งหน้าเว็บ)
     const requiredMap: Record<string, any> = {
       position,
-      companyNameTh,
       contactPersonName,
       contactPersonPosition,
       companyAddress,
@@ -1195,7 +1206,7 @@ router.post("/placement", async (req: Request, res: Response) => {
 
     const placementData: any = {
       position: position ? String(position).trim() : null,
-      companyNameTh: companyNameTh ? String(companyNameTh).trim() : null,
+      companyNameTh: companyNameTh.trim(),
       contactPersonName: contactPersonName ? String(contactPersonName).trim() : null,
       contactPersonPosition: contactPersonPosition ? String(contactPersonPosition).trim() : null,
       companyAddress: companyAddress ? String(companyAddress).trim() : null,
@@ -1203,7 +1214,7 @@ router.post("/placement", async (req: Request, res: Response) => {
       companyPhone2: companyPhone2 ? String(companyPhone2).trim() : null,
       companyEmail: companyEmail ? String(companyEmail).trim() : null,
       province: province ? String(province).trim() : null,
-      companyId: companyId ? parseInt(companyId, 10) : null,
+      companyId: selectedCompany.id,
     };
 
     const placement = await prisma.internshipPlacement.upsert({

@@ -1,15 +1,41 @@
 // @ts-nocheck
+// ===== รายชื่อสาขากลาง: อ่านจาก <script id="ict-majors-data"> ที่หน้าเพจฝังมา (ต้นทาง: src/utils/majors.ts) =====
+let ictMajorsCache: Array<{ code: string; name: string; keywords: string[] }> | null = null;
+function getIctMajors() {
+  if (ictMajorsCache) return ictMajorsCache;
+  try {
+    const el = document.getElementById('ict-majors-data');
+    ictMajorsCache = el ? JSON.parse(el.textContent || '[]') : [];
+  } catch (e) {
+    ictMajorsCache = [];
+  }
+  return ictMajorsCache;
+}
+
+function findIctMajor(raw?: string | null) {
+  const v = String(raw || '').trim().toLowerCase();
+  if (!v) return null;
+  const majors = getIctMajors();
+  return majors.find(m => m.code.toLowerCase() === v)
+    || majors.find(m => m.keywords.some(k => v.includes(k.toLowerCase())))
+    || null;
+}
+
+function normalizeMajorName(raw?: string | null): string {
+  const found = findIctMajor(raw);
+  if (found) return found.name;
+  return String(raw || '').trim().replace(/^\d+\s*/, '').replace(/^(สาขาวิชา|สาขา)\s*/, '').trim();
+}
+
+function ictMajorOptionsHtml(): string {
+  return getIctMajors().map(m => `<option value="${m.name}">สาขา${m.name} (${m.code})</option>`).join('');
+}
+
 function formatMajorName(major?: string | null): string {
   if (!major) return '-';
-  if (major.includes('วิศวกรรมซอฟต์แวร์')) return 'วิศวกรรมซอฟต์แวร์ (SE)';
-  if (major.includes('ธุรกิจดิจิทัล')) return 'ธุรกิจดิจิทัล (DB)';
-  if (major.includes('วิทยาการคอมพิวเตอร์')) return 'วิทยาการคอมพิวเตอร์ (CS)';
-  if (major.includes('เทคโนโลยีสารสนเทศ')) return 'เทคโนโลยีสารสนเทศ (IT)';
-  if (major.includes('วิศวกรรมคอมพิวเตอร์')) return 'วิศวกรรมคอมพิวเตอร์ (CPE)';
-  if (major.includes('คอมพิวเตอร์กราฟิก')) return 'คอมพิวเตอร์กราฟิกฯ (CGM)';
-  if (major.includes('ภูมิสารสนเทศ')) return 'ภูมิสารสนเทศศาสตร์ (GIS)';
-  if (major.includes('วิทยาการข้อมูล')) return 'วิทยาการข้อมูลฯ (DSA)';
-  return major.replace(/^(สาขาวิชาวิศวกรรม|สาขาวิชา|สาขา)/, '').trim() || major;
+  const found = findIctMajor(major);
+  if (found) return `${found.name} (${found.code})`;
+  return normalizeMajorName(major) || major;
 }
 
 let allStudents = [];
@@ -564,16 +590,7 @@ function renderAdvisorTable(advisors) {
     groups[title].push(a);
   });
 
-  const MAJOR_ORDER = [
-    'วิศวกรรมซอฟต์แวร์',
-    'ธุรกิจดิจิทัล',
-    'วิทยาการคอมพิวเตอร์',
-    'เทคโนโลยีสารสนเทศ',
-    'วิศวกรรมคอมพิวเตอร์',
-    'คอมพิวเตอร์กราฟิก',
-    'ภูมิสารสนเทศ',
-    'วิทยาการข้อมูล',
-  ];
+  const MAJOR_ORDER = getIctMajors().map(m => m.keywords[0]);
 
   const sortedGroups = Object.keys(groups).sort((a, b) => {
     const idxA = MAJOR_ORDER.findIndex((m) => a.includes(m));
@@ -1745,16 +1762,7 @@ window.submitBatchSupervisor = async function() {
 // =========================================================================
 // Modal: จัดการสิทธิ์อาจารย์และบุคลากรคณะ (Multi-Role Staff Management)
 // =========================================================================
-const ICT_MAJORS_LIST = [
-  'วิศวกรรมซอฟต์แวร์',
-  'ธุรกิจดิจิทัล',
-  'วิทยาการคอมพิวเตอร์',
-  'เทคโนโลยีสารสนเทศ',
-  'วิศวกรรมคอมพิวเตอร์',
-  'คอมพิวเตอร์กราฟิกและมัลติมีเดีย',
-  'ภูมิสารสนเทศศาสตร์',
-  'วิทยาการข้อมูลและการประยุกต์',
-];
+// รายชื่อสาขาใช้ getIctMajors() (แหล่งข้อมูลกลาง)
 
 interface StaffRoleRecord {
   id: number;
@@ -1826,7 +1834,7 @@ function renderStaffRolesRows(list: StaffRoleRecord[]) {
 
   tbody.innerHTML = list.map(st => {
     const deptOptions = `<option value="">ส่วนกลางทั้งคณะ ICT (8 สาขา)</option>` +
-      ICT_MAJORS_LIST.map(m => `<option value="${m}" ${st.department === m ? 'selected' : ''}>สาขา${m}</option>`).join('');
+      getIctMajors().map(m => `<option value="${m.name}" ${st.department === m.name ? 'selected' : ''}>สาขา${m.name} (${m.code})</option>`).join('');
 
     return `
       <tr id="staff-row-${st.id}">
@@ -2365,13 +2373,8 @@ function renderMajorUnlockTable() {
             <span>ถึง</span>
             <input type="date" id="major-close-${r.code}" class="input-field" value="${r.closeDate || ''}" style="font-size:11.5px; padding:4px 6px !important;" />
           </div>
-          <div style="display:flex; align-items:center; justify-content:space-between; margin-top:3px; gap:4px;">
-            <input type="text" id="major-note-${r.code}" class="input-field" value="${r.note || ''}" placeholder="หมายเหตุแจ้งนิสิต..." style="font-size:11.5px; padding:4px 8px !important; flex:1;" />
-            <button type="button" onclick="copyRowDatesToAll('${r.code}')"
-              style="background:#EEF2FF; color:#4338CA; border:1px solid #C7D2FE; padding:3px 8px; border-radius:6px; font-size:10.5px; font-weight:700; cursor:pointer; white-space:nowrap;"
-              title="คัดลอกรอบเทอมและช่วงเวลาของสาขานี้ไปใส่ในทุกสาขา">
-              📋 ใช้กับทุกสาขา
-            </button>
+          <div style="margin-top:3px;">
+            <input type="text" id="major-note-${r.code}" class="input-field" value="${r.note || ''}" placeholder="หมายเหตุแจ้งนิสิต..." style="font-size:11.5px; padding:4px 8px !important; width:100%; box-sizing:border-box;" />
           </div>
         </td>
         <td>${statusBadge}</td>
@@ -2505,26 +2508,6 @@ window.saveBatchMajorRules = async function() {
 };
 
 window.saveAllMajorRules = window.saveBatchMajorRules;
-
-window.copyRowDatesToAll = function(code) {
-  const tEl = document.getElementById(`major-term-${code}`) as HTMLInputElement | null;
-  const oEl = document.getElementById(`major-open-${code}`) as HTMLInputElement | null;
-  const cEl = document.getElementById(`major-close-${code}`) as HTMLInputElement | null;
-  const termVal = tEl?.value.trim() || '';
-  const openVal = oEl?.value || '';
-  const closeVal = cEl?.value || '';
-
-  const batchTermEl = document.getElementById('batch-target-term') as HTMLInputElement | null;
-  const batchOpenEl = document.getElementById('batch-open-date') as HTMLInputElement | null;
-  const batchCloseEl = document.getElementById('batch-close-date') as HTMLInputElement | null;
-  if (batchTermEl && termVal) batchTermEl.value = termVal;
-  if (batchOpenEl && openVal) batchOpenEl.value = openVal;
-  if (batchCloseEl && closeVal) batchCloseEl.value = closeVal;
-
-  if (window.saveBatchMajorRules) {
-    window.saveBatchMajorRules();
-  }
-};
 
 window.saveAllMajorRules = async function() {
   const rules = superAdminData.majorUnlockRules || [];
@@ -2762,8 +2745,8 @@ window.calculateTotalEventHours = function() {
   if (badgeEl) badgeEl.textContent = String(total);
   if (noteEl) {
     noteEl.textContent = count > 1
-      ? `รวม ${count} ช่วงเวลา (เฉลี่ยรอบละ ${Math.round((total / count) * 10) / 10} ชม. กรอกชั่วโมงแยกเองได้)`
-      : `รวม 1 ช่วงเวลา (กรอกชั่วโมงแต่ละช่วงเองได้)`;
+      ? `${count} ช่วงเวลา`
+      : `1 ช่วงเวลา`;
   }
 };
 
@@ -2812,18 +2795,7 @@ window.updateSelectedMajors = function() {
     if (hiddenInput) hiddenInput.value = 'ALL';
   } else {
     const names = checkedItems.map(cb => cb.value);
-    const shortNames = checkedItems.map(cb => {
-      const v = cb.value;
-      if (v === 'วิศวกรรมซอฟต์แวร์') return 'SE';
-      if (v === 'วิทยาการคอมพิวเตอร์') return 'CS';
-      if (v === 'วิศวกรรมคอมพิวเตอร์') return 'CPE';
-      if (v === 'เทคโนโลยีสารสนเทศ') return 'IT';
-      if (v === 'ธุรกิจดิจิทัล') return 'DB';
-      if (v === 'คอมพิวเตอร์กราฟิกและมัลติมีเดีย') return 'CGM';
-      if (v === 'ภูมิสารสนเทศศาสตร์') return 'GIS';
-      if (v === 'วิทยาการข้อมูลและการประยุกต์') return 'DSA';
-      return v;
-    });
+    const shortNames = checkedItems.map(cb => cb.dataset.code || findIctMajor(cb.value)?.code || cb.value);
 
     if (labelEl) labelEl.textContent = shortNames.join(', ');
     if (countEl) countEl.textContent = `(เลือก ${checkedItems.length} สาขา)`;
@@ -3089,7 +3061,7 @@ window.applyEventFilters = function() {
 
   selectEl.innerHTML = filtered.map((e: any) => `
     <option value="${e.id}">
-      [${e.skillType} Skill +${e.creditedHours} ชม.] ${e.title} (${e.eventDate} • Check-in แล้ว ${(e.checkIns || []).length} คน)
+      ${e.title} — ${e.eventDate} (${(e.checkIns || []).length} คน)
     </option>
   `).join('');
 
@@ -3118,13 +3090,13 @@ window.handleCheckInSessionChange = function() {
 
   const val = sessionSelectEl.value;
   if (val === 'ALL') {
-    if (badgeEl) badgeEl.textContent = `+${event.creditedHours} ชม. (ทุกช่วง)`;
-    if (hintEl) hintEl.textContent = `* บันทึก Check-in ทั้งกิจกรรม ได้รับชั่วโมงรวม ${event.creditedHours} ชม.`;
+    if (badgeEl) badgeEl.textContent = `+${event.creditedHours} ชม.`;
+    if (hintEl) hintEl.textContent = '';
   } else {
     const ses = (event.sessions || []).find((s: any) => s.id === val);
     if (ses) {
       if (badgeEl) badgeEl.textContent = `+${ses.hours} ชม.`;
-      if (hintEl) hintEl.textContent = `* บันทึก Check-in สำหรับ "${ses.title}" วันที่ ${ses.date} ได้รับ +${ses.hours} ชม.`;
+      if (hintEl) hintEl.textContent = '';
     }
   }
 };
@@ -3172,15 +3144,15 @@ window.renderSelectedEventCheckins = function() {
     const curVal = sessionSelectEl.value;
     if (event.sessions.length > 1) {
       sessionSelectEl.innerHTML = `
-        <option value="ALL">🌟 เช็คอินทั้งกิจกรรม (ทุกช่วงพร้อมกัน) [+${event.creditedHours} ชม.]</option>
+        <option value="ALL">ทุกช่วง (+${event.creditedHours} ชม.)</option>
         ${event.sessions.map((s: any, idx: number) => `
-          <option value="${s.id}">ช่วงที่ ${idx + 1}: ${s.title || ''} (${s.date}) [+${s.hours} ชม.]</option>
+          <option value="${s.id}">ช่วงที่ ${idx + 1}${s.title && s.title !== `ช่วงที่ ${idx + 1}` ? ` ${s.title}` : ''} • ${s.date} (+${s.hours} ชม.)</option>
         `).join('')}
       `;
     } else {
       sessionSelectEl.innerHTML = `
-        <option value="${event.sessions[0].id}">${event.sessions[0].title || 'ช่วงที่ 1'} (${event.sessions[0].date}) [+${event.sessions[0].hours} ชม.]</option>
-        <option value="ALL">🌟 เช็คอินทั้งกิจกรรม [+${event.creditedHours} ชม.]</option>
+        <option value="${event.sessions[0].id}">${event.sessions[0].date} (+${event.sessions[0].hours} ชม.)</option>
+        <option value="ALL">ทั้งกิจกรรม (+${event.creditedHours} ชม.)</option>
       `;
     }
     if (curVal && (curVal === 'ALL' || event.sessions.some((s: any) => s.id === curVal))) {
@@ -3189,6 +3161,9 @@ window.renderSelectedEventCheckins = function() {
       sessionSelectEl.value = event.sessions.length > 1 ? event.sessions[0].id : 'ALL';
     }
     window.handleCheckInSessionChange();
+    // กิจกรรมที่มีช่วงเดียว ไม่ต้องให้เลือกช่วง (ลดความรก)
+    const sessionContainer = document.getElementById('checkin-session-select-container');
+    if (sessionContainer) sessionContainer.style.display = event.sessions.length > 1 ? '' : 'none';
   }
 
   // Update filter session dropdown
@@ -3221,15 +3196,23 @@ window.renderSelectedEventCheckins = function() {
       ? `<span style="background:#EEF2FF; color:#4338CA; padding:2px 8px; border-radius:999px; font-weight:700; font-size:11.5px;">🗓️ มี ${event.sessions.length} ช่วงเวลา</span>`
       : '';
 
+    const isSoft = event.skillType === 'SOFT';
+    const infoItem = (icon: string, text: string) => `
+      <div style="display:flex; align-items:center; gap:6px; min-width:0;">
+        <span class="material-icons" style="font-size:16px; color:#94A3B8;">${icon}</span>
+        <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${escapeHtmlText(text)}">${escapeHtmlText(text)}</span>
+      </div>`;
+
     metaEl.innerHTML = `
-      <span style="display:inline-flex; align-items:center; gap:6px; flex-wrap:wrap;">
-        <span style="background:#DBEAFE; color:#1E40AF; padding:2px 8px; border-radius:999px; font-weight:700;">${event.skillType} SKILL (+${event.creditedHours} ชม.)</span>
+      <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-bottom:8px;">
+        <span style="background:${isSoft ? '#DBEAFE' : '#FCE7F3'}; color:${isSoft ? '#1E40AF' : '#9D174D'}; padding:2px 10px; border-radius:999px; font-weight:700; font-size:12px;">${isSoft ? 'Soft Skill' : 'Hard Skill'} +${event.creditedHours} ชม.</span>
         ${sessionsBadgeList}
-        <span>📅 ${event.eventDate} (${event.startTime} - ${event.endTime} น.)</span>
-        <span>📍 ${event.location}</span>
-        <span style="background:#FEF3C7; color:#92400E; padding:2px 8px; border-radius:999px; font-weight:600; font-size:11.5px;">🎯 สาขาเป้าหมาย: ${targetMajorLabel}</span>
-        <span style="background:#EDE9FE; color:#5B21B6; padding:2px 8px; border-radius:999px; font-weight:600; font-size:11.5px;">🎓 ชั้นปีเป้าหมาย: ${targetYearLabel}</span>
-      </span>
+      </div>
+      <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:6px 16px; font-size:12.5px; color:#334155;">
+        ${infoItem('event', `${event.eventDate} • ${event.startTime}-${event.endTime} น.`)}
+        ${infoItem('place', event.location || '-')}
+        ${infoItem('groups', `${targetMajorLabel} • ${targetYearLabel}`)}
+      </div>
     `;
   }
 
@@ -3238,11 +3221,9 @@ window.renderSelectedEventCheckins = function() {
   // 1. อัปเดตตัวเลือกสาขาวิชาใน Dropdown กรอง
   if (filterMajorEl) {
     const currentFilterVal = filterMajorEl.value || 'ALL';
-    const uniqueMajors = Array.from(new Set(allCheckIns.map((c: any) => c.major).filter(Boolean)));
-    uniqueMajors.sort();
+    const uniqueMajors = getIctMajors().map(m => m.name);
 
-    filterMajorEl.innerHTML = '<option value="ALL">ทุกสาขาวิชา (ทั้งหมด)</option>' +
-      uniqueMajors.map((m: any) => `<option value="${m}">${m}</option>`).join('');
+    filterMajorEl.innerHTML = '<option value="ALL">ทุกสาขา</option>' + ictMajorOptionsHtml();
 
     if (uniqueMajors.includes(currentFilterVal)) {
       filterMajorEl.value = currentFilterVal;
@@ -3288,7 +3269,7 @@ window.renderSelectedEventCheckins = function() {
   const isFiltered = isMajorFiltered || isYearFiltered || isSessionFiltered;
 
   const filteredCheckIns = allCheckIns.filter((c: any) => {
-    if (isMajorFiltered && c.major !== selectedMajor) {
+    if (isMajorFiltered && normalizeMajorName(c.major) !== selectedMajor) {
       return false;
     }
     if (isYearFiltered) {
@@ -3751,7 +3732,7 @@ window.deleteAllEventCheckIns = async function() {
   const isFiltered = isMajorFiltered || isYearFiltered || isSessionFiltered;
 
   const targetCheckIns = (event.checkIns || []).filter((c: any) => {
-    if (isMajorFiltered && c.major !== selectedMajor) return false;
+    if (isMajorFiltered && normalizeMajorName(c.major) !== selectedMajor) return false;
     if (isYearFiltered) {
       const y = c.studentCode ? c.studentCode.substring(0, 2) : '';
       if (y !== selectedYear) return false;
@@ -4768,28 +4749,92 @@ window.rescanCompanyResponseOcr = async function(studentId) {
   }
 };
 
-window.renderDocumentQueueTable = function() {
-  const tbody = document.getElementById('doc-workflow-tbody');
-  if (!tbody) return;
-  const filterVal = document.getElementById('doc-queue-filter')?.value || 'ALL';
+const NO_COMPANY_NAMES = ['ยังไม่ยื่นบริษัท', 'รอเลือกบริษัทใหม่ (ปลดล็อกแล้ว)'];
+const expandedDocGroups = new Set<string>();
 
-  let list = superAdminData.documentQueue || [];
-  if (filterVal === 'READY_FOR_REQ') {
-    list = list.filter(d => d.companyName !== 'ยังไม่ยื่นบริษัท' && !d.requestLetterIssued);
-  } else if (filterVal === 'WAITING_RESPONSE') {
-    list = list.filter(d => d.requestLetterIssued && d.companyResponseStatus === 'WAITING_RESPONSE');
-  } else if (filterVal === 'ACCEPTED') {
-    list = list.filter(d => d.companyResponseStatus === 'ACCEPTED' && !d.dispatchLetterIssued);
-  } else if (filterVal === 'DISPATCHED') {
-    list = list.filter(d => d.dispatchLetterIssued);
+function docGroupId(key: string): string {
+  return encodeURIComponent(key).replace(/[!'()*]/g, c => '%' + c.charCodeAt(0).toString(16).toUpperCase());
+}
+
+function docStudentYear(d: any): string {
+  return String(d.studentCode || '').slice(0, 2);
+}
+
+function docStageOf(d: any): 'NONE' | 'CHECKLIST' | 'READY_FOR_REQ' | 'WAITING_RESPONSE' | 'ACCEPTED' | 'DISPATCHED' {
+  if (NO_COMPANY_NAMES.includes(d.companyName)) return 'NONE';
+  if (d.dispatchLetterIssued) return 'DISPATCHED';
+  if (d.companyResponseStatus === 'ACCEPTED') return 'ACCEPTED';
+  if (d.requestLetterIssued) return 'WAITING_RESPONSE';
+  if (d.checklistStatus !== 'APPROVED') return 'CHECKLIST';
+  return 'READY_FOR_REQ';
+}
+
+function populateDocQueueFilterOptions(all: any[]) {
+  const majorEl = document.getElementById('doc-queue-major') as HTMLSelectElement | null;
+  const yearEl = document.getElementById('doc-queue-year') as HTMLSelectElement | null;
+  if (majorEl) {
+    const cur = majorEl.value || 'ALL';
+    if (majorEl.options.length <= 1) {
+      majorEl.innerHTML = '<option value="ALL">ทุกสาขาวิชา (คณะ ICT)</option>' + ictMajorOptionsHtml();
+    }
+    majorEl.value = Array.from(majorEl.options).some(o => o.value === cur) ? cur : 'ALL';
   }
+  if (yearEl) {
+    const cur = yearEl.value || 'ALL';
+    const years = Array.from(new Set(all.map(docStudentYear).filter(y => /^\d{2}$/.test(y)))).sort().reverse();
+    yearEl.innerHTML = '<option value="ALL">ทุกชั้นปี</option>' +
+      years.map(y => `<option value="${y}">รหัส ${y}</option>`).join('');
+    yearEl.value = years.includes(cur) ? cur : 'ALL';
+  }
+}
 
+window.toggleDocGroup = function(key: string) {
+  if (expandedDocGroups.has(key)) expandedDocGroups.delete(key);
+  else expandedDocGroups.add(key);
+  window.renderDocumentQueueTable();
+};
+
+window.toggleAllDocGroups = function() {
+  const keys = Array.from(document.querySelectorAll('[data-doc-group]')).map(el => el.getAttribute('data-doc-group') || '');
+  const allOpen = keys.length > 0 && keys.every(k => expandedDocGroups.has(k));
+  if (allOpen) keys.forEach(k => expandedDocGroups.delete(k));
+  else keys.forEach(k => expandedDocGroups.add(k));
+  window.renderDocumentQueueTable();
+};
+
+window.renderDocumentQueueTable = function() {
+  const container = document.getElementById('doc-workflow-groups');
+  if (!container) return;
+  const all = superAdminData.documentQueue || [];
+  populateDocQueueFilterOptions(all);
+
+  const filterVal = (document.getElementById('doc-queue-filter') as HTMLSelectElement | null)?.value || 'ALL';
+  const majorVal = (document.getElementById('doc-queue-major') as HTMLSelectElement | null)?.value || 'ALL';
+  const yearVal = (document.getElementById('doc-queue-year') as HTMLSelectElement | null)?.value || 'ALL';
+  const keyword = ((document.getElementById('doc-queue-keyword') as HTMLInputElement | null)?.value || '').trim().toLowerCase();
+  const hideNone = (document.getElementById('doc-queue-hide-none') as HTMLInputElement | null)?.checked ?? true;
+
+  const list = all.filter(d => {
+    const stage = docStageOf(d);
+    if (hideNone && stage === 'NONE') return false;
+    if (filterVal !== 'ALL' && stage !== filterVal) return false;
+    if (majorVal !== 'ALL' && normalizeMajorName(d.major) !== majorVal) return false;
+    if (yearVal !== 'ALL' && docStudentYear(d) !== yearVal) return false;
+    if (keyword) {
+      const hay = `${d.companyName} ${d.studentCode} ${d.nameTh} ${d.position}`.toLowerCase();
+      if (!hay.includes(keyword)) return false;
+    }
+    return true;
+  });
+
+  const summaryEl = document.getElementById('doc-queue-summary');
   if (list.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="6" class="text-center py-6 text-gray-400">ไม่มีรายการนิสิตในตัวกรองนี้</td></tr>';
+    if (summaryEl) summaryEl.textContent = '';
+    container.innerHTML = '<div style="padding:18px; text-align:center; color:#94A3B8; background:#F8FAFC; border-radius:12px;">ไม่มีรายการนิสิตในตัวกรองนี้</div>';
     return;
   }
 
-  tbody.innerHTML = list.map(d => {
+  const buildRow = (d: any) => {
     const escapedComp = (d.companyName || '').replace(/'/g, "\\'");
     const checklistBadge = d.checklistStatus === 'APPROVED'
       ? `<span style="background:#DCFCE7; color:#166534; padding:2px 8px; border-radius:999px; font-size:11px; font-weight:700;">✓ ที่ปรึกษาอนุมัติ</span>`
@@ -4924,10 +4969,7 @@ window.renderDocumentQueueTable = function() {
           <div style="font-weight:800; color:#1E1B4B;">${d.studentCode}</div>
           <div style="font-size:12.5px; color:#334155; font-weight:600;">${d.nameTh}</div>
           <div style="font-size:11px; color:#64748B;">สาขา${d.major}</div>
-        </td>
-        <td>
-          <div style="font-weight:700; color:#1E293B;">${d.companyName}</div>
-          <div style="font-size:11.5px; color:#64748B;">ตำแหน่ง: ${d.position}</div>
+          <div style="font-size:11px; color:#64748B;">ตำแหน่ง: ${d.position}</div>
           ${d.archiveCount > 0 ? `
             <div style="margin-top:4px;">
               <button type="button" onclick="window.openStudentArchiveModal(${d.studentId})"
@@ -4944,7 +4986,103 @@ window.renderDocumentQueueTable = function() {
         <td>${dispColHtml}</td>
       </tr>
     `;
+  };
+
+  // จัดกลุ่มตามบริษัท (นิสิตที่ยังไม่ยื่นบริษัทรวมไว้กลุ่มท้ายสุด)
+  const groupMap = new Map<string, { name: string; isNone: boolean; items: any[] }>();
+  list.forEach(d => {
+    const isNone = NO_COMPANY_NAMES.includes(d.companyName);
+    const name = isNone ? 'ยังไม่ยื่นบริษัท / รอเลือกบริษัทใหม่' : (d.companyName || '-');
+    const key = isNone ? '__NONE__' : name.trim().toLowerCase();
+    if (!groupMap.has(key)) groupMap.set(key, { name, isNone, items: [] });
+    groupMap.get(key)!.items.push(d);
+  });
+  const groups = Array.from(groupMap.entries()).sort((a, b) => {
+    if (a[1].isNone !== b[1].isNone) return a[1].isNone ? 1 : -1;
+    return b[1].items.length - a[1].items.length || a[1].name.localeCompare(b[1].name, 'th');
+  });
+
+  if (summaryEl) {
+    summaryEl.textContent = `พบ ${groups.filter(g => !g[1].isNone).length} บริษัท • นิสิต ${list.length} คน`;
+  }
+
+  // ค้นหาด้วยคำค้น → เปิดทุกกลุ่มที่ตรงอัตโนมัติ
+  const autoExpand = keyword.length > 0;
+
+  const stageChip = (count: number, label: string, bg: string, color: string) => count > 0
+    ? `<span style="background:${bg}; color:${color}; padding:2px 8px; border-radius:999px; font-size:11px; font-weight:700; white-space:nowrap;">${label} ${count}</span>`
+    : '';
+
+  container.innerHTML = groups.map(([key, g]) => {
+    const isOpen = autoExpand || expandedDocGroups.has(docGroupId(key));
+    const stages = g.items.map(docStageOf);
+    const countOf = (s: string) => stages.filter(x => x === s).length;
+    const readyIds = g.items.filter(d => docStageOf(d) === 'READY_FOR_REQ').map(d => d.studentId);
+    const escapedComp = (g.name || '').replace(/'/g, "\\'");
+    const gid = docGroupId(key);
+
+    const groupActions = g.isNone ? '' : `
+      <div style="display:flex; gap:6px; flex-wrap:wrap;" onclick="event.stopPropagation()">
+        ${readyIds.length > 0 ? `
+          <button type="button" onclick='issueGroupRequestLetter(${JSON.stringify(readyIds)}, "${escapedComp}")'
+            style="background:#4338CA; color:white; border:none; padding:6px 10px; border-radius:8px; font-size:11.5px; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:4px;">
+            <span class="material-icons" style="font-size:14px;">description</span>
+            ${readyIds.length > 1 ? `ออกหนังสือรวมกลุ่ม (${readyIds.length} คน)` : 'ออกหนังสือขอความอนุเคราะห์'}
+          </button>` : ''}
+        <button type="button" onclick='openOfficialLetterPreview("REQUEST", ${JSON.stringify(g.items.map(d => d.studentId))}, "${escapedComp}")'
+          style="background:#EEF2FF; color:#312E81; border:1px solid #C7D2FE; padding:6px 10px; border-radius:8px; font-size:11.5px; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:4px;">
+          <span class="material-icons" style="font-size:14px;">visibility</span> พรีวิว PDF
+        </button>
+      </div>
+    `;
+
+    return `
+      <div data-doc-group="${gid}" style="border:1px solid ${isOpen ? '#C7D2FE' : '#E2E8F0'}; border-radius:14px; background:#FFFFFF; overflow:hidden;">
+        <div onclick="window.toggleDocGroup('${gid}')" style="display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; padding:12px 16px; cursor:pointer; background:${isOpen ? '#F5F7FF' : (g.isNone ? '#F8FAFC' : '#FFFFFF')};">
+          <div style="display:flex; align-items:center; gap:10px; min-width:0; flex:1;">
+            <span class="material-icons" style="font-size:20px; color:#64748B; transition:transform .15s; transform:rotate(${isOpen ? 90 : 0}deg);">chevron_right</span>
+            <div style="min-width:0;">
+              <div style="font-weight:800; color:${g.isNone ? '#64748B' : '#1E1B4B'}; font-size:14px;">${g.isNone ? '' : '🏢 '}${escapeHtmlText(g.name)}</div>
+              <div style="display:flex; gap:5px; flex-wrap:wrap; margin-top:4px;">
+                <span style="background:#EEF2FF; color:#4338CA; padding:2px 8px; border-radius:999px; font-size:11px; font-weight:700;">${g.items.length} คน</span>
+                ${!g.isNone && g.items.some(d => !d.inMasterData) ? `
+                  <span title="ชื่อบริษัทนี้ยังไม่ได้ยืนยันในฐานข้อมูลสถานประกอบการ — ตรวจ/ยุบรวมชื่อที่หมวดฐานข้อมูลบริษัทก่อนออกหนังสือ"
+                    style="background:#FEF2F2; color:#B91C1C; border:1px solid #FECACA; padding:2px 8px; border-radius:999px; font-size:11px; font-weight:700;">⚠ ยังไม่อยู่ในฐานข้อมูลบริษัท</span>` : ''}
+                ${stageChip(countOf('CHECKLIST'), 'รอที่ปรึกษา', '#F1F5F9', '#475569')}
+                ${stageChip(countOf('READY_FOR_REQ'), 'รอออกหนังสือ', '#FEF3C7', '#B45309')}
+                ${stageChip(countOf('WAITING_RESPONSE'), 'รอผลตอบรับ', '#E0F2FE', '#0369A1')}
+                ${stageChip(countOf('ACCEPTED'), 'รอออกหนังสือส่งตัว', '#DCFCE7', '#166534')}
+                ${stageChip(countOf('DISPATCHED'), 'ส่งตัวแล้ว', '#DBEAFE', '#1E40AF')}
+              </div>
+            </div>
+          </div>
+          ${groupActions}
+        </div>
+        ${isOpen ? `
+          <div class="table-responsive" style="border-top:1px solid #E2E8F0;">
+            <table class="data-table" style="margin:0;">
+              <thead>
+                <tr>
+                  <th style="width:22%;">นิสิต</th>
+                  <th style="width:12%;">Checklist</th>
+                  <th style="width:24%;">1. หนังสือขอความอนุเคราะห์</th>
+                  <th style="width:22%;">2. ผลตอบรับจากบริษัท</th>
+                  <th style="width:20%;">3. หนังสือส่งตัว</th>
+                </tr>
+              </thead>
+              <tbody>${g.items.map(buildRow).join('')}</tbody>
+            </table>
+          </div>
+        ` : ''}
+      </div>
+    `;
   }).join('');
+
+  const expandBtn = document.getElementById('doc-queue-expand-btn');
+  if (expandBtn) {
+    const allOpen = groups.length > 0 && groups.every(([k]) => autoExpand || expandedDocGroups.has(docGroupId(k)));
+    expandBtn.textContent = allOpen ? 'ย่อทั้งหมด' : 'ขยายทั้งหมด';
+  }
 };
 
 window.issueSingleRequestLetter = async function(studentId, companyName) {
@@ -5502,7 +5640,7 @@ function renderCoop01PreviewTable() {
 
   // กรองตามสาขาวิชา
   if (majorVal !== 'ALL') {
-    list = list.filter(s => (s.major || '').includes(majorVal));
+    list = list.filter(s => normalizeMajorName(s.major) === majorVal);
   }
 
   // กรองตามคำค้นหา (รหัสนิสิต / ชื่อ / บริษัท)

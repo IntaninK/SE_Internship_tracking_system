@@ -7,53 +7,73 @@ let masterCompaniesList = [];
 let currentPlacementData = null;
 let isDroppedStudent = false;
 
-const STANDARD_POSITIONS = [
-  // --- สายพัฒนาซอฟต์แวร์ และระบบดิจิทัล (SE / CS / IT) ---
-  "Full-Stack Developer",
-  "Frontend Developer",
-  "Backend Developer",
-  "Mobile App Developer (iOS / Android / Flutter)",
-  "Software Engineer / Developer",
-  "DevOps / Cloud Engineer",
-  "QA / Software Tester",
-  "System Analyst / Business Analyst",
-
-  // --- สายปัญญาประดิษฐ์ วิทยาการข้อมูล และฐานข้อมูล (CS / DSA / IT) ---
-  "AI / Machine Learning Engineer",
-  "Data Scientist",
-  "Data Analyst",
-  "Data Engineer",
-  "Business Intelligence (BI) Analyst",
-  "Database Administrator (DBA)",
-
-  // --- สายโครงสร้างพื้นฐาน เครือข่าย ความปลอดภัย และฮาร์ดแวร์ (IT / CPE) ---
-  "Network & Security Engineer",
-  "Cybersecurity Specialist",
-  "System Administrator / IT Support",
-  "Embedded Systems / IoT Developer",
-  "Hardware & Computer Engineer",
-
-  // --- สายกราฟิก มัลติมีเดีย และเกม (CG / MT) ---
-  "UI/UX Designer / Product Designer",
-  "Graphic Designer / 2D Artist",
-  "3D Modeler / 3D Animator",
-  "Game Developer / Game Programmer",
-  "Video Editor / Motion Graphics",
-
-  // --- สายภูมิสารสนเทศศาสตร์ (GIS) ---
-  "GIS Specialist / GIS Developer",
-  "Spatial Data Analyst",
-  "Remote Sensing Specialist",
-  "เจ้าหน้าที่สารสนเทศภูมิศาสตร์",
-
-  // --- สายคอมพิวเตอร์ธุรกิจ และเทคโนโลยีดิจิทัล (BC) ---
-  "Digital Marketing Specialist",
-  "E-Commerce Specialist",
-  "ERP / CRM Consultant (SAP, Odoo)",
-  "Digital Business Coordinator",
-
-  "OTHER"
+// ตำแหน่งงานมาตรฐาน จัดกลุ่มตามสายงาน (keywords = คำค้นภาษาไทย/คำพ้อง เพื่อให้พิมพ์ค้นหาได้ง่าย)
+const POSITION_GROUPS: Array<{ label: string; items: Array<{ name: string; keywords?: string }> }> = [
+  {
+    label: "พัฒนาซอฟต์แวร์ (SE / CS / IT)",
+    items: [
+      { name: "Full-Stack Developer", keywords: "ฟูลสแต็ก โปรแกรมเมอร์ เว็บ web" },
+      { name: "Frontend Developer", keywords: "ฟรอนต์เอนด์ หน้าบ้าน เว็บ web react vue" },
+      { name: "Backend Developer", keywords: "แบ็กเอนด์ หลังบ้าน api server" },
+      { name: "Mobile App Developer (iOS / Android / Flutter)", keywords: "โมบาย แอป มือถือ app" },
+      { name: "Software Engineer / Developer", keywords: "วิศวกรซอฟต์แวร์ นักพัฒนา โปรแกรมเมอร์ programmer software developer" },
+      { name: "DevOps / Cloud Engineer", keywords: "คลาวด์ aws azure gcp" },
+      { name: "QA / Software Tester", keywords: "ทดสอบ เทสเตอร์ test" },
+      { name: "System Analyst / Business Analyst", keywords: "นักวิเคราะห์ระบบ วิเคราะห์ระบบ sa ba" },
+    ],
+  },
+  {
+    label: "AI / ข้อมูล / ฐานข้อมูล (CS / DSA / IT)",
+    items: [
+      { name: "AI / Machine Learning Engineer", keywords: "ปัญญาประดิษฐ์ เอไอ ml" },
+      { name: "Data Scientist", keywords: "นักวิทยาศาสตร์ข้อมูล ข้อมูล" },
+      { name: "Data Analyst", keywords: "นักวิเคราะห์ข้อมูล ข้อมูล" },
+      { name: "Data Engineer", keywords: "วิศวกรข้อมูล ข้อมูล" },
+      { name: "Business Intelligence (BI) Analyst", keywords: "บีไอ ข้อมูล dashboard" },
+      { name: "Database Administrator (DBA)", keywords: "ฐานข้อมูล ดาต้าเบส sql" },
+    ],
+  },
+  {
+    label: "เครือข่าย / ความปลอดภัย / ฮาร์ดแวร์ (IT / CPE)",
+    items: [
+      { name: "Network & Security Engineer", keywords: "เครือข่าย เน็ตเวิร์ก ความปลอดภัย" },
+      { name: "Cybersecurity Specialist", keywords: "ไซเบอร์ ความปลอดภัย security" },
+      { name: "System Administrator / IT Support", keywords: "ไอทีซัพพอร์ต ดูแลระบบ แอดมิน helpdesk" },
+      { name: "Embedded Systems / IoT Developer", keywords: "ไอโอที สมองกลฝังตัว iot" },
+      { name: "Hardware & Computer Engineer", keywords: "ฮาร์ดแวร์ วิศวกรคอมพิวเตอร์" },
+    ],
+  },
+  {
+    label: "กราฟิก / มัลติมีเดีย / เกม (CGM)",
+    items: [
+      { name: "UI/UX Designer / Product Designer", keywords: "ออกแบบ ดีไซน์ ux ui ดีไซเนอร์" },
+      { name: "Graphic Designer / 2D Artist", keywords: "กราฟิก ออกแบบ ดีไซน์" },
+      { name: "3D Modeler / 3D Animator", keywords: "สามมิติ แอนิเมชัน 3d" },
+      { name: "Game Developer / Game Programmer", keywords: "เกม game unity unreal" },
+      { name: "Video Editor / Motion Graphics", keywords: "ตัดต่อ วิดีโอ โมชัน" },
+    ],
+  },
+  {
+    label: "ภูมิสารสนเทศ (GIS)",
+    items: [
+      { name: "GIS Specialist / GIS Developer", keywords: "ภูมิสารสนเทศ แผนที่ gis" },
+      { name: "Spatial Data Analyst", keywords: "ข้อมูลเชิงพื้นที่ ภูมิสารสนเทศ" },
+      { name: "Remote Sensing Specialist", keywords: "รีโมทเซนซิง ภาพถ่ายดาวเทียม" },
+      { name: "เจ้าหน้าที่สารสนเทศภูมิศาสตร์", keywords: "gis ภูมิศาสตร์" },
+    ],
+  },
+  {
+    label: "ธุรกิจดิจิทัล (DB)",
+    items: [
+      { name: "Digital Marketing Specialist", keywords: "การตลาดดิจิทัล การตลาด marketing" },
+      { name: "E-Commerce Specialist", keywords: "อีคอมเมิร์ซ ขายออนไลน์" },
+      { name: "ERP / CRM Consultant (SAP, Odoo)", keywords: "อีอาร์พี ที่ปรึกษา sap odoo" },
+      { name: "Digital Business Coordinator", keywords: "ธุรกิจดิจิทัล ประสานงาน" },
+    ],
+  },
 ];
+
+const STANDARD_POSITIONS = POSITION_GROUPS.flatMap(g => g.items.map(i => i.name));
 
 function escapeHtml(str) {
   if (!str) return '';
@@ -236,15 +256,131 @@ window.toggleArchivedAnswers = function(idx) {
   }
 };
 
-window.handlePositionSelectChange = function(index) {
-  const sel = document.getElementById(`company-position-select-${index}`);
-  const customInput = document.getElementById(`company-custom-position-${index}`);
-  if (!sel || !customInput) return;
-  if (sel.value === 'OTHER') {
-    customInput.style.display = 'block';
-    customInput.focus();
-  } else {
-    customInput.style.display = 'none';
+// =====================================================================
+// ช่องตำแหน่งงานแบบพิมพ์ค้นหาได้ (Searchable Combobox)
+// - พิมพ์ภาษาไทย/อังกฤษเพื่อกรองตำแหน่งมาตรฐาน (ค้นจากชื่อ + keywords + ชื่อกลุ่ม)
+// - ใช้ลูกศรขึ้น/ลง + Enter เลือก, Esc ปิด
+// - ถ้าไม่มีในรายการ สามารถใช้ข้อความที่พิมพ์เป็นตำแหน่งได้เลย
+// =====================================================================
+const positionActiveIdx: Record<number, number> = {};
+
+function positionMatches(query: string) {
+  const q = query.trim().toLowerCase();
+  const tokens = q.split(/\s+/).filter(Boolean);
+  return POSITION_GROUPS.map(g => ({
+    label: g.label,
+    items: g.items.filter(i => {
+      if (!tokens.length) return true;
+      const hay = `${i.name} ${i.keywords || ''} ${g.label}`.toLowerCase();
+      return tokens.every(t => hay.includes(t));
+    }),
+  })).filter(g => g.items.length > 0);
+}
+
+function highlightMatch(text: string, query: string) {
+  const safe = escapeHtml(text);
+  const q = query.trim();
+  if (!q) return safe;
+  const idx = text.toLowerCase().indexOf(q.toLowerCase());
+  if (idx < 0) return safe;
+  return escapeHtml(text.slice(0, idx)) +
+    `<mark style="background:#E0E7FF; color:inherit; padding:0 1px; border-radius:3px;">${escapeHtml(text.slice(idx, idx + q.length))}</mark>` +
+    escapeHtml(text.slice(idx + q.length));
+}
+
+window.renderPositionOptions = function(index: number, showAll = false) {
+  const input = document.getElementById(`company-position-input-${index}`) as HTMLInputElement | null;
+  const list = document.getElementById(`company-position-list-${index}`);
+  if (!input || !list || input.readOnly) return;
+
+  // ตอนเพิ่งคลิกช่อง (มีค่าเดิมอยู่แล้ว) ให้เห็นรายการทั้งหมดก่อน แล้วค่อยกรองเมื่อเริ่มพิมพ์
+  const query = showAll ? '' : input.value;
+  const groups = positionMatches(query);
+  const typed = query.trim();
+  const exact = STANDARD_POSITIONS.some(p => p.toLowerCase() === typed.toLowerCase());
+
+  let optIdx = 0;
+  let html = groups.map(g => `
+    <div style="padding:6px 12px 3px; font-size:11px; font-weight:800; color:#64748B; background:#F8FAFC; position:sticky; top:0;">${escapeHtml(g.label)}</div>
+    ${g.items.map(i => `
+      <div class="position-option" data-idx="${optIdx++}" data-value="${escapeHtml(i.name)}"
+        onmousedown="event.preventDefault(); window.selectPosition(${index}, this.dataset.value)"
+        style="padding:7px 14px; font-size:12.5px; cursor:pointer; color:#1E293B;">
+        ${highlightMatch(i.name, typed)}
+      </div>`).join('')}
+  `).join('');
+
+  if (typed && !exact) {
+    html += `
+      <div class="position-option" data-idx="${optIdx++}" data-value="${escapeHtml(typed)}"
+        onmousedown="event.preventDefault(); window.selectPosition(${index}, this.dataset.value)"
+        style="padding:8px 14px; font-size:12.5px; cursor:pointer; color:#4338CA; border-top:1px solid #E2E8F0; font-weight:600;">
+        ✏️ ใช้ "${escapeHtml(typed)}" เป็นตำแหน่งที่ระบุเอง
+      </div>`;
+  }
+  if (!html) {
+    html = `<div style="padding:10px 14px; font-size:12px; color:#94A3B8;">ไม่พบตำแหน่งที่ตรงกัน</div>`;
+  }
+
+  list.innerHTML = html;
+  list.style.display = 'block';
+  positionActiveIdx[index] = -1;
+
+  // ไฮไลต์ตำแหน่งที่เลือกอยู่ปัจจุบัน
+  const current = input.value.trim().toLowerCase();
+  if (current) {
+    const opts = Array.from(list.querySelectorAll('.position-option')) as HTMLElement[];
+    const i = opts.findIndex(o => (o.dataset.value || '').toLowerCase() === current);
+    if (i >= 0) {
+      opts[i].style.fontWeight = '700';
+      opts[i].style.color = '#4338CA';
+      if (showAll) opts[i].scrollIntoView({ block: 'nearest' });
+    }
+  }
+};
+
+function setActivePositionOption(index: number, next: number) {
+  const list = document.getElementById(`company-position-list-${index}`);
+  if (!list) return;
+  const opts = Array.from(list.querySelectorAll('.position-option')) as HTMLElement[];
+  if (!opts.length) return;
+  const clamped = Math.max(0, Math.min(opts.length - 1, next));
+  opts.forEach((o, i) => { o.style.background = i === clamped ? '#EEF2FF' : ''; });
+  opts[clamped].scrollIntoView({ block: 'nearest' });
+  positionActiveIdx[index] = clamped;
+}
+
+window.selectPosition = function(index: number, value: string) {
+  const input = document.getElementById(`company-position-input-${index}`) as HTMLInputElement | null;
+  const list = document.getElementById(`company-position-list-${index}`);
+  if (input) input.value = value;
+  if (list) list.style.display = 'none';
+};
+
+window.closePositionList = function(index: number) {
+  const list = document.getElementById(`company-position-list-${index}`);
+  if (list) list.style.display = 'none';
+};
+
+window.handlePositionKeydown = function(index: number, e: KeyboardEvent) {
+  const list = document.getElementById(`company-position-list-${index}`);
+  const isOpen = list && list.style.display !== 'none';
+  if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+    e.preventDefault();
+    if (!isOpen) window.renderPositionOptions(index);
+    const cur = positionActiveIdx[index] ?? -1;
+    setActivePositionOption(index, e.key === 'ArrowDown' ? cur + 1 : cur - 1);
+  } else if (e.key === 'Enter') {
+    if (isOpen && (positionActiveIdx[index] ?? -1) >= 0) {
+      e.preventDefault();
+      const opt = list!.querySelectorAll('.position-option')[positionActiveIdx[index]] as HTMLElement | undefined;
+      if (opt) window.selectPosition(index, opt.dataset.value || '');
+    } else if (isOpen) {
+      e.preventDefault();
+      window.closePositionList(index);
+    }
+  } else if (e.key === 'Escape') {
+    window.closePositionList(index);
   }
 };
 
@@ -358,16 +494,7 @@ function renderCompanyCard(comp, index) {
     : '';
 
   const plc = currentPlacementData || {};
-  const currentPos = plc.position || 'Software Developer';
-  const isCustomPos = !STANDARD_POSITIONS.includes(currentPos) && currentPos !== 'OTHER';
-
-  const positionOptionsHtml = STANDARD_POSITIONS.map(p => {
-    if (p === 'OTHER') {
-      return `<option value="OTHER" ${isCustomPos ? 'selected' : ''}>-- อื่นๆ (ระบุตำแหน่งเอง...) --</option>`;
-    }
-    const isSelected = (!isCustomPos && currentPos === p) || (p === 'Software Developer' && !currentPos);
-    return `<option value="${p}" ${isSelected ? 'selected' : ''}>${p}</option>`;
-  }).join('');
+  const currentPos = plc.position && plc.position !== 'OTHER' ? plc.position : '';
 
   card.innerHTML = `
     <div class="company-header cursor-pointer" onclick="toggleCompany(${index})">
@@ -396,10 +523,21 @@ function renderCompanyCard(comp, index) {
             <label style="display:block; font-size:12px; font-weight:700; color:#334155; margin-bottom:4px;">
               ตำแหน่งที่เข้าฝึกงาน <span style="color:#DC2626;">*</span>
             </label>
-            <select id="company-position-select-${index}" onchange="window.handlePositionSelectChange(${index})" class="input-field" style="width:100%; padding:7px 10px; font-size:12.5px; border:1px solid #CBD5E1; border-radius:8px; background:white;" ${isLocked ? 'disabled style="background-color: #f8fafc; cursor: not-allowed;"' : ''}>
-              ${positionOptionsHtml}
-            </select>
-            <input type="text" id="company-custom-position-${index}" value="${isCustomPos ? escapeHtml(currentPos) : ''}" placeholder="พิมพ์ระบุชื่อตำแหน่งงานเอง..." class="input-field" style="width:100%; padding:7px 10px; font-size:12.5px; border:1.5px solid #4338CA; border-radius:8px; margin-top:6px; display:${isCustomPos ? 'block' : 'none'};" ${isLocked ? 'readonly style="background-color: #f8fafc; cursor: not-allowed;"' : ''} />
+            <div style="position:relative;">
+              <span class="material-icons" style="position:absolute; left:10px; top:50%; transform:translateY(-50%); font-size:17px; color:#94A3B8; pointer-events:none; z-index:1;">search</span>
+              <input type="text" id="company-position-input-${index}" value="${escapeHtml(currentPos)}"
+                placeholder="พิมพ์ค้นหา เช่น frontend, ข้อมูล, เกม, ออกแบบ"
+                autocomplete="off" role="combobox" aria-autocomplete="list" aria-controls="company-position-list-${index}"
+                onfocus="window.renderPositionOptions(${index}, true)"
+                oninput="window.renderPositionOptions(${index})"
+                onkeydown="window.handlePositionKeydown(${index}, event)"
+                onblur="setTimeout(() => window.closePositionList(${index}), 120)"
+                class="input-field"
+                style="width:100%; padding:7px 10px !important; padding-left:36px !important; font-size:12.5px; border:1px solid #CBD5E1; border-radius:8px; background:${isLocked ? '#f8fafc' : 'white'}; ${isLocked ? 'cursor:not-allowed;' : ''}"
+                ${isLocked ? 'readonly' : ''} />
+              <div id="company-position-list-${index}" role="listbox"
+                style="display:none; position:absolute; top:calc(100% + 4px); left:0; right:0; z-index:50; max-height:280px; overflow-y:auto; background:white; border:1px solid #CBD5E1; border-radius:10px; box-shadow:0 12px 28px -6px rgba(15,23,42,0.18);"></div>
+            </div>
           </div>
 
           <!-- จังหวัด -->
@@ -531,11 +669,15 @@ document.getElementById('save-all-btn').addEventListener('click', async () => {
       return;
     }
 
-    const posSelect = document.getElementById(`company-position-select-0`);
-    const customPosInput = document.getElementById(`company-custom-position-0`);
-    const position = posSelect && posSelect.value === 'OTHER'
-      ? (customPosInput ? customPosInput.value.trim() : 'Software Developer')
-      : (posSelect ? posSelect.value : 'Software Developer');
+    const posInput = document.getElementById(`company-position-input-0`) as HTMLInputElement | null;
+    const position = posInput ? posInput.value.trim() : '';
+    if (!position) {
+      alert('กรุณาระบุตำแหน่งที่เข้าฝึกงาน');
+      if (posInput) posInput.focus();
+      saveBtn.disabled = false;
+      saveBtn.innerHTML = '<span class="material-icons text-2xl">check_circle</span> <span>ยืนยันและส่งให้อาจารย์ที่ปรึกษาตรวจสอบ</span>';
+      return;
+    }
 
     const province = document.getElementById(`company-province-0`) ? document.getElementById(`company-province-0`).value.trim() : '';
     const contactPersonName = document.getElementById(`company-contact-name-0`) ? document.getElementById(`company-contact-name-0`).value.trim() : '';

@@ -863,10 +863,10 @@ function updatePlacementCompanyOptions() {
     select.appendChild(opt);
   });
 
-  const otherOpt = document.createElement('option');
-  otherOpt.value = '__other__';
-  otherOpt.textContent = 'อื่นๆ (กรอกระบุเอง)';
-  select.appendChild(otherOpt);
+  // ไม่มีตัวเลือก "อื่นๆ (กรอกระบุเอง)" แล้ว: ชื่อบริษัทต้องมาจาก Checklist ที่สัมภาษณ์ผ่านเท่านั้น
+  // (กันชื่อบริษัทไม่ตรงกับฐานข้อมูลสถานประกอบการ / คิวออกหนังสือ)
+  select.style.display = '';
+  if (customWrap) customWrap.style.display = 'none';
 
   const currentSavedName = (currentPlacementData && currentPlacementData.companyNameTh)
     ? currentPlacementData.companyNameTh.trim()
@@ -882,12 +882,11 @@ function updatePlacementCompanyOptions() {
       if (customWrap) customWrap.style.display = 'none';
       input.value = matched.name;
     } else {
-      select.value = '__other__';
-      select.style.display = 'none';
-      if (customWrap) customWrap.style.display = 'block';
-      input.value = currentSavedName;
+      // ชื่อเดิมที่เคยพิมพ์เอง (ระบบเก่า) ไม่ตรงกับบริษัทใน Checklist -> ให้เลือกใหม่จากรายการ
+      select.value = '';
+      input.value = '';
     }
-  } else if (prevVal && prevVal !== '__other__') {
+  } else if (prevVal) {
     const matchedPrev = passedCompanies.find(c => String(c.id) === String(prevVal));
     if (matchedPrev) {
       select.value = matchedPrev.id;
@@ -953,24 +952,19 @@ if (placementForm) {
     // ประมวลผลชื่อแหล่งฝึกงานจาก dropdown หรือกล่องกรอกในช่องเดียวกัน
     const companySelect = document.getElementById('plc-company-select');
     const companyInput = document.getElementById('plc-companyNameTh');
-    const customWrap = document.getElementById('plc-custom-company-wrap');
-    const isCustomMode = customWrap && customWrap.style.display !== 'none';
 
     let finalCompanyName = '';
     let finalCompanyId = null;
 
-    if (!isCustomMode && companySelect && companySelect.value && companySelect.value !== '__other__') {
+    if (companySelect && companySelect.value) {
       const selectedOption = companySelect.options[companySelect.selectedIndex];
       finalCompanyName = selectedOption ? (selectedOption.dataset.name || selectedOption.text) : '';
       finalCompanyId = companySelect.value;
-    } else if (companyInput) {
-      finalCompanyName = companyInput.value.trim();
     }
 
-    if (!finalCompanyName) {
-      alert('กรุณาเลือกหรือกรอก: ชื่อแหล่งฝึกงาน');
-      if (!isCustomMode && companySelect) companySelect.focus();
-      else if (companyInput) companyInput.focus();
+    if (!finalCompanyName || !finalCompanyId) {
+      alert('กรุณาเลือกชื่อแหล่งฝึกงานจากรายการบริษัทที่สัมภาษณ์ผ่านแล้ว');
+      if (companySelect) companySelect.focus();
       return;
     }
     if (companyInput) companyInput.value = finalCompanyName;
